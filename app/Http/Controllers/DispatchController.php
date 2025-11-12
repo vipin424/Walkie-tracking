@@ -7,8 +7,10 @@ use App\Models\Client;
 use App\Models\Dispatch;
 use App\Models\DispatchItem;
 use App\Models\Payment;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use lluminate\Support\Facades\Log;
 
 class DispatchController extends Controller
 {
@@ -20,7 +22,7 @@ class DispatchController extends Controller
             ->when($status, fn($q)=>$q->where('status',$status))
             ->when($client, fn($q)=>$q->whereHas('client', fn($qq)=>$qq->where('name','like',"%$client%")))
             ->orderByDesc('id')
-            ->paginate(15);
+            ->paginate(10);
 
         return view('dispatches.index', compact('dispatches','status','client'));
     }
@@ -49,7 +51,9 @@ class DispatchController extends Controller
                 'total_items' => 0,
             ]);
 
+
             foreach ($data['items'] as $item) {
+
                 DispatchItem::create([
                     'dispatch_id' => $dispatch->id,
                     'item_type' => $item['item_type'],
@@ -57,8 +61,13 @@ class DispatchController extends Controller
                     'model' => $item['model'] ?? null,
                     'quantity' => $item['quantity'],
                     'returned_qty' => 0,
-                ]);
+                    'rental_type' => $item['rental_type'] ?? 'daily',
+                    'rate_per_day' => $item['rate_per_day'] ?? 0,
+                    'rate_per_month' => $item['rate_per_month'] ?? 0,
+
+                  ]);
             }
+
 
             $dispatch->recalcStatusAndTotals();
 

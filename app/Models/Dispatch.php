@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 
 class Dispatch extends Model
 {
@@ -13,7 +16,7 @@ class Dispatch extends Model
 
     protected $fillable = [
         'code','client_id','dispatch_date','expected_return_date',
-        'status','total_items'
+        'status','total_items','invoice_path'
     ];
 
     protected $casts = [
@@ -59,5 +62,38 @@ class Dispatch extends Model
             $this->status = self::STATUS_RETURNED;
         }
         $this->save();
+
     }
+
+
+    public function generateInvoicePDF(): void
+    {
+
+        // make sure returns are loaded
+        $this->loadMissing(['client', 'items', 'payment', 'returns']);
+
+        // final return date from returns table (latest date)
+        $finalReturnDateStr = $this->returns()->max('return_date'); // string|NULL
+        $finalReturnDate = $finalReturnDateStr
+            ? Carbon::parse($finalReturnDateStr)
+            : ($this->expected_return_date ? Carbon::parse($this->expected_return_date) : null);
+
+        // total days (inclusive)
+        $dispatchDate = Carbon::parse($this->dispatch_date);
+        $baseEnd = $finalReturnDate ?: $dispatchDate; // fallback to dispatch date
+        $daysUsed = $dispatchDate->diffInDays($baseEnd, false);
+        $daysUsed = max($daysUsed, 1);
+
+        $pdf = Pdf::loadView('dispatches.invoice', [
+            'dispatch'        => $this,
+            'finalReturnDate' => $finalReturnDate, 
+            'totalDays'       => $daysUsed,
+        ]);
+
+        $fileName = 'Invoice_' . $this->code . '.pdf';
+        $filePath = 'invoices/' . $fileName;
+
+        Storage::disk('public')->put($filePath, $pdf->output());
+        $this->update(['invoice_path' => $filePath]);
+    }   
 }

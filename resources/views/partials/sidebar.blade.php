@@ -22,6 +22,9 @@
     <a href="{{ route('dispatches.index') }}" class="menu-item {{ nav_active('dispatches.*') }}">
       <i class="bi bi-truck"></i> <span>Dispatches</span>
     </a>
+    <!-- <a href="{{ route('invoices.index') }}" class="menu-item {{ nav_active('dispatches.*') }}">
+      <i class="bi bi-truck"></i> <span>Invoices</span>
+    </a> -->
     <a href="{{ route('payments.index') }}" class="menu-item {{ nav_active('payments.*') }}">
       <i class="bi bi-wallet2"></i> <span>Payments</span>
     </a>

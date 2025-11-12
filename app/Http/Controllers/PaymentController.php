@@ -29,6 +29,10 @@ class PaymentController extends Controller
 
         $payment = $dispatch->payment;
         $payment->update($validated);
+        //dd($dispatch);
+        if ($dispatch && $dispatch->status === Dispatch::STATUS_RETURNED) {
+            $dispatch->generateInvoicePDF();
+        }
 
         return back()->with('success','Payment updated');
     }

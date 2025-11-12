@@ -19,6 +19,8 @@ class DispatchRequest extends FormRequest
             'items.*.brand' => 'nullable|string|max:100',
             'items.*.model' => 'nullable|string|max:100',
             'items.*.quantity' => 'required|integer|min:1',
+            'items.*.rate_per_day' => 'required|numeric|min:0',   // 👈 ADD THIS LINE
+
         ];
     }
 }
