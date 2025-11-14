@@ -145,15 +145,20 @@ function addItem() {
           </select>
         </div>
         
-        <div class="col-md-4">
+        <div class="col-md-2">
           <label class="form-label fw-semibold small text-muted">Model</label>
-          <input name="items[${itemIndex}][model]" class="form-control" placeholder="Enter model number">
+          <input name="items[${itemIndex}][model]" class="form-control" placeholder="Enter model No.">
         </div>
         
         <div class="col-md-2">
           <label class="form-label fw-semibold small text-muted">Quantity <span class="text-danger">*</span></label>
           <input type="number" min="1" name="items[${itemIndex}][quantity]" class="form-control" placeholder="0" required>
         </div>
+       <div class="col-md-2"> <label class="form-label fw-semibold small text-muted">Rate <span class="text-danger">*</span></label> 
+       <input type="number" min="0" step="0.01" name="items[${itemIndex}][rate_per_day]" class="form-control" placeholder="Rate/day" required> 
+       </div>
+
+        
       </div>
     </div>
   </div>`;
@@ -187,6 +192,7 @@ function updateItemNumbers() {
     header.innerHTML = `<i class="bi bi-box me-2"></i>Item #${index + 1}`;
   });
 }
+
 
 // Add first item on page load
 document.addEventListener('DOMContentLoaded', function() {

@@ -105,10 +105,11 @@
                 </td>
                 <td class="px-4 py-3 text-center">
                   <div class="btn-group" role="group">
-                    <a href="{{ $d->whatsappLink() }}" target="_blank" class="btn btn-success btn-sm">
-                      <i class="bi bi-whatsapp"></i> Send via WhatsApp
-                    </a>
-
+                  @if($d->invoice_path)
+                      <a href="{{ asset('storage/'.$d->invoice_path) }}" target="_blank" class="btn btn-sm btn-outline-success">
+                          <i class="bi bi-file-earmark-pdf"></i>
+                      </a>
+                  @endif
                     <a href="{{ route('dispatches.show',$d) }}" class="btn btn-sm btn-outline-primary" title="View Details">
                       <i class="bi bi-eye"></i>
                     </a>
@@ -135,11 +136,12 @@
         </table>
       </div>
     </div>
-    @if($dispatches->hasPages())
-    <div class="card-footer bg-white border-0 p-4">
-      {{ $dispatches->links() }}
+  {{-- ✅ Pagination --}}
+  @if($dispatches->hasPages())
+    <div class="card-footer bg-white border-0 py-3 d-flex justify-content-center">
+      {{ $dispatches->links('pagination::bootstrap-5') }}
     </div>
-    @endif
+  @endif
   </div>
 </div>
 
