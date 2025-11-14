@@ -68,7 +68,7 @@ class Dispatch extends Model
     public function whatsappMessage()
     {
         $items = $this->items->map(function($i) {
-            return "- {$i->item_type} ({$i->brand} {$i->model}) × {$i->quantity}";
+            return "- {$i->item_type} ({$i->brand} {$i->model}) × {$i->quantity}pcs";
         })->implode("\n");
 
         $status = ucfirst($this->status);

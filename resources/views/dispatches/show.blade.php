@@ -294,7 +294,7 @@
       </div>
 
       <!-- whatsapp preview -->
-      <!-- <div class="modern-card mt-4">
+      <div class="modern-card mt-4">
         <div class="card-header-modern">WhatsApp Preview</div>
         <div class="card-body-modern">
             <div class="card-body">
@@ -304,7 +304,7 @@
               </a>
             </div>
         </div>
-      </div> -->
+      </div>
       <!-- End whatsapp -->
 
     </div>
