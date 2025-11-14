@@ -60,4 +60,44 @@ class Dispatch extends Model
         }
         $this->save();
     }
+
+    public function whatsappMessage()
+    {
+        $items = $this->items->map(function($i) {
+            return "- {$i->item_type} ({$i->brand} {$i->model}) × {$i->quantity}";
+        })->implode("\n");
+
+        $status = ucfirst($this->status);
+        $clientName = $this->client->name;
+        $dispatchCode = $this->code;
+        $date = $this->dispatch_date->format('d M Y');
+        $total = $this->items->sum('quantity');
+
+        return <<<MSG
+    Hello {$clientName} 👋
+
+    Here are your dispatch details:
+    ---------------------------------
+    Dispatch ID: {$dispatchCode}
+    Date: {$date}
+    Total Items: {$total}
+
+    Items:
+    {$items}
+
+    Status: {$status}
+
+    Thank you,
+    Crewrent Enterprises
+    MSG;
+    }
+
+    public function whatsappLink()
+    {
+        $number = preg_replace('/[^0-9]/', '', $this->client->contact_number);
+        $text = urlencode($this->whatsappMessage());
+        return "https://wa.me/{$number}?text={$text}";
+    }
+
+
 }

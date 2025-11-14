@@ -292,10 +292,26 @@
           </div>
         </div>
       </div>
+
+      <!-- whatsapp preview -->
+      <!-- <div class="modern-card mt-4">
+        <div class="card-header-modern">WhatsApp Preview</div>
+        <div class="card-body-modern">
+            <div class="card-body">
+              <pre class="bg-light p-3 rounded small text-dark">{{ $dispatch->whatsappMessage() }}</pre>
+              <a href="{{ $dispatch->whatsappLink() }}" target="_blank" class="btn btn-success">
+                <i class="bi bi-whatsapp"></i> Open in WhatsApp
+              </a>
+            </div>
+        </div>
+      </div> -->
+      <!-- End whatsapp -->
+
     </div>
 
     <!-- Main Content -->
     <div>
+
       <!-- Items Table -->
       <div class="modern-card" style="margin-bottom: 1.5rem;">
         <div class="card-header-modern">Dispatch Items</div>

@@ -105,6 +105,10 @@
                 </td>
                 <td class="px-4 py-3 text-center">
                   <div class="btn-group" role="group">
+                    <a href="{{ $d->whatsappLink() }}" target="_blank" class="btn btn-success btn-sm">
+                      <i class="bi bi-whatsapp"></i> Send via WhatsApp
+                    </a>
+
                     <a href="{{ route('dispatches.show',$d) }}" class="btn btn-sm btn-outline-primary" title="View Details">
                       <i class="bi bi-eye"></i>
                     </a>
