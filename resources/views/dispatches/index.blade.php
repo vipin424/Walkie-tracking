@@ -113,12 +113,12 @@
                     <a href="{{ route('dispatches.show',$d) }}" class="btn btn-sm btn-outline-primary" title="View Details">
                       <i class="bi bi-eye"></i>
                     </a>
-                    <form method="post" action="{{ route('dispatches.destroy',$d) }}" class="d-inline">
+                    <!-- <form method="post" action="{{ route('dispatches.destroy',$d) }}" class="d-inline">
                       @csrf @method('DELETE')
                       <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this dispatch?')" title="Delete">
                         <i class="bi bi-trash"></i>
                       </button>
-                    </form>
+                    </form> -->
                   </div>
                 </td>
               </tr>
