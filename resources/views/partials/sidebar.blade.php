@@ -19,6 +19,9 @@
     <a href="{{ route('clients.index') }}" class="menu-item {{ nav_active('clients.*') }}">
       <i class="bi bi-people"></i> <span>Clients</span>
     </a>
+    <a href="{{ route('orders.index') }}" class="menu-item {{ nav_active('orders.*') }}">
+      <i class="bi bi-diagram-2"></i> <span>Orders</span>
+    </a>
     <a href="{{ route('dispatches.index') }}" class="menu-item {{ nav_active('dispatches.*') }}">
       <i class="bi bi-truck"></i> <span>Dispatches</span>
     </a>

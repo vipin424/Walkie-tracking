@@ -28,12 +28,33 @@ class PaymentController extends Controller
         ]);
 
         $payment = $dispatch->payment;
-        $payment->update($validated);
-        //dd($dispatch);
+
+        // ---------------------------------------------
+        // 🟡 Calculate remaining amount = total - advance
+        // ---------------------------------------------
+        $total = $validated['total_amount'] ?? $payment->total_amount;
+        $advance = $validated['advance_amount'] ?? $payment->advance_amount;
+
+        $finalTotal = max($total - $advance, 0);   // no negative totals
+
+        // ---------------------------------------------
+        // 🟢 Update with adjusted final amount
+        // ---------------------------------------------
+        $payment->update([
+            'payment_status' => $validated['payment_status'],
+            'advance_amount' => $advance,
+            'total_amount'   => $finalTotal,
+            'remarks'        => $validated['remarks'] ?? $payment->remarks,
+        ]);
+
+        // ---------------------------------------------
+        // 🟣 Auto-generate invoice if returned
+        // ---------------------------------------------
         if ($dispatch && $dispatch->status === Dispatch::STATUS_RETURNED) {
             $dispatch->generateInvoicePDF();
         }
 
         return back()->with('success','Payment updated');
     }
+
 }

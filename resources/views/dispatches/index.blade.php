@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('title','Dispatches')
 @section('content')
 <div class="container-fluid px-4 py-4">
   <!-- Header -->

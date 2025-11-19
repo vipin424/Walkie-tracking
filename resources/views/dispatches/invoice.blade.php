@@ -92,7 +92,7 @@
         </tr>
         <tr>
             <td class="text-right">Net Payable:</td>
-            <td class="text-right">₹{{ number_format(($dispatch->payment->total_amount ?? 0) - ($dispatch->payment->advance_amount ?? 0), 2) }}</td>
+            <td class="text-right">₹{{ number_format(($dispatch->payment->total_amount ?? 0), 2) }}</td>
         </tr>
     </table>
 
