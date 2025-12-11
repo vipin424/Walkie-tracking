@@ -9,7 +9,8 @@ use App\Http\Controllers\{
     ReturnController,
     PaymentController,
     InvoiceController,
-    OrderController
+    OrderController,
+    QuotationController
 };
 
 Route::get('/', function () {
@@ -32,6 +33,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('clients', ClientController::class);
+    Route::resource('quotations', QuotationController::class);
+    // Extra custom routes for PDF, Email, WhatsApp
+    Route::post('quotations/{quotation}/generate-pdf', [QuotationController::class, 'generatePdf'])->name('quotations.generatePdf');
+    Route::post('quotations/{quotation}/send-email', [QuotationController::class, 'sendEmail'])->name('quotations.sendEmail');
+    Route::post('quotations/{quotation}/send-whatsapp', [QuotationController::class, 'sendWhatsapp'])->name('quotations.sendWhatsapp');
+
+
     Route::resource('orders', OrderController::class);
     Route::post('/orders/{order}/approve', [OrderController::class, 'approve'])->name('orders.approve');
     Route::post('/orders/{order}/reject', [OrderController::class, 'reject'])->name('orders.reject');
