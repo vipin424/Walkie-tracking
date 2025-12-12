@@ -131,7 +131,7 @@ class QuotationController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, Quotation $quotation)
     {
         $request->validate([
             'client_name' => 'required|string',
@@ -209,8 +209,8 @@ class QuotationController extends Controller
         $pdf = PDF::loadHTML($html)->setPaper('a4', 'portrait');
 
         $fileName = $quotation->code . '.pdf';
-        $path = 'public/quotations/' . $fileName;
-        Storage::put($path, $pdf->output());
+        Storage::disk('public')->put('quotations/'.$fileName, $pdf->output());
+
 
         // Save public accessible path like storage/quotations/...
         $quotation->pdf_path = 'storage/quotations/' . $fileName;

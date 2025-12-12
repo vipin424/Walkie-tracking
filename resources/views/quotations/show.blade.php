@@ -1,113 +1,295 @@
 @extends('layouts.app')
-
+@section('title', 'Quotation Details')
 @section('content')
-<div class="container">
-    <h3>Quotation: {{ $quotation->code }}</h3>
+<div class="container-fluid px-4 py-4">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <a href="{{ route('quotations.index') }}" class="text-decoration-none text-muted mb-2 d-inline-block">
+        <i class="bi bi-arrow-left me-2"></i>Back to Quotations
+      </a>
+      <h4 class="mb-1 fw-bold">Quotation: {{ $quotation->code }}</h4>
+      <p class="text-muted mb-0">View and manage quotation details</p>
+    </div>
+    <div>
+      @php
+        $statusColors = [
+          'pending' => 'warning',
+          'approved' => 'success',
+          'rejected' => 'danger'
+        ];
+        $color = $statusColors[$quotation->status] ?? 'secondary';
+      @endphp
+      <span class="badge bg-{{ $color }} px-4 py-2 fs-6" style="background-color: rgba(var(--bs-{{ $color }}-rgb), 0.15) !important; color: var(--bs-{{ $color }}) !important;">
+        {{ ucfirst($quotation->status) }}
+      </span>
+    </div>
+  </div>
 
-    <div class="mb-3">
-        <a href="{{ route('quotations.edit', $quotation) }}" class="btn btn-warning">Edit</a>
+  <!-- Action Buttons -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{{ route('quotations.edit', $quotation) }}" class="btn btn-warning">
+          <i class="bi bi-pencil-square me-2"></i>Edit Quotation
+        </a>
 
-        <form action="{{ route('quotations.generatePdf', $quotation) }}" method="POST" style="display:inline">
-            @csrf
-            <button class="btn btn-primary">Generate PDF</button>
+        <form action="{{ route('quotations.generatePdf', $quotation) }}" method="POST" class="d-inline">
+          @csrf
+          <button class="btn btn-primary">
+            <i class="bi bi-file-earmark-pdf me-2"></i>Generate PDF
+          </button>
         </form>
 
-        <!-- Send Email form -->
-        <button class="btn btn-success" data-toggle="modal" data-target="#emailModal">Send Email</button>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#emailModal">
+          <i class="bi bi-envelope me-2"></i>Send Email
+        </button>
 
-        <!-- Send WhatsApp form -->
-        <button class="btn btn-info" data-toggle="modal" data-target="#waModal">Send WhatsApp</button>
+        <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#waModal">
+          <i class="bi bi-whatsapp me-2"></i>Send WhatsApp
+        </button>
 
         @if($quotation->pdf_path)
-            <a href="{{ Storage::url(str_replace('storage/','public/',$quotation->pdf_path)) }}" target="_blank" class="btn btn-outline-secondary">View PDF</a>
+          <a href="{{ Storage::url(str_replace('storage/','public/',$quotation->pdf_path)) }}" target="_blank" class="btn btn-outline-secondary">
+            <i class="bi bi-eye me-2"></i>View PDF
+          </a>
         @endif
+      </div>
     </div>
+  </div>
 
-    <div class="card">
-        <div class="card-body">
-            <h5>Client</h5>
-            <p>{{ $quotation->client_name }} <br> {{ $quotation->client_phone }} <br> {{ $quotation->client_email }}</p>
-
-            <h5>Items</h5>
-            <table class="table">
-                <thead><tr><th>#</th><th>Item</th><th>Type</th><th>Qty</th><th>Unit</th><th>Total</th></tr></thead>
-                <tbody>
-                    @foreach($quotation->items as $i => $it)
-                    <tr>
-                        <td>{{ $i+1 }}</td>
-                        <td>{{ $it->item_name }} <div class="text-muted">{{ $it->description }}</div></td>
-                        <td>{{ $it->item_type }}</td>
-                        <td>{{ $it->quantity }}</td>
-                        <td>₹{{ number_format($it->unit_price,2) }}</td>
-                        <td>₹{{ number_format($it->total_price,2) }}</td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-
-            <div class="text-right">
-                <div>Subtotal: ₹{{ number_format($quotation->subtotal,2) }}</div>
-                <div>Tax: ₹{{ number_format($quotation->tax_amount,2) }}</div>
-                <div>Discount: ₹{{ number_format($quotation->discount_amount,2) }}</div>
-                <h4>Total: ₹{{ number_format($quotation->total_amount,2) }}</h4>
-            </div>
-
-            <h5>Notes</h5>
-            <p>{{ $quotation->notes }}</p>
+  <div class="row">
+    <!-- Client Information -->
+    <div class="col-lg-4 mb-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-0 p-4">
+          <h5 class="mb-0 fw-semibold">
+            <i class="bi bi-person-circle me-2 text-warning"></i>Client Information
+          </h5>
         </div>
-    </div>
-
-    <!-- Email Modal -->
-    <div class="modal fade" id="emailModal" tabindex="-1">
-      <div class="modal-dialog">
-        <form action="{{ route('quotations.sendEmail', $quotation) }}" method="POST">
-            @csrf
-            <div class="modal-content">
-              <div class="modal-header"><h5>Send Email</h5></div>
-              <div class="modal-body">
-                <div class="form-group">
-                    <label>To Email</label>
-                    <input name="to_email" class="form-control" value="{{ $quotation->client_email }}">
-                </div>
-                <div class="form-group">
-                    <label>Message</label>
-                    <textarea name="message" class="form-control">Hello {{ $quotation->client_name }}, Please find attached the quotation {{ $quotation->code }}.</textarea>
-                </div>
-              </div>
-              <div class="modal-footer">
-                <button class="btn btn-secondary" type="button" data-dismiss="modal">Close</button>
-                <button class="btn btn-success">Send</button>
-              </div>
-            </div>
-        </form>
+        <div class="card-body p-4">
+          <div class="mb-3">
+            <label class="text-muted small fw-semibold mb-1">Name</label>
+            <p class="mb-0 fw-medium">{{ $quotation->client_name }}</p>
+          </div>
+          <div class="mb-3">
+            <label class="text-muted small fw-semibold mb-1">Phone</label>
+            <p class="mb-0">
+              <i class="bi bi-telephone-fill text-success me-2"></i>{{ $quotation->client_phone }}
+            </p>
+          </div>
+          <div class="mb-0">
+            <label class="text-muted small fw-semibold mb-1">Email</label>
+            <p class="mb-0">
+              <i class="bi bi-envelope-fill text-primary me-2"></i>{{ $quotation->client_email }}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- WhatsApp Modal -->
-    <div class="modal fade" id="waModal" tabindex="-1">
-      <div class="modal-dialog">
-        <form action="{{ route('quotations.sendWhatsapp', $quotation) }}" method="POST" target="_blank">
-            @csrf
-            <div class="modal-content">
-              <div class="modal-header"><h5>Send WhatsApp</h5></div>
-              <div class="modal-body">
-                <div class="form-group">
-                    <label>To Phone</label>
-                    <input name="to_phone" class="form-control" value="{{ $quotation->client_phone }}">
-                </div>
-                <div class="form-group">
-                    <label>Message</label>
-                    <textarea name="message" class="form-control">Hello {{ $quotation->client_name }}, Here is the quotation {{ $quotation->code }}. Please download from the link and reply to confirm.</textarea>
-                </div>
-              </div>
-              <div class="modal-footer">
-                <button class="btn btn-secondary" type="button" data-dismiss="modal">Close</button>
-                <button class="btn btn-info">Open WhatsApp</button>
+    <!-- Summary Information -->
+    <div class="col-lg-8 mb-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-0 p-4">
+          <h5 class="mb-0 fw-semibold">
+            <i class="bi bi-calculator me-2 text-warning"></i>Quotation Summary
+          </h5>
+        </div>
+        <div class="card-body p-4">
+          <div class="row">
+            <div class="col-md-3 mb-3">
+              <div class="p-3 bg-light rounded">
+                <label class="text-muted small fw-semibold mb-1 d-block">Subtotal</label>
+                <h5 class="mb-0 fw-bold">₹{{ number_format($quotation->subtotal, 2) }}</h5>
               </div>
             </div>
-        </form>
+            <div class="col-md-3 mb-3">
+              <div class="p-3 bg-light rounded">
+                <label class="text-muted small fw-semibold mb-1 d-block">Tax Amount</label>
+                <h5 class="mb-0 fw-bold text-info">₹{{ number_format($quotation->tax_amount, 2) }}</h5>
+              </div>
+            </div>
+            <div class="col-md-3 mb-3">
+              <div class="p-3 bg-light rounded">
+                <label class="text-muted small fw-semibold mb-1 d-block">Discount</label>
+                <h5 class="mb-0 fw-bold text-danger">₹{{ number_format($quotation->discount_amount, 2) }}</h5>
+              </div>
+            </div>
+            <div class="col-md-3 mb-3">
+              <div class="p-3 bg-warning bg-opacity-10 rounded border border-warning">
+                <label class="text-muted small fw-semibold mb-1 d-block">Total Amount</label>
+                <h5 class="mb-0 fw-bold text-warning">₹{{ number_format($quotation->total_amount, 2) }}</h5>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+  </div>
 
+  <!-- Items Table -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 p-4">
+      <h5 class="mb-0 fw-semibold">
+        <i class="bi bi-box-seam me-2 text-warning"></i>Quotation Items
+      </h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="bg-light">
+            <tr>
+              <th class="px-4 py-3 text-muted fw-semibold">#</th>
+              <th class="px-4 py-3 text-muted fw-semibold">Item Details</th>
+              <th class="px-4 py-3 text-muted fw-semibold">Type</th>
+              <th class="px-4 py-3 text-muted fw-semibold text-center">Quantity</th>
+              <th class="px-4 py-3 text-muted fw-semibold text-end">Unit Price</th>
+              <th class="px-4 py-3 text-muted fw-semibold text-end">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach($quotation->items as $i => $it)
+            <tr>
+              <td class="px-4 py-3">
+                <span class="badge bg-secondary bg-opacity-10 text-secondary">{{ $i+1 }}</span>
+              </td>
+              <td class="px-4 py-3">
+                <div class="fw-medium">{{ $it->item_name }}</div>
+                @if($it->description)
+                  <small class="text-muted">{{ $it->description }}</small>
+                @endif
+              </td>
+              <td class="px-4 py-3">
+                <span class="badge bg-info bg-opacity-10 text-info">{{ $it->item_type }}</span>
+              </td>
+              <td class="px-4 py-3 text-center">
+                <span class="fw-semibold">{{ $it->quantity }}</span>
+              </td>
+              <td class="px-4 py-3 text-end">
+                ₹{{ number_format($it->unit_price, 2) }}
+              </td>
+              <td class="px-4 py-3 text-end">
+                <span class="fw-semibold text-dark">₹{{ number_format($it->total_price, 2) }}</span>
+              </td>
+            </tr>
+            @endforeach
+          </tbody>
+          <tfoot class="bg-light">
+            <tr>
+              <td colspan="5" class="px-4 py-3 text-end fw-semibold">Grand Total:</td>
+              <td class="px-4 py-3 text-end">
+                <span class="fs-5 fw-bold text-warning">₹{{ number_format($quotation->total_amount, 2) }}</span>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes Section -->
+  @if($quotation->notes)
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0 p-4">
+      <h5 class="mb-0 fw-semibold">
+        <i class="bi bi-sticky me-2 text-warning"></i>Additional Notes
+      </h5>
+    </div>
+    <div class="card-body p-4">
+      <p class="mb-0 text-muted">{{ $quotation->notes }}</p>
+    </div>
+  </div>
+  @endif
 </div>
+
+<!-- Email Modal -->
+<div class="modal fade" id="emailModal" tabindex="-1" aria-labelledby="emailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form action="{{ route('quotations.sendEmail', $quotation) }}" method="POST">
+      @csrf
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-success bg-opacity-10 border-0 p-4">
+          <h5 class="modal-title fw-semibold" id="emailModalLabel">
+            <i class="bi bi-envelope me-2 text-success"></i>Send Email
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">To Email</label>
+            <input name="to_email" class="form-control" value="{{ $quotation->client_email }}" required>
+          </div>
+          <div class="mb-0">
+            <label class="form-label fw-semibold">Message</label>
+            <textarea name="message" class="form-control" rows="4" required>Hello {{ $quotation->client_name }}, Please find attached the quotation {{ $quotation->code }}.</textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 p-4">
+          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-success">
+            <i class="bi bi-send me-2"></i>Send Email
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- WhatsApp Modal -->
+<div class="modal fade" id="waModal" tabindex="-1" aria-labelledby="waModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form action="{{ route('quotations.sendWhatsapp', $quotation) }}" method="POST" target="_blank">
+      @csrf
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-info bg-opacity-10 border-0 p-4">
+          <h5 class="modal-title fw-semibold" id="waModalLabel">
+            <i class="bi bi-whatsapp me-2 text-info"></i>Send WhatsApp
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">To Phone</label>
+            <input name="to_phone" class="form-control" value="{{ $quotation->client_phone }}" required>
+          </div>
+          <div class="mb-0">
+            <label class="form-label fw-semibold">Message</label>
+            <textarea name="message" class="form-control" rows="4" required>Hello {{ $quotation->client_name }}, Here is the quotation {{ $quotation->code }}. Please download from the link and reply to confirm.</textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 p-4">
+          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-info">
+            <i class="bi bi-whatsapp me-2"></i>Open WhatsApp
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.03);
+  }
+  
+  .badge {
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+  
+  .card {
+    transition: all 0.3s ease;
+  }
+  
+  .form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+  }
+
+  .modal-content {
+    border-radius: 0.5rem;
+  }
+</style>
 @endsection

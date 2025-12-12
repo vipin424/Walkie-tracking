@@ -21,10 +21,11 @@
 <body>
   <div class="header">
     <div class="company">
-      <img src="{{ public_path('images/crewrent-logo.png') }}" alt="logo" />
-      <div><strong>Crewrent Enterprises</strong></div>
+     <img src="{{ public_path('image/logo.png') }}" style="width:150px; height:150px; object-fit:contain;" alt="Company Logo">
+
+      <div><strong>Crewrent Enterprises</strong></div>  
       <div>Address line, City</div>
-      <div>Phone: +91-XXXXXXXXXX | Email: info@crewrent.com</div>
+      <div>Phone: +91-9324465314 | Email: info@crewrent.com</div>
     </div>
     <div class="client">
       <h2>Quotation</h2>
@@ -40,10 +41,10 @@
     <thead>
       <tr>
         <th>#</th>
-        <th>Description</th>
+        <th>Items</th>
         <th>Type</th>
         <th class="right">Qty</th>
-        <th class="right">Unit Price</th>
+        <th class="right">Rate / Item / Day</th>
         <th class="right">Tax %</th>
         <th class="right">Total</th>
       </tr>

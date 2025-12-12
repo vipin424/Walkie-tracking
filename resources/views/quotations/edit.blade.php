@@ -7,7 +7,6 @@
     <form action="{{ route('quotations.update', $quotation) }}" method="POST" id="quotation-form">
         @csrf @method('PUT')
         @include('quotations.partials.form', ['quotation' => $quotation])
-        @include('quotations.partials.modals')
 
         <button class="btn btn-primary">Update Quotation</button>
     </form>
