@@ -1,19 +1,15 @@
 @extends('layouts.app')
-<<<<<<< HEAD
-@section('title', 'Dispatches')
-=======
-@section('title','Dispatches')
->>>>>>> 11eeccf12c8fd97c7200fa704a1d502a1dccf2fd
+@section('title','Quotations')
 @section('content')
 <div class="container-fluid px-4 py-4">
   <!-- Header -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <h4 class="mb-1 fw-bold">Dispatches</h4>
-      <p class="text-muted mb-0">Manage and track all dispatch orders</p>
+      <h4 class="mb-1 fw-bold">Quotations</h4>
+      <p class="text-muted mb-0">Manage and track all quotations</p>
     </div>
-    <a class="btn btn-warning btn-md shadow-sm" href="{{ route('dispatches.create') }}">
-      <i class="bi bi-plus-circle me-2"></i>New Dispatch
+    <a class="btn btn-warning btn-md shadow-sm" href="{{ route('quotations.create') }}">
+      <i class="bi bi-plus-circle me-2"></i>New Quotation
     </a>
   </div>
 
@@ -26,23 +22,23 @@
             <label class="form-label fw-semibold text-muted small">Status Filter</label>
             <select name="status" class="form-select form-select-md">
               <option value="">All Status</option>
-              @foreach(['Active','Partially Returned','Returned'] as $s)
-                <option value="{{ $s }}" @selected(request('status')===$s)>{{ $s }}</option>
+              @foreach(['pending','approved','rejected'] as $s)
+                <option value="{{ $s }}" @selected(request('status')===$s)>{{ ucfirst($s) }}</option>
               @endforeach
             </select>
           </div>
           <div class="col-md-4">
-            <label class="form-label fw-semibold text-muted small">Client Name</label>
-            <input class="form-control form-control-md" name="client" placeholder="Search by client name..." value="{{ request('client') }}">
+            <label class="form-label fw-semibold text-muted small">Search</label>
+            <input class="form-control form-control-md" name="search" placeholder="Search by code or client..." value="{{ request('search') }}">
           </div>
           <div class="col-md-2">
             <button class="btn btn-outline-warning btn-md w-100">
               <i class="bi bi-funnel me-2"></i>Apply Filters
             </button>
           </div>
-          @if(request('status') || request('client'))
+          @if(request('status') || request('search'))
           <div class="col-md-2">
-            <a href="{{ route('dispatches.index') }}" class="btn btn-outline-secondary btn-md w-100">
+            <a href="{{ route('quotations.index') }}" class="btn btn-outline-secondary btn-md w-100">
               <i class="bi bi-x-circle me-2"></i>Clear
             </a>
           </div>
@@ -52,14 +48,14 @@
     </div>
   </div>
 
-  <!-- Dispatches Table -->
+  <!-- Quotations Table -->
   <div class="card border-0 shadow-sm">
     <div class="card-header bg-white border-0 p-4">
       <div class="d-flex justify-content-between align-items-center">
         <h5 class="mb-0 fw-semibold">
-          <i class="bi bi-box-seam me-2 text-warning"></i>All Dispatches
+          <i class="bi bi-file-earmark-text me-2 text-warning"></i>All Quotations
         </h5>
-        <span class="badge bg-warning bg-opacity-10 text-warning fs-6">{{ $dispatches->total() }} Total</span>
+        <span class="badge bg-warning bg-opacity-10 text-warning fs-6">{{ $quotations->total() }} Total</span>
       </div>
     </div>
     <div class="card-body p-0">
@@ -67,19 +63,20 @@
         <table class="table table-hover align-middle mb-0">
           <thead class="bg-light">
             <tr>
-              <th class="px-4 py-3 text-muted fw-semibold">Dispatch Code</th>
+              <th class="px-4 py-3 text-muted fw-semibold">Quotation Code</th>
               <th class="px-4 py-3 text-muted fw-semibold">Client</th>
+              <th class="px-4 py-3 text-muted fw-semibold">Total Amount</th>
               <th class="px-4 py-3 text-muted fw-semibold">Status</th>
-              <th class="px-4 py-3 text-muted fw-semibold text-center">Total Items</th>
+              <th class="px-4 py-3 text-muted fw-semibold">Created Date</th>
               <th class="px-4 py-3 text-muted fw-semibold text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
-            @forelse($dispatches as $d)
+            @forelse($quotations as $q)
               <tr>
                 <td class="px-4 py-3">
-                  <a href="{{ route('dispatches.show',$d) }}" class="text-decoration-none fw-semibold text-primary">
-                    <i class="bi bi-file-text me-2"></i>{{ $d->code }}
+                  <a href="{{ route('quotations.show',$q) }}" class="text-decoration-none fw-semibold text-primary">
+                    <i class="bi bi-file-text me-2"></i>{{ $q->code }}
                   </a>
                 </td>
                 <td class="px-4 py-3">
@@ -87,52 +84,54 @@
                     <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-2">
                       <i class="bi bi-person-fill text-warning"></i>
                     </div>
-                    <span class="fw-medium">{{ $d->client->name }}</span>
+                    <div>
+                      <span class="fw-medium d-block">{{ $q->client_name }}</span>
+                      <small class="text-muted">{{ $q->client_phone }}</small>
+                    </div>
                   </div>
+                </td>
+                <td class="px-4 py-3">
+                  <span class="fw-semibold text-dark">₹{{ number_format($q->total_amount, 2) }}</span>
                 </td>
                 <td class="px-4 py-3">
                   @php
                     $statusColors = [
-                      'Active' => 'info',
-                      'Partially Returned' => 'danger',
-                      'Returned' => 'success'
+                      'pending' => 'warning',
+                      'approved' => 'success',
+                      'rejected' => 'danger'
                     ];
-                    $color = $statusColors[$d->status] ?? 'secondary';
+                    $color = $statusColors[$q->status] ?? 'secondary';
                   @endphp
                   <span class="badge bg-{{ $color }} px-3 py-2" style="background-color: rgba(var(--bs-{{ $color }}-rgb), 0.15) !important; color: var(--bs-{{ $color }}) !important;">
-                    {{ $d->status }}
+                    {{ ucfirst($q->status) }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-center">
-                  <span class="badge bg-secondary bg-opacity-10 text-secondary fs-6 px-3 py-2">
-                    {{ $d->total_items }}
-                  </span>
+                <td class="px-4 py-3">
+                  <span class="text-muted">{{ $q->created_at->format('d M Y') }}</span>
                 </td>
                 <td class="px-4 py-3 text-center">
                   <div class="btn-group" role="group">
-                  @if($d->invoice_path)
-                      <a href="{{ asset('storage/'.$d->invoice_path) }}" target="_blank" class="btn btn-sm btn-outline-success">
-                          <i class="bi bi-file-earmark-pdf"></i>
-                      </a>
-                  @endif
-                    <a href="{{ route('dispatches.show',$d) }}" class="btn btn-sm btn-outline-primary" title="View Details">
+                    <a href="{{ route('quotations.show',$q) }}" class="btn btn-sm btn-outline-primary" title="View Details">
                       <i class="bi bi-eye"></i>
                     </a>
-                    <!-- <form method="post" action="{{ route('dispatches.destroy',$d) }}" class="d-inline">
+                    <a href="{{ route('quotations.edit',$q) }}" class="btn btn-sm btn-outline-warning" title="Edit">
+                      <i class="bi bi-pencil"></i>
+                    </a>
+                    <form method="post" action="{{ route('quotations.destroy',$q) }}" class="d-inline">
                       @csrf @method('DELETE')
-                      <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this dispatch?')" title="Delete">
+                      <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this quotation?')" title="Delete">
                         <i class="bi bi-trash"></i>
                       </button>
-                    </form> -->
+                    </form>
                   </div>
                 </td>
               </tr>
             @empty
               <tr>
-                <td colspan="5" class="text-center py-5">
+                <td colspan="6" class="text-center py-5">
                   <div class="text-muted">
                     <i class="bi bi-inbox display-4 d-block mb-3"></i>
-                    <p class="mb-0">No dispatches found</p>
+                    <p class="mb-0">No quotations found</p>
                   </div>
                 </td>
               </tr>
@@ -141,12 +140,12 @@
         </table>
       </div>
     </div>
-  {{-- ✅ Pagination --}}
-  @if($dispatches->hasPages())
-    <div class="card-footer bg-white border-0 py-3 d-flex justify-content-center">
-      {{ $dispatches->links('pagination::bootstrap-5') }}
-    </div>
-  @endif
+    {{-- ✅ Pagination --}}
+    @if($quotations->hasPages())
+      <div class="card-footer bg-white border-0 py-3 d-flex justify-content-center">
+        {{ $quotations->links('pagination::bootstrap-5') }}
+      </div>
+    @endif
   </div>
 </div>
 

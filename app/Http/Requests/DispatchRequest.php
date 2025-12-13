@@ -20,6 +20,7 @@ class DispatchRequest extends FormRequest
             'items.*.model' => 'nullable|string|max:100',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.rate_per_day' => 'required|numeric|min:0',   // 👈 ADD THIS LINE
+            'order_id' => 'nullable|exists:orders,id',
 
         ];
     }

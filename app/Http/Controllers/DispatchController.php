@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\Dispatch;
 use App\Models\DispatchItem;
 use App\Models\Payment;
+use App\Models\Order;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -71,13 +72,44 @@ class DispatchController extends Controller
 
             $dispatch->recalcStatusAndTotals();
 
+            $advance = 0;
+
+            // IF COMING FROM ORDER, FETCH ORDER ADVANCE
+            if (!empty($data['order_id'])) {
+                $order = Order::with('payment')->find($data['order_id']);
+                $advance = $order->payment->advance_paid ?? 0;
+            }
+
+            // CREATE PAYMENT ENTRY
             Payment::create([
                 'dispatch_id' => $dispatch->id,
                 'payment_status' => \App\Models\Payment::STATUS_UNPAID,
-                'advance_amount' => 0,
+                'advance_amount' => $advance,
                 'total_amount' => 0,
                 'remarks' => null,
             ]);
+
+            // UPDATE ORDER STATUS
+            if (!empty($data['order_id'])) {
+                $order->status = 'dispatched';
+                $order->save();
+            }
+           
+            // if ($data['order_id']) {
+            //     $order = Order::find($data['order_id']);
+            //     $order->status = 'dispatched';
+            //     $order->save();
+            // }
+
+            // Payment::create([
+            //     'dispatch_id' => $dispatch->id,
+            //     'payment_status' => \App\Models\Payment::STATUS_UNPAID,
+            //     'advance_amount' => 0,
+            //     'total_amount' => 0,
+            //     'remarks' => null,
+            // ]);
+
+
 
             return redirect()->route('dispatches.show', $dispatch)->with('success','Dispatch created');
         });
