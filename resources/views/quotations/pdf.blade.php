@@ -11,7 +11,7 @@
       .client {text-align:right;}
       table {width:100%; border-collapse:collapse; margin-top:20px;}
       th, td {padding:8px; border:1px solid #e1e1e1;}
-      th {background:#f7f7f7; text-align:left;}
+      th {background:#ff9800; text-align:left;}
       .right {text-align:right;}
       .total-row td {font-weight:bold;}
       .notes {margin-top:20px; font-size:11px;}
@@ -24,8 +24,12 @@
      <img src="{{ public_path('image/logo.png') }}" style="width:150px; height:150px; object-fit:contain;" alt="Company Logo">
 
       <div><strong>Crewrent Enterprises</strong></div>  
-      <div>Address line, City</div>
-      <div>Phone: +91-9324465314 | Email: info@crewrent.com</div>
+      <div style="font-size:11px; line-height:1.5; color:#444; margin-bottom:4px;">
+          The Avenue, IA Project Rd, Chimatpada,<br>
+          Marol, Andheri East, Mumbai,<br>
+          Maharashtra – 400059
+      </div>
+    <div>Phone: +91-9324465314 | Email: info@crewrent.com</div>
     </div>
     <div class="client">
       <h2>Quotation</h2>
@@ -65,30 +69,82 @@
       </tr>
       @endforeach
     </tbody>
-    <tfoot>
+  <tfoot>
+
+      {{-- Event Duration --}}
       <tr class="total-row">
-        <td colspan="6" class="right">Subtotal</td>
-        <td class="right">{{ number_format($quotation->subtotal,2) }}</td>
+          <td colspan="6" class="right">
+              Event Duration
+          </td>
+          <td class="right">
+              {{ $quotation->total_days }}
+              Day{{ $quotation->total_days > 1 ? 's' : '' }}
+          </td>
       </tr>
+
+      {{-- Subtotal --}}
       <tr class="total-row">
-        <td colspan="6" class="right">Tax</td>
-        <td class="right">{{ number_format($quotation->tax_amount,2) }}</td>
+          <td colspan="6" class="right">Subtotal</td>
+          <td class="right">{{ number_format($quotation->subtotal, 2) }}</td>
       </tr>
+
+      {{-- Tax (only if > 0) --}}
+      @if($quotation->tax_amount > 0)
       <tr class="total-row">
-        <td colspan="6" class="right">Discount</td>
-        <td class="right">- {{ number_format($quotation->discount_amount,2) }}</td>
+          <td colspan="6" class="right">Tax</td>
+          <td class="right">{{ number_format($quotation->tax_amount, 2) }}</td>
       </tr>
+      @endif
+
+      {{-- Extra Charges --}}
+      @if($quotation->extra_charge_type === 'delivery')
       <tr class="total-row">
-        <td colspan="6" class="right">Total</td>
-        <td class="right">{{ number_format($quotation->total_amount,2) }}</td>
+          <td colspan="6" class="right">
+              Delivery Charges
+          </td>
+          <td class="right">
+              {{ number_format($quotation->extra_charge_total, 2) }}
+          </td>
       </tr>
-    </tfoot>
+      @endif
+
+      @if($quotation->extra_charge_type === 'staff')
+      <tr class="total-row">
+          <td colspan="6" class="right">
+              Support Staff
+              ({{ number_format($quotation->extra_charge_rate, 2) }}
+              × {{ $quotation->total_days }} Day{{ $quotation->total_days > 1 ? 's' : '' }})
+          </td>
+          <td class="right">
+              {{ number_format($quotation->extra_charge_total, 2) }}
+          </td>
+      </tr>
+      @endif
+
+      {{-- Discount (only if > 0) --}}
+      @if($quotation->discount_amount > 0)
+      <tr class="total-row">
+          <td colspan="6" class="right">Discount</td>
+          <td class="right">
+              - {{ number_format($quotation->discount_amount, 2) }}
+          </td>
+      </tr>
+      @endif
+
+      {{-- Grand Total --}}
+      <tr class="total-row">
+          <td colspan="6" class="right"><strong>Grand Total</strong></td>
+          <td class="right"><strong>{{ number_format($quotation->total_amount, 2) }}</strong></td>
+      </tr>
+
+  </tfoot>
+
   </table>
 
   <div class="notes">
     <strong>Notes & Terms:</strong>
     <div>
-      {!! nl2br(e($quotation->notes ?: "1) Security deposit applicable as per policy.\n2) 50% advance required to confirm booking. Balance at dispatch.\n3) Quote valid for 7 days.\n4) Equipment must be returned in same condition.")) !!}
+    {!! $quotation->notes !!}
     </div>
   </div>
 

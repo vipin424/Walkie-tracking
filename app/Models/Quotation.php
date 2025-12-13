@@ -8,8 +8,8 @@ use Illuminate\Support\Str;
 class Quotation extends Model
 {
     protected $fillable = [
-        'code','client_name','client_email','client_phone','event_from','event_to',
-        'notes','subtotal','tax_amount','discount_amount','total_amount','status','created_by','pdf_path'
+        'code','client_name','client_email','client_phone','event_from','event_to','total_days',
+        'notes','subtotal','tax_amount','discount_amount','extra_charge_type','extra_charge_rate','extra_charge_total','total_amount','status','created_by','pdf_path'
     ];
 
     protected static function booted()

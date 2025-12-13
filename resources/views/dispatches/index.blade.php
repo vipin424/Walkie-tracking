@@ -1,9 +1,5 @@
 @extends('layouts.app')
-<<<<<<< HEAD
 @section('title', 'Dispatches')
-=======
-@section('title','Dispatches')
->>>>>>> 11eeccf12c8fd97c7200fa704a1d502a1dccf2fd
 @section('content')
 <div class="container-fluid px-4 py-4">
   <!-- Header -->

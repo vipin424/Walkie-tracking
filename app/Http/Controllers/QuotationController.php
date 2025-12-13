@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\QuotationMailable;
 use PDF;
+use Carbon\Carbon;
 
 
 class QuotationController extends Controller
@@ -48,7 +49,10 @@ class QuotationController extends Controller
             'client_name' => 'required|string',
             'client_email' => 'nullable|email',
             'client_phone' => 'nullable|string',
-            
+
+            'event_from' => 'required|date',
+            'event_to'   => 'required|date|after_or_equal:event_from',
+
             'items' => 'required|array|min:1',
             'items.*.item_name' => 'required|string',
             'items.*.quantity' => 'required|numeric|min:1',
@@ -56,45 +60,79 @@ class QuotationController extends Controller
             'items.*.tax_percent' => 'nullable|numeric|min:0',
         ]);
 
-        // calculate totals
+        /** 🔹 CALCULATE TOTAL DAYS */
+        $eventFrom = Carbon::parse($request->event_from);
+        $eventTo   = Carbon::parse($request->event_to);
+
+        // +1 because same day = 1 day
+        $totalDays = $eventFrom->diffInDays($eventTo) + 1;
+
         $subtotal = 0;
         $tax_amount = 0;
         $discount = floatval($request->discount_amount ?? 0);
 
+        /** 🔹 CALCULATE TOTALS (PER DAY LOGIC) */
         foreach ($request->items as $row) {
-            $qty = floatval($row['quantity'] ?? 1);
-            $unit = floatval($row['unit_price'] ?? 0);
-            $taxp = floatval($row['tax_percent'] ?? 0);
-            $lineTotal = $qty * $unit;
-            $lineTax = $lineTotal * ($taxp/100);
-            $subtotal += $lineTotal + $lineTax;
+
+            $qty   = floatval($row['quantity']);
+            $unit  = floatval($row['unit_price']);
+            $taxp  = floatval($row['tax_percent'] ?? 0);
+
+            // ⭐ PER DAY BASE TOTAL
+            $baseTotal = $qty * $unit * $totalDays;
+
+            $lineTax   = $baseTotal * ($taxp / 100);
+            $lineTotal = $baseTotal + $lineTax;
+
+            $subtotal  += $baseTotal;
             $tax_amount += $lineTax;
         }
+        // EXTRA CHARGES
+        $extraChargeType = $request->extra_charge_type;
+        $extraRate = floatval($request->extra_charge_rate ?? 0);
+        $extraTotal = 0;
 
-        $total = $subtotal - $discount;
+        if ($extraChargeType === 'delivery') {
+            $extraTotal = $extraRate; // one time
+        }
 
+        if ($extraChargeType === 'staff') {
+            $extraTotal = $extraRate * $totalDays; // per day
+        }
+
+
+        $total = $subtotal + $tax_amount + $extraTotal - $discount;
+
+        /** 🔹 SAVE QUOTATION */
         $quotation = Quotation::create([
-            'client_name'=> $request->client_name,
-            'client_email'=> $request->client_email,
-            'client_phone'=> $request->client_phone,
-            'event_from'=> $request->event_from ?: null,
-            'event_to'=> $request->event_to ?: null,
-            'notes'=> $request->notes ?: null,
-            'subtotal'=> $subtotal,
-            'tax_amount'=> $tax_amount,
-            'discount_amount'=> $discount,
-            'total_amount'=> $total,
-            'created_by'=> Auth::id(),
+            'client_name' => $request->client_name,
+            'client_email' => $request->client_email,
+            'client_phone' => $request->client_phone,
+            'event_from' => $request->event_from,
+            'event_to' => $request->event_to,
+            'total_days' => $totalDays,
+            'notes' => $request->notes,
+            'subtotal' => $subtotal,
+            'tax_amount' => $tax_amount,
+            'discount_amount' => $discount,
+            'extra_charge_type'  => $extraChargeType,
+            'extra_charge_rate'  => $extraRate,
+            'extra_charge_total' => $extraTotal,
+            'total_amount' => $total,
+            'created_by' => Auth::id(),
             'status' => 'draft',
         ]);
 
-        // save items
+        /** 🔹 SAVE ITEMS (PER DAY TOTAL STORED) */
         foreach ($request->items as $row) {
-            $qty = intval($row['quantity'] ?? 1);
-            $unit = floatval($row['unit_price'] ?? 0);
-            $taxp = floatval($row['tax_percent'] ?? 0);
-            $lineTotal = $qty * $unit;
-            $lineTax = $lineTotal * ($taxp/100);
+
+            $qty   = intval($row['quantity']);
+            $unit  = floatval($row['unit_price']);
+            $taxp  = floatval($row['tax_percent'] ?? 0);
+
+            $baseTotal = $qty * $unit * $totalDays;
+            $lineTax   = $baseTotal * ($taxp / 100);
+
             QuotationItem::create([
                 'quotation_id' => $quotation->id,
                 'item_name' => $row['item_name'],
@@ -103,12 +141,82 @@ class QuotationController extends Controller
                 'quantity' => $qty,
                 'unit_price' => $unit,
                 'tax_percent' => $taxp,
-                'total_price' => $lineTotal + $lineTax,
+                'total_price' => $baseTotal + $lineTax,
             ]);
         }
 
-        return redirect()->route('quotations.show', $quotation)->with('success','Quotation created. You can generate PDF or send now.');
+        return redirect()
+            ->route('quotations.show', $quotation)
+            ->with('success', "Quotation created for {$totalDays} day(s). You can generate PDF or send now.");
     }
+
+    // public function store(Request $request)
+    // {
+    //     $request->validate([
+    //         'client_name' => 'required|string',
+    //         'client_email' => 'nullable|email',
+    //         'client_phone' => 'nullable|string',
+            
+    //         'items' => 'required|array|min:1',
+    //         'items.*.item_name' => 'required|string',
+    //         'items.*.quantity' => 'required|numeric|min:1',
+    //         'items.*.unit_price' => 'required|numeric|min:0',
+    //         'items.*.tax_percent' => 'nullable|numeric|min:0',
+    //     ]);
+
+    //     // calculate totals
+    //     $subtotal = 0;
+    //     $tax_amount = 0;
+    //     $discount = floatval($request->discount_amount ?? 0);
+
+    //     foreach ($request->items as $row) {
+    //         $qty = floatval($row['quantity'] ?? 1);
+    //         $unit = floatval($row['unit_price'] ?? 0);
+    //         $taxp = floatval($row['tax_percent'] ?? 0);
+    //         $lineTotal = $qty * $unit;
+    //         $lineTax = $lineTotal * ($taxp/100);
+    //         $subtotal += $lineTotal + $lineTax;
+    //         $tax_amount += $lineTax;
+    //     }
+
+    //     $total = $subtotal - $discount;
+
+    //     $quotation = Quotation::create([
+    //         'client_name'=> $request->client_name,
+    //         'client_email'=> $request->client_email,
+    //         'client_phone'=> $request->client_phone,
+    //         'event_from'=> $request->event_from ?: null,
+    //         'event_to'=> $request->event_to ?: null,
+    //         'notes'=> $request->notes ?: null,
+    //         'subtotal'=> $subtotal,
+    //         'tax_amount'=> $tax_amount,
+    //         'discount_amount'=> $discount,
+    //         'total_amount'=> $total,
+    //         'created_by'=> Auth::id(),
+    //         'status' => 'draft',
+    //     ]);
+
+    //     // save items
+    //     foreach ($request->items as $row) {
+    //         $qty = intval($row['quantity'] ?? 1);
+    //         $unit = floatval($row['unit_price'] ?? 0);
+    //         $taxp = floatval($row['tax_percent'] ?? 0);
+    //         $lineTotal = $qty * $unit;
+    //         $lineTax = $lineTotal * ($taxp/100);
+    //         QuotationItem::create([
+    //             'quotation_id' => $quotation->id,
+    //             'item_name' => $row['item_name'],
+    //             'item_type' => $row['item_type'] ?? null,
+    //             'description' => $row['description'] ?? null,
+    //             'quantity' => $qty,
+    //             'unit_price' => $unit,
+    //             'tax_percent' => $taxp,
+    //             'total_price' => $lineTotal + $lineTax,
+    //         ]);
+    //     }
+
+    //     return redirect()->route('quotations.show', $quotation)->with('success','Quotation created. You can generate PDF or send now.');
+    // }
 
     /**
      * Display the specified resource.
@@ -133,64 +241,110 @@ class QuotationController extends Controller
      */
     public function update(Request $request, Quotation $quotation)
     {
-        $request->validate([
-            'client_name' => 'required|string',
-            'client_email' => 'nullable|email',
-            'items' => 'required|array|min:1',
-        ]);
+            $request->validate([
+                'client_name' => 'required|string',
+                'client_email' => 'nullable|email',
+                'client_phone' => 'nullable|string',
 
-        // recalc totals same as store
-        $subtotal = 0;
-        $tax_amount = 0;
-        $discount = floatval($request->discount_amount ?? 0);
+                'event_from' => 'required|date',
+                'event_to'   => 'required|date|after_or_equal:event_from',
 
-        foreach ($request->items as $row) {
-            $qty = floatval($row['quantity'] ?? 1);
-            $unit = floatval($row['unit_price'] ?? 0);
-            $taxp = floatval($row['tax_percent'] ?? 0);
-            $lineTotal = $qty * $unit;
-            $lineTax = $lineTotal * ($taxp/100);
-            $subtotal += $lineTotal + $lineTax;
-            $tax_amount += $lineTax;
-        }
-
-        $total = $subtotal - $discount;
-
-        $quotation->update([
-            'client_name'=> $request->client_name,
-            'client_email'=> $request->client_email,
-            'client_phone'=> $request->client_phone,
-            'event_from'=> $request->event_from ?: null,
-            'event_to'=> $request->event_to ?: null,
-            'notes'=> $request->notes ?: null,
-            'subtotal'=> $subtotal,
-            'tax_amount'=> $tax_amount,
-            'discount_amount'=> $discount,
-            'total_amount'=> $total,
-        ]);
-
-        // replace items: simple approach remove & recreate
-        $quotation->items()->delete();
-        foreach ($request->items as $row) {
-            $qty = intval($row['quantity'] ?? 1);
-            $unit = floatval($row['unit_price'] ?? 0);
-            $taxp = floatval($row['tax_percent'] ?? 0);
-            $lineTotal = $qty * $unit;
-            $lineTax = $lineTotal * ($taxp/100);
-            QuotationItem::create([
-                'quotation_id' => $quotation->id,
-                'item_name' => $row['item_name'],
-                'item_type' => $row['item_type'] ?? null,
-                'description' => $row['description'] ?? null,
-                'quantity' => $qty,
-                'unit_price' => $unit,
-                'tax_percent' => $taxp,
-                'total_price' => $lineTotal + $lineTax,
+                'items' => 'required|array|min:1',
+                'items.*.item_name' => 'required|string',
+                'items.*.quantity' => 'required|numeric|min:1',
+                'items.*.unit_price' => 'required|numeric|min:0',
+                'items.*.tax_percent' => 'nullable|numeric|min:0',
             ]);
+
+            /** 🔹 CALCULATE TOTAL DAYS */
+            $eventFrom = Carbon::parse($request->event_from);
+            $eventTo   = Carbon::parse($request->event_to);
+
+            // Same day booking = 1 day
+            $totalDays = $eventFrom->diffInDays($eventTo) + 1;
+
+            $subtotal = 0;
+            $tax_amount = 0;
+            $discount = floatval($request->discount_amount ?? 0);
+
+            /** 🔹 RECALCULATE TOTALS (PER DAY) */
+            foreach ($request->items as $row) {
+
+                $qty  = floatval($row['quantity']);
+                $unit = floatval($row['unit_price']);
+                $taxp = floatval($row['tax_percent'] ?? 0);
+
+                $baseTotal = $qty * $unit * $totalDays;
+                $lineTax   = $baseTotal * ($taxp / 100);
+
+                $subtotal   += $baseTotal;
+                $tax_amount += $lineTax;
+            }
+
+            // EXTRA CHARGES
+            $extraChargeType = $request->extra_charge_type;
+            $extraRate = floatval($request->extra_charge_rate ?? 0);
+            $extraTotal = 0;
+
+            if ($extraChargeType == 'delivery') {
+                $extraTotal = floatval($request->delivery_charge_amount ?? 0); // one time
+            }
+
+            if ($extraChargeType == 'staff') {
+                $extraTotal = $extraRate * $totalDays; // per day
+            }
+
+
+            $total = $subtotal + $tax_amount + $extraTotal - $discount;
+            //$total = $subtotal + $tax_amount - $discount;
+
+            /** 🔹 UPDATE QUOTATION */
+            $quotation->update([
+                'client_name' => $request->client_name,
+                'client_email' => $request->client_email,
+                'client_phone' => $request->client_phone,
+                'event_from' => $request->event_from,
+                'event_to' => $request->event_to,
+                'total_days' => $totalDays,
+                'notes' => $request->notes,
+                'subtotal' => $subtotal,
+                'tax_amount' => $tax_amount,
+                'discount_amount' => $discount,
+                'extra_charge_type'  => $extraChargeType,
+                'extra_charge_rate'  => $extraRate,
+                'extra_charge_total' => $extraTotal,
+                'total_amount' => $total,
+            ]);
+
+            /** 🔹 REPLACE ITEMS */
+            $quotation->items()->delete();
+
+            foreach ($request->items as $row) {
+
+                $qty  = intval($row['quantity']);
+                $unit = floatval($row['unit_price']);
+                $taxp = floatval($row['tax_percent'] ?? 0);
+
+                $baseTotal = $qty * $unit * $totalDays;
+                $lineTax   = $baseTotal * ($taxp / 100);
+
+                QuotationItem::create([
+                    'quotation_id' => $quotation->id,
+                    'item_name' => $row['item_name'],
+                    'item_type' => $row['item_type'] ?? null,
+                    'description' => $row['description'] ?? null,
+                    'quantity' => $qty,
+                    'unit_price' => $unit,
+                    'tax_percent' => $taxp,
+                    'total_price' => $baseTotal + $lineTax,
+                ]);
+            }
+
+            return redirect()
+                ->route('quotations.show', $quotation)
+                ->with('success', "Quotation updated successfully for {$totalDays} day(s).");
         }
 
-        return redirect()->route('quotations.show', $quotation)->with('success','Quotation updated.');
-    }
 
     /**
      * Remove the specified resource from storage.
@@ -269,38 +423,65 @@ class QuotationController extends Controller
     {
         $request->validate([
             'to_phone' => 'required|string',
-            'message' => 'nullable|string'
+            'message'  => 'nullable|string',
         ]);
 
-        // ensure PDF exists
-        if (!$quotation->pdf_path || !Storage::exists(str_replace('storage/','public/',$quotation->pdf_path))) {
+        // Ensure PDF exists
+        if (
+            !$quotation->pdf_path ||
+            !Storage::exists(str_replace('storage/', 'public/', $quotation->pdf_path))
+        ) {
             $this->generatePdf($quotation);
             $quotation->refresh();
         }
 
-        // Generate signed download URL valid for 7 days
-        $url = \URL::signedRoute('quotations.download', ['quotation' => $quotation->id], now()->addDays(7));
+        $url = \URL::signedRoute(
+            'quotations.download',
+            ['quotation' => $quotation->id],
+            now()->addDays(7)
+        );
 
-        $message = $request->message ?: "Hello {$quotation->client_name},\nHere is the quotation {$quotation->code} from Crewrent. Download: {$url}\nTotal: ₹" . number_format($quotation->total_amount,2) . "\nPlease reply to confirm.";
+        $messageText =
+            "Hello {$quotation->client_name},\n\n" .
+            "Here is the quotation {$quotation->code}.\n\n" .
+            "Total Amount: ₹" . number_format($quotation->total_amount, 2) . "\n\n" .
+            "Download Quotation:\n{$url}\n\n" .
+            "Please reply to confirm.";
 
-        // build wa.me link
-        // ensure phone has country code (if user not input, you might prepend 91)
         $phone = preg_replace('/\D+/', '', $request->to_phone);
         if (strlen($phone) <= 10) {
-            // assume India local number: prepend 91
             $phone = '91' . $phone;
         }
 
-        $waLink = 'https://wa.me/' . $phone . '?text=' . urlencode($message);
+        $waLink = 'https://wa.me/' . $phone . '?text=' . rawurlencode($messageText);
 
         QuotationLog::create([
             'quotation_id' => $quotation->id,
-            'user_id' => Auth::id(),
-            'action' => 'sent_whatsapp_link',
-            'meta' => json_encode(['to' => $phone, 'link' => $url]),
+            'user_id'      => Auth::id(),
+            'action'       => 'sent_whatsapp_link',
+            'meta'         => json_encode(['to' => $phone, 'link' => $url]),
         ]);
 
-        // redirect admin to wa link (opens WhatsApp Web/mobile)
         return redirect($waLink);
+    }
+
+
+
+    public function download(Quotation $quotation)
+    {
+        // Ensure PDF exists
+        if (
+            !$quotation->pdf_path ||
+            !Storage::exists(str_replace('storage/', 'public/', $quotation->pdf_path))
+        ) {
+            abort(404, 'Quotation PDF not found.');
+        }
+
+        $path = str_replace('storage/', 'public/', $quotation->pdf_path);
+
+        return Storage::download(
+            $path,
+            $quotation->code . '.pdf'
+        );
     }
 }

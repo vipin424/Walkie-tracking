@@ -175,14 +175,85 @@
             </tr>
             @endforeach
           </tbody>
+          
           <tfoot class="bg-light">
-            <tr>
-              <td colspan="5" class="px-4 py-3 text-end fw-semibold">Grand Total:</td>
-              <td class="px-4 py-3 text-end">
-                <span class="fs-5 fw-bold text-warning">₹{{ number_format($quotation->total_amount, 2) }}</span>
-              </td>
-            </tr>
+
+              {{-- Event Duration --}}
+              <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
+                      Event Duration:
+                  </td>
+                  <td class="px-4 py-3 text-end fw-semibold">
+                      {{ $quotation->total_days }}
+                      Day{{ $quotation->total_days > 1 ? 's' : '' }}
+                  </td>
+              </tr>
+
+              {{-- Total Tax --}}
+              @if($quotation->tax_amount > 0)
+              <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
+                      Total Tax:
+                  </td>
+                  <td class="px-4 py-3 text-end fw-semibold">
+                      ₹{{ number_format($quotation->tax_amount, 2) }}
+                  </td>
+              </tr>
+              @endif
+
+              {{-- Extra Charges --}}
+              @if($quotation->extra_charge_type === 'delivery')
+              <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
+                      Delivery Charges:
+                  </td>
+                  <td class="px-4 py-3 text-end fw-semibold">
+                      ₹{{ number_format($quotation->extra_charge_total, 2) }}
+                  </td>
+              </tr>
+              @endif
+
+              @if($quotation->extra_charge_type === 'staff')
+              <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
+                      Support Staff
+                      (₹{{ number_format($quotation->extra_charge_rate, 2) }} ×
+                      {{ $quotation->total_days }}
+                      Day{{ $quotation->total_days > 1 ? 's' : '' }}):
+                  </td>
+                  <td class="px-4 py-3 text-end fw-semibold">
+                      ₹{{ number_format($quotation->extra_charge_total, 2) }}
+                  </td>
+              </tr>
+              @endif
+
+              {{-- Discount --}}
+              @if($quotation->discount_amount > 0)
+              <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
+                      Discount:
+                  </td>
+                  <td class="px-4 py-3 text-end fw-semibold text-danger">
+                      − ₹{{ number_format($quotation->discount_amount, 2) }}
+                  </td>
+              </tr>
+              @endif
+
+              {{-- Grand Total --}}
+              <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold">
+                      Grand Total:
+                  </td>
+                  <td class="px-4 py-3 text-end">
+                      <span class="fs-5 fw-bold text-warning">
+                          ₹{{ number_format($quotation->total_amount, 2) }}
+                      </span>
+                  </td>
+              </tr>
+
           </tfoot>
+
+
         </table>
       </div>
     </div>
@@ -206,7 +277,7 @@
 <!-- Email Modal -->
 <div class="modal fade" id="emailModal" tabindex="-1" aria-labelledby="emailModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <form action="{{ route('quotations.sendEmail', $quotation) }}" method="POST">
+    <form action="{{ route('quotations.sendEmail', $quotation) }}" method="POST" id="sendEmailForm">
       @csrf
       <div class="modal-content border-0 shadow">
         <div class="modal-header bg-success bg-opacity-10 border-0 p-4">
@@ -227,9 +298,13 @@
         </div>
         <div class="modal-footer border-0 p-4">
           <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-          <button class="btn btn-success">
-            <i class="bi bi-send me-2"></i>Send Email
+          <button type="submit" class="btn btn-success" id="sendEmailBtn">
+              <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
+              <span class="btn-text">
+                  <i class="bi bi-send me-2"></i>Send Email
+              </span>
           </button>
+
         </div>
       </div>
     </form>
@@ -292,4 +367,28 @@
     border-radius: 0.5rem;
   }
 </style>
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const form = document.getElementById('sendEmailForm');
+    const btn  = document.getElementById('sendEmailBtn');
+    const spinner = btn.querySelector('.spinner-border');
+    const btnText = btn.querySelector('.btn-text');
+
+    form.addEventListener('submit', function () {
+        // Disable button
+        btn.disabled = true;
+
+        // Show spinner
+        spinner.classList.remove('d-none');
+
+        // Change text
+        btnText.innerHTML = 'Sending...';
+    });
+
+});
+</script>
+@endpush
+
 @endsection

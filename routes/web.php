@@ -38,7 +38,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('quotations/{quotation}/generate-pdf', [QuotationController::class, 'generatePdf'])->name('quotations.generatePdf');
     Route::post('quotations/{quotation}/send-email', [QuotationController::class, 'sendEmail'])->name('quotations.sendEmail');
     Route::post('quotations/{quotation}/send-whatsapp', [QuotationController::class, 'sendWhatsapp'])->name('quotations.sendWhatsapp');
-
+    Route::get('quotations/{quotation}/download',[QuotationController::class, 'download'])->name('quotations.download');
 
     Route::resource('orders', OrderController::class);
     Route::post('/orders/{order}/approve', [OrderController::class, 'approve'])->name('orders.approve');

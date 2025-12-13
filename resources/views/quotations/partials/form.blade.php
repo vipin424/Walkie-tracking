@@ -26,6 +26,33 @@
     </div>
 
     <div class="row g-3 mt-2">
+
+      <div class="col-md-6">
+          <label class="form-label fw-semibold">Event From</label>
+          <input type="date" name="event_from" id="event_from" class="form-control"
+          value="{{ old('event_from', $quotation && $quotation->event_from ? \Carbon\Carbon::parse($quotation->event_from)->format('Y-m-d') : '') }}">
+      </div>
+
+      <div class="col-md-6">
+          <label class="form-label fw-semibold">Event To</label>
+          <input type="date" name="event_to" id="event_to" class="form-control"
+          value="{{ old('event_to', $quotation && $quotation->event_to ? \Carbon\Carbon::parse($quotation->event_to)->format('Y-m-d') : '') }}">
+      </div>
+
+    <div class="col-md-12">
+        <label class="form-label fw-semibold">Notes</label>
+        <textarea
+            name="notes"
+            id="notes_editor"
+            class="form-control"
+            rows="4"
+        >{{ old('notes', $quotation->notes ?? '') }}</textarea>
+    </div>
+
+
+    </div>
+
+    <!-- <div class="row g-3 mt-2">
       <div class="col-md-6">
         <label class="form-label fw-semibold">Event From</label>
         <input type="date" name="event_from" class="form-control" 
@@ -35,7 +62,7 @@
         <label class="form-label fw-semibold">Notes</label>
         <textarea name="notes" class="form-control" rows="1">{{ old('notes', $quotation->notes ?? '') }}</textarea>
       </div>
-    </div>
+    </div> -->
   </div>
 </div>
 
@@ -125,6 +152,90 @@
             <span class="text-muted">Tax (calculated):</span>
             <span class="fw-semibold">₹ <span id="tax_amount">0.00</span></span>
           </div>
+          <div class="d-flex justify-content-between mb-3">
+            <span class="text-muted">Event Duration:</span>
+            <span class="fw-semibold">
+                <span id="total_days">1</span> Day(s)
+            </span>
+        </div>
+        <!-- Additional Charges -->
+        <div class="mb-3">
+            <span class="text-muted d-block mb-2">Additional Charges:</span>
+
+            <!-- Delivery Charges -->
+            <div class="form-check d-flex align-items-center gap-2 mb-2">
+                <input class="form-check-input extra-charge-option mt-0"
+                      type="radio"
+                      name="extra_charge_type"
+                      id="delivery_charge_option"
+                      value="delivery" {{ old('extra_charge_type', $quotation->extra_charge_type ?? '') === 'delivery' ? 'checked' : '' }}>
+                <label class="form-check-label fw-semibold" for="delivery_charge_option">
+                    Delivery Charges
+                </label>
+            </div>
+
+            <div id="delivery_charge_input" class="ms-4 mb-3" style="{{ old('extra_charge_type', $quotation->extra_charge_type ?? '') === 'delivery' ? '' : 'display:none;' }}">
+                <div class="input-group" style="max-width:200px;">
+                    <span class="input-group-text">₹</span>
+                    <input type="number"
+                          step="0.01"
+                          name="delivery_charge_amount"
+                          class="form-control extra-charge-amount"
+                          id="delivery_charge_amount"
+                          value="{{ old('extra_charge_total', $quotation->extra_charge_total ?? '') }}"
+                          placeholder="Enter amount">
+                </div>
+            </div>
+
+            <!-- Attendance / Support Staff -->
+            <div class="form-check d-flex align-items-center gap-2 mb-2">
+                <input class="form-check-input extra-charge-option mt-0"
+                      type="radio"
+                      name="extra_charge_type"
+                      id="staff_charge_option"
+                      value="staff" {{ old('extra_charge_type', $quotation->extra_charge_type ?? '') === 'staff' ? 'checked' : '' }}>
+                <label class="form-check-label fw-semibold" for="staff_charge_option">
+                    Attendance / Support Staff <span class="text-muted">(Per Day)</span>
+                </label>
+
+              <div id="staff_charge_input"
+                  class="ms-4 mb-2"
+                  style="{{ old('extra_charge_type', $quotation->extra_charge_type ?? '') === 'staff' ? '' : 'display:none;' }}">
+                  <div class="input-group mb-1" style="max-width:200px;">
+                      <span class="input-group-text">₹</span>
+                      <input type="number"
+                            step="0.01"
+                            class="form-control"
+                            name="extra_charge_rate"
+                            id="staff_charge_amount"
+                            value="{{ old('extra_charge_rate', $quotation->extra_charge_rate ?? '') }}"
+                            placeholder="Per day amount">
+                  </div>
+
+                    <small class="text-muted">
+                        Total for <span id="staff_days">1</span> day(s):
+                        <strong>₹ <span id="staff_total">0.00</span></strong>
+                    </small>
+                </div>
+
+            </div>
+
+            <div id="staff_charge_input" class="ms-4 mb-2" style="display:none;">
+                <div class="input-group" style="max-width:200px;">
+                    <span class="input-group-text">₹</span>
+                    <input type="number"
+                          step="0.01"
+                          class="form-control extra-charge-amount"
+                          id="staff_charge_amount"
+                          placeholder="Per day amount">
+                </div>
+                <small class="text-muted d-block mt-1">
+                    This amount will be multiplied by total days
+                </small>
+            </div>
+        </div>
+
+
           <div class="d-flex justify-content-between align-items-center mb-3">
             <label class="text-muted mb-0">Discount:</label>
             <div class="input-group" style="width: 150px;">
@@ -171,6 +282,192 @@
 
 @push('scripts')
 <script>
+document.addEventListener('DOMContentLoaded', function(){
+
+    /* ======================
+       TOTAL DAYS
+    ====================== */
+    function getTotalDays() {
+        const from = document.getElementById('event_from').value;
+        const to   = document.getElementById('event_to').value;
+
+        if (!from || !to) return 1;
+
+        const start = new Date(from);
+        const end   = new Date(to);
+
+        const diff = (end - start) / (1000 * 60 * 60 * 24);
+        return diff >= 0 ? diff + 1 : 1;
+    }
+
+    /* ======================
+       EXTRA CHARGE CALC
+    ====================== */
+    function getExtraCharge() {
+        const selected = document.querySelector('input[name="extra_charge_type"]:checked');
+        if (!selected) return 0;
+
+        const days = getTotalDays();
+
+        // Delivery → one time
+        if (selected.value === 'delivery') {
+            return parseFloat(document.getElementById('delivery_charge_amount').value) || 0;
+        }
+
+        // Staff → per day
+        if (selected.value === 'staff') {
+            const perDay = parseFloat(document.getElementById('staff_charge_amount').value) || 0;
+            const total = perDay * days;
+
+            document.getElementById('staff_days').innerText = days;
+            document.getElementById('staff_total').innerText = total.toFixed(2);
+
+            return total;
+        }
+
+        return 0;
+    }
+
+    /* ======================
+       ROW CALCULATION
+    ====================== */
+    function recalcRow(row){
+        const qty  = parseFloat(row.querySelector('.qty').value) || 0;
+        const unit = parseFloat(row.querySelector('.unit').value) || 0;
+        const tax  = parseFloat(row.querySelector('.tax').value) || 0;
+        const days = getTotalDays();
+
+        const baseTotal = qty * unit * days;
+        const taxAmount = baseTotal * (tax / 100);
+
+        row.querySelector('.line_total').innerText = '₹' + (baseTotal + taxAmount).toFixed(2);
+        row.dataset.baseAmount = baseTotal.toFixed(2);
+        row.dataset.taxAmount  = taxAmount.toFixed(2);
+    }
+
+    /* ======================
+       SUMMARY CALC
+    ====================== */
+    function recalcAll(){
+        let subtotal = 0;
+        let totalTax = 0;
+
+        document.querySelectorAll('.item-row').forEach(row => {
+            recalcRow(row);
+            subtotal += parseFloat(row.dataset.baseAmount || 0);
+            totalTax += parseFloat(row.dataset.taxAmount || 0);
+        });
+
+        const discount    = parseFloat(document.getElementById('discount').value) || 0;
+        const extraCharge = getExtraCharge();
+
+        const total = subtotal + totalTax + extraCharge - discount;
+
+        document.getElementById('subtotal').innerText = subtotal.toFixed(2);
+        document.getElementById('tax_amount').innerText = totalTax.toFixed(2);
+        document.getElementById('total_amount').innerText = total.toFixed(2);
+        document.getElementById('total_days').innerText = getTotalDays();
+    }
+
+    /* ======================
+       EXTRA CHARGE UI
+    ====================== */
+    const deliveryInput = document.getElementById('delivery_charge_input');
+    const staffInput    = document.getElementById('staff_charge_input');
+
+    document.querySelectorAll('.extra-charge-option').forEach(opt => {
+        opt.addEventListener('change', function () {
+            deliveryInput.style.display = 'none';
+            staffInput.style.display = 'none';
+
+            document.getElementById('delivery_charge_amount').value = '';
+            document.getElementById('staff_charge_amount').value = '';
+
+            if (this.value === 'delivery') deliveryInput.style.display = 'block';
+            if (this.value === 'staff') staffInput.style.display = 'block';
+
+            recalcAll();
+        });
+    });
+
+    /* ======================
+       EVENT LISTENERS
+    ====================== */
+    document.addEventListener('input', function(e){
+        if (
+            e.target.matches('.qty') ||
+            e.target.matches('.unit') ||
+            e.target.matches('.tax') ||
+            e.target.matches('#discount') ||
+            e.target.matches('#delivery_charge_amount') ||
+            e.target.matches('#staff_charge_amount')
+        ) {
+            recalcAll();
+        }
+    });
+
+    document.getElementById('event_from').addEventListener('change', recalcAll);
+    document.getElementById('event_to').addEventListener('change', recalcAll);
+
+    /* ======================
+       ADD ROW
+    ====================== */
+    document.getElementById('add-row').addEventListener('click', function(){
+        const tbody = document.querySelector('#items-table tbody');
+        const index = tbody.children.length;
+
+        const tr = document.createElement('tr');
+        tr.classList.add('item-row');
+        tr.innerHTML = `
+            <td><input name="items[${index}][item_name]" class="form-control form-control-sm"></td>
+            <td><input name="items[${index}][item_type]" class="form-control form-control-sm"></td>
+            <td><input name="items[${index}][description]" class="form-control form-control-sm"></td>
+            <td><input name="items[${index}][quantity]" class="form-control form-control-sm qty text-center" value="1"></td>
+            <td><input name="items[${index}][unit_price]" class="form-control form-control-sm unit" value="0"></td>
+            <td><input name="items[${index}][tax_percent]" class="form-control form-control-sm tax text-center" value="0"></td>
+            <td class="line_total text-end fw-semibold">₹0.00</td>
+            <td><button type="button" class="btn btn-sm btn-outline-danger remove-row">×</button></td>
+        `;
+        tbody.appendChild(tr);
+        recalcAll();
+    });
+
+    /* ======================
+       REMOVE ROW
+    ====================== */
+    document.addEventListener('click', function(e){
+        if (e.target.closest('.remove-row')) {
+            const rows = document.querySelectorAll('.item-row');
+            if (rows.length > 1) {
+                e.target.closest('tr').remove();
+                recalcAll();
+            }
+        }
+    });
+
+    // Initial run
+    recalcAll();
+});
+</script>
+
+<script src="https://cdn.ckeditor.com/ckeditor5/40.2.0/classic/ckeditor.js"></script>
+
+<script>
+    ClassicEditor
+        .create(document.querySelector('#notes_editor'), {
+            toolbar: [
+                'bold', 'italic', 'underline',
+                '|',
+                'bulletedList', 'numberedList',
+                '|',
+                'undo', 'redo'
+            ]
+        })
+        .catch(error => {
+            console.error(error);
+        });
+</script>
+<!-- <script>
 document.addEventListener('DOMContentLoaded', function(){
     function recalcRow(row){
         const qty = parseFloat(row.querySelector('.qty').value) || 0;
@@ -274,7 +571,7 @@ document.addEventListener('DOMContentLoaded', function(){
         alert('Please save the quotation first. After saving, you can send WhatsApp message from the quotation details page.');
     });
 });
-</script>
+</script> -->
 
 <style>
   .table-hover tbody tr:hover {
