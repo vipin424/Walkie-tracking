@@ -1,133 +1,394 @@
 @extends('layouts.app')
-@section('title','Order Details')
-
+@section('title', 'Quotation Details')
 @section('content')
 <div class="container-fluid px-4 py-4">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <a href="{{ route('quotations.index') }}" class="text-decoration-none text-muted mb-2 d-inline-block">
+        <i class="bi bi-arrow-left me-2"></i>Back to Quotations
+      </a>
+      <h4 class="mb-1 fw-bold">Quotation: {{ $quotation->code }}</h4>
+      <p class="text-muted mb-0">View and manage quotation details</p>
+    </div>
+    <div>
+      @php
+        $statusColors = [
+          'pending' => 'warning',
+          'approved' => 'success',
+          'rejected' => 'danger'
+        ];
+        $color = $statusColors[$quotation->status] ?? 'secondary';
+      @endphp
+      <span class="badge bg-{{ $color }} px-4 py-2 fs-6" style="background-color: rgba(var(--bs-{{ $color }}-rgb), 0.15) !important; color: var(--bs-{{ $color }}) !important;">
+        {{ ucfirst($quotation->status) }}
+      </span>
+    </div>
+  </div>
 
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="fw-bold mb-1">Order Details</h4>
-            <p class="text-muted mb-0">Order #{{ $order->order_code }}</p>
-        </div>
-
-        <a href="{{ route('orders.index') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-2"></i>Back
+  <!-- Action Buttons -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4">
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{{ route('quotations.edit', $quotation) }}" class="btn btn-warning">
+          <i class="bi bi-pencil-square me-2"></i>Edit Quotation
         </a>
+
+        <form action="{{ route('quotations.generatePdf', $quotation) }}" method="POST" class="d-inline">
+          @csrf
+          <button class="btn btn-primary">
+            <i class="bi bi-file-earmark-pdf me-2"></i>Generate PDF
+          </button>
+        </form>
+
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#emailModal">
+          <i class="bi bi-envelope me-2"></i>Send Email
+        </button>
+
+        <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#waModal">
+          <i class="bi bi-whatsapp me-2"></i>Send WhatsApp
+        </button>
+
+        @if($quotation->pdf_path)
+          <a href="{{ Storage::url(str_replace('storage/','public/',$quotation->pdf_path)) }}" target="_blank" class="btn btn-outline-secondary">
+            <i class="bi bi-eye me-2"></i>View PDF
+          </a>
+        @endif
+      </div>
     </div>
+  </div>
 
-    <!-- ORDER INFO -->
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-header bg-white p-4 border-0">
-            <h5 class="fw-semibold"><i class="bi bi-info-circle text-warning me-2"></i>Order Information</h5>
-        </div>
-
-        <div class="card-body p-4 row g-3">
-            <div class="col-md-4">
-                <strong>Client:</strong> {{ $order->client->name }}
-            </div>
-
-            <div class="col-md-4">
-                <strong>Order Date:</strong> {{ $order->order_date }}
-            </div>
-
-            <div class="col-md-4">
-                <strong>Start Date:</strong> {{ $order->start_date }}
-            </div>
-
-            <div class="col-md-4">
-                <strong>End Date:</strong> {{ $order->end_date }}
-            </div>
-
-            <div class="col-md-4">
-                <strong>Event:</strong> {{ $order->event_name ?? '-' }}
-            </div>
-
-            <div class="col-md-4">
-                <strong>Location:</strong> {{ $order->location ?? '-' }}
-            </div>
-
-            <div class="col-md-4">
-                <strong>Delivery Type:</strong> {{ ucfirst($order->delivery_type) }}
-            </div>
-
-            @if($order->delivery_type == 'delivery')
-            <div class="col-md-4">
-                <strong>Delivery Charges:</strong> ₹{{ $order->delivery_charges }}
-            </div>
-            @endif
-
-            <div class="col-md-12">
-                <strong>Remarks:</strong> {{ $order->remarks ?? '-' }}
-            </div>
-        </div>
-    </div>
-
-    <!-- ORDER ITEMS -->
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-header p-4 bg-white border-0">
-            <h5 class="fw-semibold"><i class="bi bi-box-seam text-success me-2"></i>Order Items</h5>
-        </div>
-
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="bg-light">
-                    <tr>
-                        <th>#</th>
-                        <th>Item Type</th>
-                        <th>Brand</th>
-                        <th>Model</th>
-                        <th>Qty</th>
-                        <th>Rental Type</th>
-                        <th>Rate</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @foreach($order->items as $i)
-                    <tr>
-                        <td>{{ $loop->iteration }}</td>
-                        <td>{{ $i->item_type }}</td>
-                        <td>{{ $i->brand }}</td>
-                        <td>{{ $i->model }}</td>
-                        <td>{{ $i->quantity }}</td>
-                        <td>{{ ucfirst($i->rental_type) }}</td>
-                        <td>
-                            @if($i->rental_type=='daily')
-                                ₹{{ $i->rate_per_day }}
-                            @else
-                                ₹{{ $i->rate_per_month }}
-                            @endif
-                        </td>
-                        <td>₹{{ $i->total_amount }}</td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- PAYMENT -->
-    <div class="card shadow-sm border-0 mb-4">
+  <div class="row">
+    <!-- Client Information -->
+    <div class="col-lg-4 mb-4">
+      <div class="card border-0 shadow-sm h-100">
         <div class="card-header bg-white border-0 p-4">
-            <h5 class="fw-semibold"><i class="bi bi-cash-coin text-warning me-2"></i>Payment Summary</h5>
+          <h5 class="mb-0 fw-semibold">
+            <i class="bi bi-person-circle me-2 text-warning"></i>Client Information
+          </h5>
         </div>
-
-        <div class="card-body p-4 row">
-            <div class="col-md-4">
-                <strong>Total Amount:</strong> ₹{{ $order->payment->total_amount }}
-            </div>
-
-            <div class="col-md-4">
-                <strong>Advance Paid:</strong> ₹{{ $order->payment->advance_paid }}
-            </div>
-
-            <div class="col-md-4">
-                <strong>Due Amount:</strong> ₹{{ $order->payment->due_amount }}
-            </div>
+        <div class="card-body p-4">
+          <div class="mb-3">
+            <label class="text-muted small fw-semibold mb-1">Name</label>
+            <p class="mb-0 fw-medium">{{ $quotation->client_name }}</p>
+          </div>
+          <div class="mb-3">
+            <label class="text-muted small fw-semibold mb-1">Phone</label>
+            <p class="mb-0">
+              <i class="bi bi-telephone-fill text-success me-2"></i>{{ $quotation->client_phone }}
+            </p>
+          </div>
+          <div class="mb-0">
+            <label class="text-muted small fw-semibold mb-1">Email</label>
+            <p class="mb-0">
+              <i class="bi bi-envelope-fill text-primary me-2"></i>{{ $quotation->client_email }}
+            </p>
+          </div>
         </div>
+      </div>
     </div>
 
+    <!-- Summary Information -->
+    <div class="col-lg-8 mb-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-0 p-4">
+          <h5 class="mb-0 fw-semibold">
+            <i class="bi bi-calculator me-2 text-warning"></i>Quotation Summary
+          </h5>
+        </div>
+        <div class="card-body p-4">
+          <div class="row">
+            <div class="col-md-3 mb-3">
+              <div class="p-3 bg-light rounded">
+                <label class="text-muted small fw-semibold mb-1 d-block">Subtotal</label>
+                <h5 class="mb-0 fw-bold">₹{{ number_format($quotation->subtotal, 2) }}</h5>
+              </div>
+            </div>
+            <div class="col-md-3 mb-3">
+              <div class="p-3 bg-light rounded">
+                <label class="text-muted small fw-semibold mb-1 d-block">Tax Amount</label>
+                <h5 class="mb-0 fw-bold text-info">₹{{ number_format($quotation->tax_amount, 2) }}</h5>
+              </div>
+            </div>
+            <div class="col-md-3 mb-3">
+              <div class="p-3 bg-light rounded">
+                <label class="text-muted small fw-semibold mb-1 d-block">Discount</label>
+                <h5 class="mb-0 fw-bold text-danger">₹{{ number_format($quotation->discount_amount, 2) }}</h5>
+              </div>
+            </div>
+            <div class="col-md-3 mb-3">
+              <div class="p-3 bg-warning bg-opacity-10 rounded border border-warning">
+                <label class="text-muted small fw-semibold mb-1 d-block">Total Amount</label>
+                <h5 class="mb-0 fw-bold text-warning">₹{{ number_format($quotation->total_amount, 2) }}</h5>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Items Table -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 p-4">
+      <h5 class="mb-0 fw-semibold">
+        <i class="bi bi-box-seam me-2 text-warning"></i>Quotation Items
+      </h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="bg-light">
+            <tr>
+              <th class="px-4 py-3 text-muted fw-semibold">#</th>
+              <th class="px-4 py-3 text-muted fw-semibold">Item Details</th>
+              <th class="px-4 py-3 text-muted fw-semibold">Type</th>
+              <th class="px-4 py-3 text-muted fw-semibold text-center">Quantity</th>
+              <th class="px-4 py-3 text-muted fw-semibold text-end">Unit Price</th>
+              <th class="px-4 py-3 text-muted fw-semibold text-end">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach($quotation->items as $i => $it)
+            <tr>
+              <td class="px-4 py-3">
+                <span class="badge bg-secondary bg-opacity-10 text-secondary">{{ $i+1 }}</span>
+              </td>
+              <td class="px-4 py-3">
+                <div class="fw-medium">{{ $it->item_name }}</div>
+                @if($it->description)
+                  <small class="text-muted">{{ $it->description }}</small>
+                @endif
+              </td>
+              <td class="px-4 py-3">
+                <span class="badge bg-info bg-opacity-10 text-info">{{ $it->item_type }}</span>
+              </td>
+              <td class="px-4 py-3 text-center">
+                <span class="fw-semibold">{{ $it->quantity }}</span>
+              </td>
+              <td class="px-4 py-3 text-end">
+                ₹{{ number_format($it->unit_price, 2) }}
+              </td>
+              <td class="px-4 py-3 text-end">
+                <span class="fw-semibold text-dark">₹{{ number_format($it->total_price, 2) }}</span>
+              </td>
+            </tr>
+            @endforeach
+          </tbody>
+          
+          <tfoot class="bg-light">
+
+              {{-- Event Duration --}}
+              <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
+                      Event Duration:
+                  </td>
+                  <td class="px-4 py-3 text-end fw-semibold">
+                      {{ $quotation->total_days }}
+                      Day{{ $quotation->total_days > 1 ? 's' : '' }}
+                  </td>
+              </tr>
+
+              {{-- Total Tax --}}
+              @if($quotation->tax_amount > 0)
+              <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
+                      Total Tax:
+                  </td>
+                  <td class="px-4 py-3 text-end fw-semibold">
+                      ₹{{ number_format($quotation->tax_amount, 2) }}
+                  </td>
+              </tr>
+              @endif
+
+              {{-- Extra Charges --}}
+              @if($quotation->extra_charge_type === 'delivery')
+              <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
+                      Delivery Charges:
+                  </td>
+                  <td class="px-4 py-3 text-end fw-semibold">
+                      ₹{{ number_format($quotation->extra_charge_total, 2) }}
+                  </td>
+              </tr>
+              @endif
+
+              @if($quotation->extra_charge_type === 'staff')
+              <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
+                      Support Staff
+                      (₹{{ number_format($quotation->extra_charge_rate, 2) }} ×
+                      {{ $quotation->total_days }}
+                      Day{{ $quotation->total_days > 1 ? 's' : '' }}):
+                  </td>
+                  <td class="px-4 py-3 text-end fw-semibold">
+                      ₹{{ number_format($quotation->extra_charge_total, 2) }}
+                  </td>
+              </tr>
+              @endif
+
+              {{-- Discount --}}
+              @if($quotation->discount_amount > 0)
+              <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
+                      Discount:
+                  </td>
+                  <td class="px-4 py-3 text-end fw-semibold text-danger">
+                      − ₹{{ number_format($quotation->discount_amount, 2) }}
+                  </td>
+              </tr>
+              @endif
+
+              {{-- Grand Total --}}
+              <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold">
+                      Grand Total:
+                  </td>
+                  <td class="px-4 py-3 text-end">
+                      <span class="fs-5 fw-bold text-warning">
+                          ₹{{ number_format($quotation->total_amount, 2) }}
+                      </span>
+                  </td>
+              </tr>
+
+          </tfoot>
+
+
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes Section -->
+  @if($quotation->notes)
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0 p-4">
+      <h5 class="mb-0 fw-semibold">
+        <i class="bi bi-sticky me-2 text-warning"></i>Additional Notes
+      </h5>
+    </div>
+    <div class="card-body p-4">
+      <p class="mb-0 text-muted">{{ $quotation->notes }}</p>
+    </div>
+  </div>
+  @endif
 </div>
+
+<!-- Email Modal -->
+<div class="modal fade" id="emailModal" tabindex="-1" aria-labelledby="emailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form action="{{ route('quotations.sendEmail', $quotation) }}" method="POST" id="sendEmailForm">
+      @csrf
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-success bg-opacity-10 border-0 p-4">
+          <h5 class="modal-title fw-semibold" id="emailModalLabel">
+            <i class="bi bi-envelope me-2 text-success"></i>Send Email
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">To Email</label>
+            <input name="to_email" class="form-control" value="{{ $quotation->client_email }}" required>
+          </div>
+          <div class="mb-0">
+            <label class="form-label fw-semibold">Message</label>
+            <textarea name="message" class="form-control" rows="4" required>Hello {{ $quotation->client_name }}, Please find attached the quotation {{ $quotation->code }}.</textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 p-4">
+          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success" id="sendEmailBtn">
+              <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
+              <span class="btn-text">
+                  <i class="bi bi-send me-2"></i>Send Email
+              </span>
+          </button>
+
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- WhatsApp Modal -->
+<div class="modal fade" id="waModal" tabindex="-1" aria-labelledby="waModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form action="{{ route('quotations.sendWhatsapp', $quotation) }}" method="POST" target="_blank">
+      @csrf
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-info bg-opacity-10 border-0 p-4">
+          <h5 class="modal-title fw-semibold" id="waModalLabel">
+            <i class="bi bi-whatsapp me-2 text-info"></i>Send WhatsApp
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">To Phone</label>
+            <input name="to_phone" class="form-control" value="{{ $quotation->client_phone }}" required>
+          </div>
+          <div class="mb-0">
+            <label class="form-label fw-semibold">Message</label>
+            <textarea name="message" class="form-control" rows="4" required>Hello {{ $quotation->client_name }}, Here is the quotation {{ $quotation->code }}. Please download from the link and reply to confirm.</textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 p-4">
+          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-info">
+            <i class="bi bi-whatsapp me-2"></i>Open WhatsApp
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.03);
+  }
+  
+  .badge {
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+  
+  .card {
+    transition: all 0.3s ease;
+  }
+  
+  .form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+  }
+
+  .modal-content {
+    border-radius: 0.5rem;
+  }
+</style>
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const form = document.getElementById('sendEmailForm');
+    const btn  = document.getElementById('sendEmailBtn');
+    const spinner = btn.querySelector('.spinner-border');
+    const btnText = btn.querySelector('.btn-text');
+
+    form.addEventListener('submit', function () {
+        // Disable button
+        btn.disabled = true;
+
+        // Show spinner
+        spinner.classList.remove('d-none');
+
+        // Change text
+        btnText.innerHTML = 'Sending...';
+    });
+
+});
+</script>
+@endpush
+
 @endsection

@@ -13,15 +13,19 @@ return new class extends Migration
     {
         Schema::create('order_items', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('order_id');
-            $table->string('item_type');
-            $table->string('brand')->nullable();
-            $table->string('model')->nullable();
+            $table->foreignId('order_id')
+                ->constrained()
+                ->cascadeOnDelete();
+
+            $table->string('item_name');
+            $table->string('item_type')->nullable();
+            $table->text('description')->nullable();
+
             $table->integer('quantity');
-            $table->enum('rental_type', ['daily','monthly'])->default('daily');
-            $table->decimal('rate_per_day',10,2)->nullable();
-            $table->decimal('rate_per_month',10,2)->nullable();
-            $table->decimal('total_amount',10,2)->default(0);
+            $table->decimal('unit_price', 12, 2);
+            $table->decimal('tax_percent', 5, 2)->default(0);
+            $table->decimal('total_price', 12, 2);
+
             $table->timestamps();
         });
     }

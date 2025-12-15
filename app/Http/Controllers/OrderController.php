@@ -2,256 +2,477 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Quotation;
+use App\Models\QuotationItem;
+use App\Models\QuotationLog;
 use Illuminate\Http\Request;
-use App\Models\Order;
-use App\Models\Client;
-use App\Models\OrderItem;
-use App\Models\OrderPayment;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\QuotationMailable;
+use PDF;
 use Carbon\Carbon;
+
 
 class OrderController extends Controller
 {
-     public function index(Request $request)
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request)
     {
-        $query = Order::with('client')->where('status', '!=', 'dispatched');
-
-        if ($request->client) {
-            $query->where('client_id', $request->client);
+        $q = Quotation::query();
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $q->where('code','like',"%{$s}%")
+              ->orWhere('client_name','like',"%{$s}%")
+              ->orWhere('client_phone','like',"%{$s}%");
         }
-
-        if ($request->status) {
-            $query->where('status', $request->status);
-        }
-
-        $orders = $query->latest()->paginate(10);
-        $clients = Client::all();
-
-        return view('orders.index', compact('orders','clients'));
+        $quotations = $q->latest()->paginate(20);
+        return view('quotations.index', compact('quotations'));
     }
 
+    /**
+     * Show the form for creating a new resource.
+     */
     public function create()
     {
-        $clients = Client::all();
-        return view('orders.create', compact('clients'));
+        return view('orders.create');
     }
 
+    /**
+     * Store a newly created resource in storage.
+     */
     public function store(Request $request)
     {
         $request->validate([
-            'client_id' => 'required',
-            'order_date' => 'required|date',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date',
+            'client_name'   => 'required|string',
+            'items'         => 'required|array|min:1',
+            'advance_paid'  => 'required|numeric|min:0',
         ]);
 
-        DB::transaction(function() use ($request) {
-
-        $yearMonth = now()->format('Ym');
-
-            $lastOrder = Order::where('order_code', 'like', "ORD-$yearMonth-%")
-                ->orderBy('id', 'desc')
-                ->first();
-
-            if ($lastOrder) {
-                $lastSeq = (int) substr($lastOrder->order_code, -3); // last 3 digits
-                $nextSeq = $lastSeq + 1;
-            } else {
-                $nextSeq = 1;
-            }
-
-            $code = "ORD-$yearMonth-" . str_pad($nextSeq, 3, '0', STR_PAD_LEFT);
-            $reminderDate = Carbon::parse($request->start_date)->subDays(2);
+        DB::transaction(function () use ($request, &$order) {
 
             $order = Order::create([
-                'order_code' => $code,
-                'client_id' => $request->client_id,
-                'order_date' => $request->order_date,
-                'start_date' => $request->start_date,
-                'end_date' => $request->end_date,
-                'event_name' => $request->event_name,
-                'location' => $request->location,
-                'delivery_type' => $request->delivery_type,
-                'delivery_charges' => $request->delivery_charges ?? 0,
-                'remarks' => $request->remarks,
-                'reminder_date' => $reminderDate,
+                'order_code' => Order::generateCode(),
+                'quotation_id' => null,
+
+                'client_name' => $request->client_name,
+                'client_email'=> $request->client_email,
+                'client_phone'=> $request->client_phone,
+
+                'event_from' => $request->event_from,
+                'event_to'   => $request->event_to,
+                'total_days' => $request->total_days,
+
+                'subtotal' => $request->subtotal,
+                'tax_amount' => $request->tax_amount,
+
+                'extra_charge_type' => $request->extra_charge_type,
+                'extra_charge_rate' => $request->extra_charge_rate,
+                'extra_charge_total'=> $request->extra_charge_total,
+
+                'discount_amount' => $request->discount_amount,
+                'total_amount' => $request->total_amount,
+
+                'advance_paid' => $request->advance_paid,
+                'balance_amount' => $request->total_amount - $request->advance_paid,
+
+                'status' => 'confirmed',
+                'created_by' => auth()->id(),
             ]);
 
-            $total = 0;
-
             foreach ($request->items as $item) {
+                $order->items()->create($item);
+            }
+        });
 
-                $days = Carbon::parse($request->start_date)->diffInDays(Carbon::parse($request->end_date));
-                $months = Carbon::parse($request->start_date)->diffInMonths(Carbon::parse($request->end_date));
+        return redirect()->route('orders.show', $order)
+            ->with('success','Order created successfully.');
+    }
 
-                if ($item['rental_type'] === 'monthly') {
-                    $itemTotal = $item['quantity'] * $item['rate_per_month'] * ($months ?: 1);
-                } else {
-                    $itemTotal = $item['quantity'] * $item['rate_per_day'] * ($days ?: 1);
-                }
+    // public function store(Request $request)
+    // {
+    //     $request->validate([
+    //         'client_name' => 'required|string',
+    //         'client_email' => 'nullable|email',
+    //         'client_phone' => 'nullable|string',
+            
+    //         'items' => 'required|array|min:1',
+    //         'items.*.item_name' => 'required|string',
+    //         'items.*.quantity' => 'required|numeric|min:1',
+    //         'items.*.unit_price' => 'required|numeric|min:0',
+    //         'items.*.tax_percent' => 'nullable|numeric|min:0',
+    //     ]);
 
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'item_type' => $item['item_type'],
-                    'brand' => $item['brand'],
-                    'model' => $item['model'],
-                    'quantity' => $item['quantity'],
-                    'rental_type' => $item['rental_type'],
-                    'rate_per_day' => $item['rate_per_day'] ?? 0,
-                    'rate_per_month' => $item['rate_per_month'] ?? 0,
-                    'total_amount' => $itemTotal,
-                ]);
+    //     // calculate totals
+    //     $subtotal = 0;
+    //     $tax_amount = 0;
+    //     $discount = floatval($request->discount_amount ?? 0);
 
-                $total += $itemTotal;
+    //     foreach ($request->items as $row) {
+    //         $qty = floatval($row['quantity'] ?? 1);
+    //         $unit = floatval($row['unit_price'] ?? 0);
+    //         $taxp = floatval($row['tax_percent'] ?? 0);
+    //         $lineTotal = $qty * $unit;
+    //         $lineTax = $lineTotal * ($taxp/100);
+    //         $subtotal += $lineTotal + $lineTax;
+    //         $tax_amount += $lineTax;
+    //     }
+
+    //     $total = $subtotal - $discount;
+
+    //     $quotation = Quotation::create([
+    //         'client_name'=> $request->client_name,
+    //         'client_email'=> $request->client_email,
+    //         'client_phone'=> $request->client_phone,
+    //         'event_from'=> $request->event_from ?: null,
+    //         'event_to'=> $request->event_to ?: null,
+    //         'notes'=> $request->notes ?: null,
+    //         'subtotal'=> $subtotal,
+    //         'tax_amount'=> $tax_amount,
+    //         'discount_amount'=> $discount,
+    //         'total_amount'=> $total,
+    //         'created_by'=> Auth::id(),
+    //         'status' => 'draft',
+    //     ]);
+
+    //     // save items
+    //     foreach ($request->items as $row) {
+    //         $qty = intval($row['quantity'] ?? 1);
+    //         $unit = floatval($row['unit_price'] ?? 0);
+    //         $taxp = floatval($row['tax_percent'] ?? 0);
+    //         $lineTotal = $qty * $unit;
+    //         $lineTax = $lineTotal * ($taxp/100);
+    //         QuotationItem::create([
+    //             'quotation_id' => $quotation->id,
+    //             'item_name' => $row['item_name'],
+    //             'item_type' => $row['item_type'] ?? null,
+    //             'description' => $row['description'] ?? null,
+    //             'quantity' => $qty,
+    //             'unit_price' => $unit,
+    //             'tax_percent' => $taxp,
+    //             'total_price' => $lineTotal + $lineTax,
+    //         ]);
+    //     }
+
+    //     return redirect()->route('quotations.show', $quotation)->with('success','Quotation created. You can generate PDF or send now.');
+    // }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(Quotation $quotation)
+    {
+        $quotation->load('items','logs');
+        return view('quotations.show', compact('quotation'));
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(Quotation $quotation)
+    {
+        $quotation->load('items');
+        return view('quotations.edit', compact('quotation'));
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, Quotation $quotation)
+    {
+            $request->validate([
+                'client_name' => 'required|string',
+                'client_email' => 'nullable|email',
+                'client_phone' => 'nullable|string',
+
+                'event_from' => 'required|date',
+                'event_to'   => 'required|date|after_or_equal:event_from',
+
+                'items' => 'required|array|min:1',
+                'items.*.item_name' => 'required|string',
+                'items.*.quantity' => 'required|numeric|min:1',
+                'items.*.unit_price' => 'required|numeric|min:0',
+                'items.*.tax_percent' => 'nullable|numeric|min:0',
+            ]);
+
+            /** 🔹 CALCULATE TOTAL DAYS */
+            $eventFrom = Carbon::parse($request->event_from);
+            $eventTo   = Carbon::parse($request->event_to);
+
+            // Same day booking = 1 day
+            $totalDays = $eventFrom->diffInDays($eventTo) + 1;
+
+            $subtotal = 0;
+            $tax_amount = 0;
+            $discount = floatval($request->discount_amount ?? 0);
+
+            /** 🔹 RECALCULATE TOTALS (PER DAY) */
+            foreach ($request->items as $row) {
+
+                $qty  = floatval($row['quantity']);
+                $unit = floatval($row['unit_price']);
+                $taxp = floatval($row['tax_percent'] ?? 0);
+
+                $baseTotal = $qty * $unit * $totalDays;
+                $lineTax   = $baseTotal * ($taxp / 100);
+
+                $subtotal   += $baseTotal;
+                $tax_amount += $lineTax;
             }
 
-            OrderPayment::create([
-                'order_id' => $order->id,
+            // EXTRA CHARGES
+            $extraChargeType = $request->extra_charge_type;
+            $extraRate = floatval($request->extra_charge_rate ?? 0);
+            $extraTotal = 0;
+
+            if ($extraChargeType == 'delivery') {
+                $extraTotal = floatval($request->delivery_charge_amount ?? 0); // one time
+            }
+
+            if ($extraChargeType == 'staff') {
+                $extraTotal = $extraRate * $totalDays; // per day
+            }
+
+
+            $total = $subtotal + $tax_amount + $extraTotal - $discount;
+            //$total = $subtotal + $tax_amount - $discount;
+
+            /** 🔹 UPDATE QUOTATION */
+            $quotation->update([
+                'client_name' => $request->client_name,
+                'client_email' => $request->client_email,
+                'client_phone' => $request->client_phone,
+                'event_from' => $request->event_from,
+                'event_to' => $request->event_to,
+                'total_days' => $totalDays,
+                'notes' => $request->notes,
+                'subtotal' => $subtotal,
+                'tax_amount' => $tax_amount,
+                'discount_amount' => $discount,
+                'extra_charge_type'  => $extraChargeType,
+                'extra_charge_rate'  => $extraRate,
+                'extra_charge_total' => $extraTotal,
                 'total_amount' => $total,
-                'advance_paid' => $request->advance_paid ?? 0,
-                'payment_mode' => $request->payment_mode,
-                'due_amount' => $total,
-            ]);
-        });
-
-        return redirect()->route('orders.index')->with('success','Order Added Successfully!');
-    }
-
-    public function edit($id)
-    {
-        $order = Order::with('items')->findOrFail($id);
-        $clients = Client::all();
-
-        return view('orders.edit', compact('order','clients'));
-    }
-
-   public function show($id)
-   {
-        $order = Order::with(['client','items','payment'])->findOrFail($id);
-
-        return view('orders.show', compact('order'));
-   }
-
-   public function update(Request $request, $id)
-   {
-        $request->validate([
-            'client_id' => 'required',
-            'order_date' => 'required|date',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date'
-        ]);
-
-        DB::transaction(function() use ($request, $id) {
-
-            $order = Order::findOrFail($id);
-
-            // Update main order fields
-            $order->update([
-                'client_id' => $request->client_id,
-                'order_date' => $request->order_date,
-                'start_date' => $request->start_date,
-                'end_date' => $request->end_date,
-                'event_name' => $request->event_name,
-                'location' => $request->location,
-                'delivery_type' => $request->delivery_type,
-                'delivery_charges' => $request->delivery_charges ?? 0,
-                'remarks' => $request->remarks,
-                'reminder_date' => Carbon::parse($request->start_date)->subDays(2),
             ]);
 
-            // Delete old items
-            OrderItem::where('order_id', $order->id)->delete();
+            /** 🔹 REPLACE ITEMS */
+            $quotation->items()->delete();
 
-            // Re-add items
-            $total = 0;
-            foreach ($request->items as $item) {
+            foreach ($request->items as $row) {
 
-                $days = Carbon::parse($request->start_date)->diffInDays(Carbon::parse($request->end_date));
-                $months = Carbon::parse($request->start_date)->diffInMonths(Carbon::parse($request->end_date));
+                $qty  = intval($row['quantity']);
+                $unit = floatval($row['unit_price']);
+                $taxp = floatval($row['tax_percent'] ?? 0);
 
-                if ($item['rental_type'] === 'monthly') {
-                    $itemTotal = $item['quantity'] * $item['rate_per_month'] * ($months ?: 1);
-                } else {
-                    $itemTotal = $item['quantity'] * $item['rate_per_day'] * ($days ?: 1);
-                }
+                $baseTotal = $qty * $unit * $totalDays;
+                $lineTax   = $baseTotal * ($taxp / 100);
 
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'item_type' => $item['item_type'],
-                    'brand' => $item['brand'],
-                    'model' => $item['model'],
-                    'quantity' => $item['quantity'],
-                    'rental_type' => $item['rental_type'],
-                    'rate_per_day' => $item['rate_per_day'] ?? 0,
-                    'rate_per_month' => $item['rate_per_month'] ?? 0,
-                    'total_amount' => $itemTotal,
-                ]);
-
-                $total += $itemTotal;
-            }
-
-            // Update payment
-            if ($order->payment) {
-                $order->payment->update([
-                    'total_amount' => $total,
-                    'advance_paid' => $request->advance_paid,
-                    'due_amount' => $total - $request->advance_paid,
+                QuotationItem::create([
+                    'quotation_id' => $quotation->id,
+                    'item_name' => $row['item_name'],
+                    'item_type' => $row['item_type'] ?? null,
+                    'description' => $row['description'] ?? null,
+                    'quantity' => $qty,
+                    'unit_price' => $unit,
+                    'tax_percent' => $taxp,
+                    'total_price' => $baseTotal + $lineTax,
                 ]);
             }
-        });
 
-        return redirect()->route('orders.index')->with('success', 'Order Updated Successfully');
-    }
-
-
-    public function destroy($id)
-    {
-        $order = Order::findOrFail($id);
-
-        OrderItem::where('order_id', $order->id)->delete();
-        OrderPayment::where('order_id', $order->id)->delete();
-
-        $order->delete();
-
-        return back()->with('success','Order Deleted');
-    }
-
-
-    public function approve($id)
-    {
-        $order = Order::findOrFail($id);
-        $order->update(['status' => 'approved']);
-
-        return back()->with('success','Order Approved');
-    }
-
-
-    public function reject($id)
-    {
-        $order = Order::findOrFail($id);
-        $order->update(['status' => 'rejected']);
-
-        return back()->with('success','Order Rejected');
-    }
-
-
-    public function convertToDispatch($id)
-    {
-        $order = Order::with('items', 'client')->findOrFail($id);
-
-        // Must be approved first
-        if ($order->status !== 'approved') {
-            return back()->with('error', 'Order not approved yet!');
+            return redirect()
+                ->route('quotations.show', $quotation)
+                ->with('success', "Quotation updated successfully for {$totalDays} day(s).");
         }
 
-        // Load clients list for dropdown
-        $clients = Client::all();
 
-        return view('dispatches.convert', compact('order', 'clients'));
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(string $id)
+    {
+        $quotation->delete();
+        return redirect()->route('quotations.index')->with('success','Quotation deleted.');
+    }
+
+    // Generate PDF and store it
+    public function generatePdf(Quotation $quotation)
+    {
+        $quotation->load('items');
+        $html = view('quotations.pdf', compact('quotation'))->render();
+        $pdf = PDF::loadHTML($html)->setPaper('a4', 'portrait');
+
+        $fileName = $quotation->code . '.pdf';
+        Storage::disk('public')->put('quotations/'.$fileName, $pdf->output());
+
+
+        // Save public accessible path like storage/quotations/...
+        $quotation->pdf_path = 'storage/quotations/' . $fileName;
+        $quotation->save();
+
+        // log
+        QuotationLog::create([
+            'quotation_id' => $quotation->id,
+            'user_id' => Auth::id(),
+            'action' => 'generated_pdf',
+            'meta' => json_encode(['path' => $quotation->pdf_path]),
+        ]);
+
+        return redirect()->back()->with('success','PDF generated and stored.');
+    }
+
+    // Download via signed route - signed middleware protects it
+    public function downloadPdf(Quotation $quotation)
+    {
+        if (!$quotation->pdf_path) {
+            abort(404, 'PDF not found');
+        }
+        // Convert storage path to actual path
+        $diskPath = str_replace('storage/','public/',$quotation->pdf_path);
+        if (!Storage::exists($diskPath)) abort(404,'File not found');
+        return Storage::download($diskPath, $quotation->code . '.pdf');
+    }
+
+    public function sendEmail(Request $request, Quotation $quotation)
+    {
+        $request->validate([
+            'to_email' => 'required|email',
+            'message' => 'nullable|string'
+        ]);
+
+        // ensure PDF exists, if not generate
+        if (!$quotation->pdf_path || !Storage::exists(str_replace('storage/','public/',$quotation->pdf_path))) {
+            // generate
+            $this->generatePdf($quotation);
+        }
+
+        Mail::to($request->to_email)->send(new QuotationMailable($quotation, $request->message));
+
+        $quotation->update(['status' => 'sent']);
+        QuotationLog::create([
+            'quotation_id' => $quotation->id,
+            'user_id' => Auth::id(),
+            'action' => 'sent_email',
+            'meta' => json_encode(['to' => $request->to_email]),
+        ]);
+
+        return redirect()->back()->with('success','Quotation emailed successfully.');
+    }
+
+    public function sendWhatsapp(Request $request, Quotation $quotation)
+    {
+        $request->validate([
+            'to_phone' => 'required|string',
+            'message'  => 'nullable|string',
+        ]);
+
+        // Ensure PDF exists
+        if (
+            !$quotation->pdf_path ||
+            !Storage::exists(str_replace('storage/', 'public/', $quotation->pdf_path))
+        ) {
+            $this->generatePdf($quotation);
+            $quotation->refresh();
+        }
+
+        $url = \URL::signedRoute(
+            'quotations.download',
+            ['quotation' => $quotation->id],
+            now()->addDays(7)
+        );
+
+        $messageText =
+            "Hello {$quotation->client_name},\n\n" .
+            "Here is the quotation {$quotation->code}.\n\n" .
+            "Total Amount: ₹" . number_format($quotation->total_amount, 2) . "\n\n" .
+            "Download Quotation:\n{$url}\n\n" .
+            "Please reply to confirm.";
+
+        $phone = preg_replace('/\D+/', '', $request->to_phone);
+        if (strlen($phone) <= 10) {
+            $phone = '91' . $phone;
+        }
+
+        $waLink = 'https://wa.me/' . $phone . '?text=' . rawurlencode($messageText);
+
+        QuotationLog::create([
+            'quotation_id' => $quotation->id,
+            'user_id'      => Auth::id(),
+            'action'       => 'sent_whatsapp_link',
+            'meta'         => json_encode(['to' => $phone, 'link' => $url]),
+        ]);
+
+        return redirect($waLink);
     }
 
 
 
+    public function download(Quotation $quotation)
+    {
+        // Ensure PDF exists
+        if (
+            !$quotation->pdf_path ||
+            !Storage::exists(str_replace('storage/', 'public/', $quotation->pdf_path))
+        ) {
+            abort(404, 'Quotation PDF not found.');
+        }
 
+        $path = str_replace('storage/', 'public/', $quotation->pdf_path);
+
+        return Storage::download(
+            $path,
+            $quotation->code . '.pdf'
+        );
+    }
+
+
+    public function storeFromQuotation(Request $request, Quotation $quotation)
+    {
+        $request->validate([
+            'advance_paid' => 'required|numeric|min:0|max:' . $quotation->total_amount,
+        ]);
+
+        DB::transaction(function () use ($quotation, $request, &$order) {
+
+            $order = Order::create([
+                'order_code' => Order::generateCode(),
+                'quotation_id' => $quotation->id,
+
+                'client_name' => $quotation->client_name,
+                'client_email'=> $quotation->client_email,
+                'client_phone'=> $quotation->client_phone,
+
+                'event_from' => $quotation->event_from,
+                'event_to'   => $quotation->event_to,
+                'total_days' => $quotation->total_days,
+
+                'subtotal' => $quotation->subtotal,
+                'tax_amount' => $quotation->tax_amount,
+
+                'extra_charge_type' => $quotation->extra_charge_type,
+                'extra_charge_rate' => $quotation->extra_charge_rate,
+                'extra_charge_total'=> $quotation->extra_charge_total,
+
+                'discount_amount' => $quotation->discount_amount,
+                'total_amount' => $quotation->total_amount,
+
+                'advance_paid' => $request->advance_paid,
+                'balance_amount' => $quotation->total_amount - $request->advance_paid,
+
+                'status' => 'confirmed',
+                'created_by' => auth()->id(),
+            ]);
+
+            foreach ($quotation->items as $item) {
+                $order->items()->create($item->toArray());
+            }
+
+            $quotation->update(['status' => 'accepted']);
+        });
+
+        return redirect()->route('orders.show', $order)
+            ->with('success','Quotation converted to Order.');
+    }
 
 }

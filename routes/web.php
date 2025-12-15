@@ -41,10 +41,22 @@ Route::middleware(['auth'])->group(function () {
     Route::get('quotations/{quotation}/download',[QuotationController::class, 'download'])->name('quotations.download');
 
     Route::resource('orders', OrderController::class);
-    Route::post('/orders/{order}/approve', [OrderController::class, 'approve'])->name('orders.approve');
-    Route::post('/orders/{order}/reject', [OrderController::class, 'reject'])->name('orders.reject');
-    Route::get('/orders/{order}/convert-dispatch', [OrderController::class, 'convertToDispatch'])
-        ->name('orders.convertToDispatch');
+        // Direct order create
+    Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');
+    Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
+
+    // Quotation → Order
+    Route::post(
+        'quotations/{quotation}/convert-to-order',
+        [OrderController::class, 'storeFromQuotation']
+    )->name('orders.fromQuotation');
+
+    // View
+    Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    // Route::post('/orders/{order}/approve', [OrderController::class, 'approve'])->name('orders.approve');
+    // Route::post('/orders/{order}/reject', [OrderController::class, 'reject'])->name('orders.reject');
+    // Route::get('/orders/{order}/convert-dispatch', [OrderController::class, 'convertToDispatch'])
+    //     ->name('orders.convertToDispatch');
     Route::resource('dispatches', DispatchController::class)->only(['index','create','store','show','destroy']);
     Route::post('returns', [ReturnController::class, 'store'])->name('returns.store');
     Route::resource('invoices', InvoiceController::class);

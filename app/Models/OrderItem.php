@@ -7,8 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class OrderItem extends Model
 {
     protected $fillable = [
-        'order_id','item_type','brand','model','quantity',
-        'rental_type','rate_per_day','rate_per_month','total_amount'
+        'order_id','item_name','item_type',
+        'description','quantity',
+        'unit_price','tax_percent','total_price'
     ];
 
     public function order() {
