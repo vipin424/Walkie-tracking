@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Quotation;
-use App\Models\QuotationItem;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\QuotationLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
-use App\Mail\QuotationMailable;
+use App\Mail\OrderMailable;
 use PDF;
 use Carbon\Carbon;
-
+use DB;
 
 class OrderController extends Controller
 {
@@ -21,15 +21,15 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $q = Quotation::query();
+        $q= Order::query();
         if ($request->filled('search')) {
             $s = $request->search;
             $q->where('code','like',"%{$s}%")
               ->orWhere('client_name','like',"%{$s}%")
               ->orWhere('client_phone','like',"%{$s}%");
         }
-        $quotations = $q->latest()->paginate(20);
-        return view('quotations.index', compact('quotations'));
+        $orders = $q->latest()->paginate(20);
+        return view('orders.index', compact('orders'));
     }
 
     /**
@@ -47,49 +47,119 @@ class OrderController extends Controller
     {
         $request->validate([
             'client_name'   => 'required|string',
-            'items'         => 'required|array|min:1',
-            'advance_paid'  => 'required|numeric|min:0',
+            'client_email'  => 'nullable|email',
+            'client_phone'  => 'nullable|string',
+
+            'event_from' => 'required|date',
+            'event_to'   => 'required|date|after_or_equal:event_from',
+
+            'items' => 'required|array|min:1',
+            'items.*.item_name' => 'required|string',
+            'items.*.quantity' => 'required|numeric|min:1',
+            'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.tax_percent' => 'nullable|numeric|min:0',
+
+            'advance_paid' => 'required|numeric|min:0',
         ]);
 
         DB::transaction(function () use ($request, &$order) {
 
+            /** 🔹 TOTAL DAYS */
+            $eventFrom = Carbon::parse($request->event_from);
+            $eventTo   = Carbon::parse($request->event_to);
+            $totalDays = $eventFrom->diffInDays($eventTo) + 1;
+
+            $subtotal   = 0;
+            $tax_amount = 0;
+            $discount   = floatval($request->discount_amount ?? 0);
+
+            /** 🔹 ITEMS CALCULATION (PER DAY) */
+            foreach ($request->items as $row) {
+
+                $qty  = floatval($row['quantity']);
+                $unit = floatval($row['unit_price']);
+                $taxp = floatval($row['tax_percent'] ?? 0);
+
+                $baseTotal = $qty * $unit * $totalDays;
+                $lineTax   = $baseTotal * ($taxp / 100);
+
+                $subtotal   += $baseTotal;
+                $tax_amount += $lineTax;
+            }
+
+            /** 🔹 EXTRA CHARGES */
+            $extraChargeType = $request->extra_charge_type;
+            $extraRate  = floatval($request->extra_charge_rate ?? 0);
+            $extraTotal = 0;
+
+            if ($extraChargeType === 'delivery') {
+                $extraTotal = $extraRate; // one time
+            }
+
+            if ($extraChargeType === 'staff') {
+                $extraTotal = $extraRate * $totalDays; // per day
+            }
+
+            /** 🔹 FINAL TOTAL */
+            $total = $subtotal + $tax_amount + $extraTotal - $discount;
+
+            /** 🔹 CREATE ORDER */
             $order = Order::create([
                 'order_code' => Order::generateCode(),
-                'quotation_id' => null,
+                'quotation_id' => null, // DIRECT ORDER
 
-                'client_name' => $request->client_name,
-                'client_email'=> $request->client_email,
-                'client_phone'=> $request->client_phone,
+                'client_name'  => $request->client_name,
+                'client_email' => $request->client_email,
+                'client_phone' => $request->client_phone,
 
                 'event_from' => $request->event_from,
                 'event_to'   => $request->event_to,
-                'total_days' => $request->total_days,
+                'total_days' => $totalDays,
 
-                'subtotal' => $request->subtotal,
-                'tax_amount' => $request->tax_amount,
+                'subtotal' => $subtotal,
+                'tax_amount' => $tax_amount,
 
-                'extra_charge_type' => $request->extra_charge_type,
-                'extra_charge_rate' => $request->extra_charge_rate,
-                'extra_charge_total'=> $request->extra_charge_total,
+                'extra_charge_type'  => $extraChargeType,
+                'extra_charge_rate'  => $extraRate,
+                'extra_charge_total' => $extraTotal,
 
-                'discount_amount' => $request->discount_amount,
-                'total_amount' => $request->total_amount,
+                'discount_amount' => $discount,
+                'total_amount' => $total,
 
-                'advance_paid' => $request->advance_paid,
-                'balance_amount' => $request->total_amount - $request->advance_paid,
+                'advance_paid'  => $request->advance_paid,
+                'balance_amount'=> $total - $request->advance_paid,
 
                 'status' => 'confirmed',
                 'created_by' => auth()->id(),
             ]);
 
-            foreach ($request->items as $item) {
-                $order->items()->create($item);
+            /** 🔹 SAVE ORDER ITEMS */
+            foreach ($request->items as $row) {
+
+                $qty  = intval($row['quantity']);
+                $unit = floatval($row['unit_price']);
+                $taxp = floatval($row['tax_percent'] ?? 0);
+
+                $baseTotal = $qty * $unit * $totalDays;
+                $lineTax   = $baseTotal * ($taxp / 100);
+
+                $order->items()->create([
+                    'item_name' => $row['item_name'],
+                    'item_type' => $row['item_type'] ?? null,
+                    'description' => $row['description'] ?? null,
+                    'quantity' => $qty,
+                    'unit_price' => $unit,
+                    'tax_percent' => $taxp,
+                    'total_price' => $baseTotal + $lineTax,
+                ]);
             }
         });
 
-        return redirect()->route('orders.show', $order)
-            ->with('success','Order created successfully.');
+        return redirect()
+            ->route('orders.show', $order)
+            ->with('success', 'Order created successfully.');
     }
+
 
     // public function store(Request $request)
     // {
@@ -122,7 +192,7 @@ class OrderController extends Controller
 
     //     $total = $subtotal - $discount;
 
-    //     $quotation = Quotation::create([
+    //     $order = Order::create([
     //         'client_name'=> $request->client_name,
     //         'client_email'=> $request->client_email,
     //         'client_phone'=> $request->client_phone,
@@ -145,7 +215,7 @@ class OrderController extends Controller
     //         $lineTotal = $qty * $unit;
     //         $lineTax = $lineTotal * ($taxp/100);
     //         QuotationItem::create([
-    //             'quotation_id' => $quotation->id,
+    //             'quotation_id' => $order->id,
     //             'item_name' => $row['item_name'],
     //             'item_type' => $row['item_type'] ?? null,
     //             'description' => $row['description'] ?? null,
@@ -156,31 +226,31 @@ class OrderController extends Controller
     //         ]);
     //     }
 
-    //     return redirect()->route('quotations.show', $quotation)->with('success','Quotation created. You can generate PDF or send now.');
+    //     return redirect()->route('quotations.show', $quotation)->with('success','Order created. You can generate PDF or send now.');
     // }
 
     /**
      * Display the specified resource.
      */
-    public function show(Quotation $quotation)
+    public function show(Order $order)
     {
-        $quotation->load('items','logs');
-        return view('quotations.show', compact('quotation'));
+        $order->load('items');
+        return view('orders.show', compact('order'));
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Quotation $quotation)
+    public function edit(Order $order)
     {
-        $quotation->load('items');
-        return view('quotations.edit', compact('quotation'));
+        $order->load('items');
+        return view('orders.edit', compact('order'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Quotation $quotation)
+    public function update(Request $request, Order $order)
     {
             $request->validate([
                 'client_name' => 'required|string',
@@ -240,7 +310,7 @@ class OrderController extends Controller
             //$total = $subtotal + $tax_amount - $discount;
 
             /** 🔹 UPDATE QUOTATION */
-            $quotation->update([
+            $order->update([
                 'client_name' => $request->client_name,
                 'client_email' => $request->client_email,
                 'client_phone' => $request->client_phone,
@@ -258,7 +328,7 @@ class OrderController extends Controller
             ]);
 
             /** 🔹 REPLACE ITEMS */
-            $quotation->items()->delete();
+            $order->items()->delete();
 
             foreach ($request->items as $row) {
 
@@ -269,8 +339,8 @@ class OrderController extends Controller
                 $baseTotal = $qty * $unit * $totalDays;
                 $lineTax   = $baseTotal * ($taxp / 100);
 
-                QuotationItem::create([
-                    'quotation_id' => $quotation->id,
+                OrderItem::create([
+                    'order_id' => $order->id,
                     'item_name' => $row['item_name'],
                     'item_type' => $row['item_type'] ?? null,
                     'description' => $row['description'] ?? null,
@@ -282,8 +352,8 @@ class OrderController extends Controller
             }
 
             return redirect()
-                ->route('quotations.show', $quotation)
-                ->with('success', "Quotation updated successfully for {$totalDays} day(s).");
+                ->route('orders.show', $order)
+                ->with('success', "Order updated successfully for {$totalDays} day(s).");
         }
 
 
@@ -292,49 +362,49 @@ class OrderController extends Controller
      */
     public function destroy(string $id)
     {
-        $quotation->delete();
-        return redirect()->route('quotations.index')->with('success','Quotation deleted.');
+        $order->delete();
+        return redirect()->route('orders.index')->with('success','Order deleted.');
     }
 
     // Generate PDF and store it
-    public function generatePdf(Quotation $quotation)
+    public function generatePdf(Order $order)
     {
-        $quotation->load('items');
-        $html = view('quotations.pdf', compact('quotation'))->render();
+        $order->load('items');
+        $html = view('orders.pdf', compact('order'))->render();
         $pdf = PDF::loadHTML($html)->setPaper('a4', 'portrait');
 
-        $fileName = $quotation->code . '.pdf';
-        Storage::disk('public')->put('quotations/'.$fileName, $pdf->output());
+        $fileName = $order->code . '.pdf';
+        Storage::disk('public')->put('orders/'.$fileName, $pdf->output());
 
 
-        // Save public accessible path like storage/quotations/...
-        $quotation->pdf_path = 'storage/quotations/' . $fileName;
-        $quotation->save();
+        // Save public accessible path like storage/orders/...
+        $order->pdf_path = 'storage/orders/' . $fileName;
+        $order->save();
 
         // log
-        QuotationLog::create([
-            'quotation_id' => $quotation->id,
+        OrderLog::create([
+            'order_id' => $order->id,
             'user_id' => Auth::id(),
             'action' => 'generated_pdf',
-            'meta' => json_encode(['path' => $quotation->pdf_path]),
+            'meta' => json_encode(['path' => $order->pdf_path]),
         ]);
 
         return redirect()->back()->with('success','PDF generated and stored.');
     }
 
     // Download via signed route - signed middleware protects it
-    public function downloadPdf(Quotation $quotation)
+    public function downloadPdf(Order $order)
     {
-        if (!$quotation->pdf_path) {
+        if (!$order->pdf_path) {
             abort(404, 'PDF not found');
         }
         // Convert storage path to actual path
-        $diskPath = str_replace('storage/','public/',$quotation->pdf_path);
+        $diskPath = str_replace('storage/','public/',$order->pdf_path);
         if (!Storage::exists($diskPath)) abort(404,'File not found');
-        return Storage::download($diskPath, $quotation->code . '.pdf');
+        return Storage::download($diskPath, $order->code . '.pdf');
     }
 
-    public function sendEmail(Request $request, Quotation $quotation)
+    public function sendEmail(Request $request, Order $order)
     {
         $request->validate([
             'to_email' => 'required|email',
@@ -342,25 +412,25 @@ class OrderController extends Controller
         ]);
 
         // ensure PDF exists, if not generate
-        if (!$quotation->pdf_path || !Storage::exists(str_replace('storage/','public/',$quotation->pdf_path))) {
+        if (!$order->pdf_path || !Storage::exists(str_replace('storage/','public/',$order->pdf_path))) {
             // generate
-            $this->generatePdf($quotation);
+            $this->generatePdf($order);
         }
 
-        Mail::to($request->to_email)->send(new QuotationMailable($quotation, $request->message));
+        Mail::to($request->to_email)->send(new OrderMailable($order, $request->message));
 
-        $quotation->update(['status' => 'sent']);
+        $order->update(['status' => 'sent']);
         QuotationLog::create([
-            'quotation_id' => $quotation->id,
+            'quotation_id' => $order->id,
             'user_id' => Auth::id(),
             'action' => 'sent_email',
             'meta' => json_encode(['to' => $request->to_email]),
         ]);
 
-        return redirect()->back()->with('success','Quotation emailed successfully.');
+        return redirect()->back()->with('success','Order emailed successfully.');
     }
 
-    public function sendWhatsapp(Request $request, Quotation $quotation)
+    public function sendWhatsapp(Request $request, Order $order)
     {
         $request->validate([
             'to_phone' => 'required|string',
@@ -369,24 +439,24 @@ class OrderController extends Controller
 
         // Ensure PDF exists
         if (
-            !$quotation->pdf_path ||
-            !Storage::exists(str_replace('storage/', 'public/', $quotation->pdf_path))
+            !$order->pdf_path ||
+            !Storage::exists(str_replace('storage/', 'public/', $order->pdf_path))
         ) {
-            $this->generatePdf($quotation);
-            $quotation->refresh();
+            $this->generatePdf($order);
+            $order->refresh();
         }
 
         $url = \URL::signedRoute(
-            'quotations.download',
-            ['quotation' => $quotation->id],
+            'orders.download',
+            ['order' => $order->id],
             now()->addDays(7)
         );
 
         $messageText =
-            "Hello {$quotation->client_name},\n\n" .
-            "Here is the quotation {$quotation->code}.\n\n" .
-            "Total Amount: ₹" . number_format($quotation->total_amount, 2) . "\n\n" .
-            "Download Quotation:\n{$url}\n\n" .
+            "Hello {$order->client_name},\n\n" .
+            "Here is the order {$order->code}.\n\n" .
+            "Total Amount: ₹" . number_format($order->total_amount, 2) . "\n\n" .
+            "Download Order:\n{$url}\n\n" .
             "Please reply to confirm.";
 
         $phone = preg_replace('/\D+/', '', $request->to_phone);
@@ -397,7 +467,7 @@ class OrderController extends Controller
         $waLink = 'https://wa.me/' . $phone . '?text=' . rawurlencode($messageText);
 
         QuotationLog::create([
-            'quotation_id' => $quotation->id,
+            'quotation_id' => $order->id,
             'user_id'      => Auth::id(),
             'action'       => 'sent_whatsapp_link',
             'meta'         => json_encode(['to' => $phone, 'link' => $url]),
@@ -408,71 +478,72 @@ class OrderController extends Controller
 
 
 
-    public function download(Quotation $quotation)
+    public function download(Order $order)
     {
         // Ensure PDF exists
         if (
-            !$quotation->pdf_path ||
-            !Storage::exists(str_replace('storage/', 'public/', $quotation->pdf_path))
+            !$order->pdf_path ||
+            !Storage::exists(str_replace('storage/', 'public/', $order->pdf_path))
         ) {
-            abort(404, 'Quotation PDF not found.');
+            abort(404, 'Order PDF not found.');
         }
 
-        $path = str_replace('storage/', 'public/', $quotation->pdf_path);
+        $path = str_replace('storage/', 'public/', $order->pdf_path);
 
         return Storage::download(
             $path,
-            $quotation->code . '.pdf'
+            $order->code . '.pdf'
         );
     }
 
 
-    public function storeFromQuotation(Request $request, Quotation $quotation)
-    {
-        $request->validate([
-            'advance_paid' => 'required|numeric|min:0|max:' . $quotation->total_amount,
-        ]);
+    // public function storeFromQuotation(Request $request, Order $order)
+    // {
+    //     $request->validate([
+    //         'advance_paid' => 'required|numeric|min:0|max:' . $order->total_amount,
+    //     ]);
 
-        DB::transaction(function () use ($quotation, $request, &$order) {
+    //     DB::transaction(function () use ($order, $request, &$order) {
 
-            $order = Order::create([
-                'order_code' => Order::generateCode(),
-                'quotation_id' => $quotation->id,
+    //         $order = Order::create([
+    //             'order_code' => Order::generateCode(),
+    //             'quotation_id' => $order->id,
 
-                'client_name' => $quotation->client_name,
-                'client_email'=> $quotation->client_email,
-                'client_phone'=> $quotation->client_phone,
+    //             'client_name' => $order->client_name,
+    //             'client_email'=> $order->client_email,
+    //             'client_phone'=> $order->client_phone,
 
-                'event_from' => $quotation->event_from,
-                'event_to'   => $quotation->event_to,
-                'total_days' => $quotation->total_days,
+    //             'event_from' => $order->event_from,
+    //             'event_to'   => $order->event_to,
+    //             'total_days' => $order->total_days,
 
-                'subtotal' => $quotation->subtotal,
-                'tax_amount' => $quotation->tax_amount,
+    //             'subtotal' => $order->subtotal,
+    //             'tax_amount' => $order->tax_amount,
 
-                'extra_charge_type' => $quotation->extra_charge_type,
-                'extra_charge_rate' => $quotation->extra_charge_rate,
-                'extra_charge_total'=> $quotation->extra_charge_total,
+    //             'extra_charge_type' => $order->extra_charge_type,
+    //             'extra_charge_rate' => $order->extra_charge_rate,
+    //             'extra_charge_total'=> $order->extra_charge_total,
 
-                'discount_amount' => $quotation->discount_amount,
-                'total_amount' => $quotation->total_amount,
+    //             'discount_amount' => $order->discount_amount,
+    //             'total_amount' => $order->total_amount,
 
-                'advance_paid' => $request->advance_paid,
-                'balance_amount' => $quotation->total_amount - $request->advance_paid,
+    //             'advance_paid' => $request->advance_paid,
+    //             'balance_amount' => $order->total_amount - $request->advance_paid,
 
-                'status' => 'confirmed',
-                'created_by' => auth()->id(),
-            ]);
+    //             'status' => 'confirmed',
+    //             'created_by' => auth()->id(),
+    //         ]);
 
-            foreach ($quotation->items as $item) {
-                $order->items()->create($item->toArray());
-            }
+    //         foreach ($order->items as $item) {
+    //             $order->items()->create($item->toArray());
+    //         }
 
-            $quotation->update(['status' => 'accepted']);
-        });
+    //         $order->update(['status' => 'accepted']);
+    //     });
 
-        return redirect()->route('orders.show', $order)
-            ->with('success','Quotation converted to Order.');
-    }
+    //     return redirect()->route('orders.show', $order)
+    //         ->with('success','Order converted to Order.');
+    // }
+
 
 }

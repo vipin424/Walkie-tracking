@@ -1,8 +1,8 @@
 @extends('layouts.app')
-
+@section('title','Orders')
 @section('content')
 <div class="container">
-    <h3>Create Quotation</h3>
+    <h3>Create Order</h3>
     @if ($errors->any())
         <div class="alert alert-danger">
             <ul class="mb-0">
@@ -13,11 +13,11 @@
         </div>
     @endif
 
-    <form action="{{ route('quotations.store') }}" method="POST" id="quotation-form">
+    <form action="{{ route('orders.store') }}" method="POST" id="order-form">
         @csrf
-        @include('quotations.partials.form', ['quotation' => null])
+        @include('orders.partials.form', ['order' => null])
 
-        <button class="btn btn-primary">Save Quotation</button>
+        <button class="btn btn-primary">Save Order</button>
     </form>
 </div>
 @endsection

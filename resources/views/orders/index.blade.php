@@ -1,15 +1,15 @@
 @extends('layouts.app')
-@section('title','Quotations')
+@section('title','Orders')
 @section('content')
 <div class="container-fluid px-4 py-4">
   <!-- Header -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <h4 class="mb-1 fw-bold">Quotations</h4>
-      <p class="text-muted mb-0">Manage and track all quotations</p>
+      <h4 class="mb-1 fw-bold">Orders</h4>
+      <p class="text-muted mb-0">Manage and track all Orders</p>
     </div>
-    <a class="btn btn-warning btn-md shadow-sm" href="{{ route('quotations.create') }}">
-      <i class="bi bi-plus-circle me-2"></i>New Quotation
+    <a class="btn btn-warning btn-md shadow-sm" href="{{ route('orders.create') }}">
+      <i class="bi bi-plus-circle me-2"></i>New Order
     </a>
   </div>
 
@@ -38,7 +38,7 @@
           </div>
           @if(request('status') || request('search'))
           <div class="col-md-2">
-            <a href="{{ route('quotations.index') }}" class="btn btn-outline-secondary btn-md w-100">
+            <a href="{{ route('orders.index') }}" class="btn btn-outline-secondary btn-md w-100">
               <i class="bi bi-x-circle me-2"></i>Clear
             </a>
           </div>
@@ -48,14 +48,14 @@
     </div>
   </div>
 
-  <!-- Quotations Table -->
+  <!-- orders Table -->
   <div class="card border-0 shadow-sm">
     <div class="card-header bg-white border-0 p-4">
       <div class="d-flex justify-content-between align-items-center">
         <h5 class="mb-0 fw-semibold">
-          <i class="bi bi-file-earmark-text me-2 text-warning"></i>All Quotations
+          <i class="bi bi-file-earmark-text me-2 text-warning"></i>All Orders
         </h5>
-        <span class="badge bg-warning bg-opacity-10 text-warning fs-6">{{ $quotations->total() }} Total</span>
+        <span class="badge bg-warning bg-opacity-10 text-warning fs-6">{{ $orders->total() }} Total</span>
       </div>
     </div>
     <div class="card-body p-0">
@@ -63,7 +63,7 @@
         <table class="table table-hover align-middle mb-0">
           <thead class="bg-light">
             <tr>
-              <th class="px-4 py-3 text-muted fw-semibold">Quotation Code</th>
+              <th class="px-4 py-3 text-muted fw-semibold">order Code</th>
               <th class="px-4 py-3 text-muted fw-semibold">Client</th>
               <th class="px-4 py-3 text-muted fw-semibold">Total Amount</th>
               <th class="px-4 py-3 text-muted fw-semibold">Status</th>
@@ -72,10 +72,10 @@
             </tr>
           </thead>
           <tbody>
-            @forelse($quotations as $q)
+            @forelse($orders as $q)
               <tr>
                 <td class="px-4 py-3">
-                  <a href="{{ route('quotations.show',$q) }}" class="text-decoration-none fw-semibold text-primary">
+                  <a href="{{ route('orders.show',$q) }}" class="text-decoration-none fw-semibold text-primary">
                     <i class="bi bi-file-text me-2"></i>{{ $q->code }}
                   </a>
                 </td>
@@ -111,15 +111,15 @@
                 </td>
                 <td class="px-4 py-3 text-center">
                   <div class="btn-group" role="group">
-                    <a href="{{ route('quotations.show',$q) }}" class="btn btn-sm btn-outline-primary" title="View Details">
+                    <a href="{{ route('orders.show',$q) }}" class="btn btn-sm btn-outline-primary" title="View Details">
                       <i class="bi bi-eye"></i>
                     </a>
-                    <a href="{{ route('quotations.edit',$q) }}" class="btn btn-sm btn-outline-warning" title="Edit">
+                    <a href="{{ route('orders.edit',$q) }}" class="btn btn-sm btn-outline-warning" title="Edit">
                       <i class="bi bi-pencil"></i>
                     </a>
-                    <form method="post" action="{{ route('quotations.destroy',$q) }}" class="d-inline">
+                    <form method="post" action="{{ route('orders.destroy',$q) }}" class="d-inline">
                       @csrf @method('DELETE')
-                      <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this quotation?')" title="Delete">
+                      <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this order?')" title="Delete">
                         <i class="bi bi-trash"></i>
                       </button>
                     </form>
@@ -131,7 +131,7 @@
                 <td colspan="6" class="text-center py-5">
                   <div class="text-muted">
                     <i class="bi bi-inbox display-4 d-block mb-3"></i>
-                    <p class="mb-0">No quotations found</p>
+                    <p class="mb-0">No orders found</p>
                   </div>
                 </td>
               </tr>
@@ -141,9 +141,9 @@
       </div>
     </div>
     {{-- ✅ Pagination --}}
-    @if($quotations->hasPages())
+    @if($orders->hasPages())
       <div class="card-footer bg-white border-0 py-3 d-flex justify-content-center">
-        {{ $quotations->links('pagination::bootstrap-5') }}
+        {{ $orders->links('pagination::bootstrap-5') }}
       </div>
     @endif
   </div>

@@ -2,13 +2,13 @@
 
 @section('content')
 <div class="container">
-    <h3>Edit Quotation {{ $quotation->code }}</h3>
+    <h3>Edit Order {{ $order->order_code }}</h3>
 
-    <form action="{{ route('quotations.update', $quotation) }}" method="POST" id="quotation-form">
+    <form action="{{ route('orders.update', $order) }}" method="POST" id="order-form">
         @csrf @method('PUT')
-        @include('quotations.partials.form', ['quotation' => $quotation])
+        @include('orders.partials.form', ['order' => $order])
 
-        <button class="btn btn-primary">Update Quotation</button>
+        <button class="btn btn-primary">Update Order</button>
     </form>
 </div>
 @endsection

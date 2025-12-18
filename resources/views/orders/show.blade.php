@@ -1,15 +1,15 @@
 @extends('layouts.app')
-@section('title', 'Quotation Details')
+@section('title', 'Order Details')
 @section('content')
 <div class="container-fluid px-4 py-4">
   <!-- Header -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <a href="{{ route('quotations.index') }}" class="text-decoration-none text-muted mb-2 d-inline-block">
-        <i class="bi bi-arrow-left me-2"></i>Back to Quotations
+      <a href="{{ route('orders.index') }}" class="text-decoration-none text-muted mb-2 d-inline-block">
+        <i class="bi bi-arrow-left me-2"></i>Back to Orders
       </a>
-      <h4 class="mb-1 fw-bold">Quotation: {{ $quotation->code }}</h4>
-      <p class="text-muted mb-0">View and manage quotation details</p>
+      <h4 class="mb-1 fw-bold">Order: {{ $order->order_code }}</h4>
+      <p class="text-muted mb-0">View and manage order details</p>
     </div>
     <div>
       @php
@@ -18,10 +18,10 @@
           'approved' => 'success',
           'rejected' => 'danger'
         ];
-        $color = $statusColors[$quotation->status] ?? 'secondary';
+        $color = $statusColors[$order->status] ?? 'secondary';
       @endphp
       <span class="badge bg-{{ $color }} px-4 py-2 fs-6" style="background-color: rgba(var(--bs-{{ $color }}-rgb), 0.15) !important; color: var(--bs-{{ $color }}) !important;">
-        {{ ucfirst($quotation->status) }}
+        {{ ucfirst($order->status) }}
       </span>
     </div>
   </div>
@@ -30,11 +30,11 @@
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-body p-4">
       <div class="d-flex flex-wrap gap-2">
-        <a href="{{ route('quotations.edit', $quotation) }}" class="btn btn-warning">
-          <i class="bi bi-pencil-square me-2"></i>Edit Quotation
+        <a href="{{ route('orders.edit', $order) }}" class="btn btn-warning">
+          <i class="bi bi-pencil-square me-2"></i>Edit Order
         </a>
 
-        <form action="{{ route('quotations.generatePdf', $quotation) }}" method="POST" class="d-inline">
+        <form action="{{ route('orders.generatePdf', $order) }}" method="POST" class="d-inline">
           @csrf
           <button class="btn btn-primary">
             <i class="bi bi-file-earmark-pdf me-2"></i>Generate PDF
@@ -49,8 +49,8 @@
           <i class="bi bi-whatsapp me-2"></i>Send WhatsApp
         </button>
 
-        @if($quotation->pdf_path)
-          <a href="{{ Storage::url(str_replace('storage/','public/',$quotation->pdf_path)) }}" target="_blank" class="btn btn-outline-secondary">
+        @if($order->pdf_path)
+          <a href="{{ Storage::url(str_replace('storage/','public/',$order->pdf_path)) }}" target="_blank" class="btn btn-outline-secondary">
             <i class="bi bi-eye me-2"></i>View PDF
           </a>
         @endif
@@ -70,18 +70,18 @@
         <div class="card-body p-4">
           <div class="mb-3">
             <label class="text-muted small fw-semibold mb-1">Name</label>
-            <p class="mb-0 fw-medium">{{ $quotation->client_name }}</p>
+            <p class="mb-0 fw-medium">{{ $order->client_name }}</p>
           </div>
           <div class="mb-3">
             <label class="text-muted small fw-semibold mb-1">Phone</label>
             <p class="mb-0">
-              <i class="bi bi-telephone-fill text-success me-2"></i>{{ $quotation->client_phone }}
+              <i class="bi bi-telephone-fill text-success me-2"></i>{{ $order->client_phone }}
             </p>
           </div>
           <div class="mb-0">
             <label class="text-muted small fw-semibold mb-1">Email</label>
             <p class="mb-0">
-              <i class="bi bi-envelope-fill text-primary me-2"></i>{{ $quotation->client_email }}
+              <i class="bi bi-envelope-fill text-primary me-2"></i>{{ $order->client_email }}
             </p>
           </div>
         </div>
@@ -93,7 +93,7 @@
       <div class="card border-0 shadow-sm h-100">
         <div class="card-header bg-white border-0 p-4">
           <h5 class="mb-0 fw-semibold">
-            <i class="bi bi-calculator me-2 text-warning"></i>Quotation Summary
+            <i class="bi bi-calculator me-2 text-warning"></i>Order Summary
           </h5>
         </div>
         <div class="card-body p-4">
@@ -101,25 +101,25 @@
             <div class="col-md-3 mb-3">
               <div class="p-3 bg-light rounded">
                 <label class="text-muted small fw-semibold mb-1 d-block">Subtotal</label>
-                <h5 class="mb-0 fw-bold">₹{{ number_format($quotation->subtotal, 2) }}</h5>
+                <h5 class="mb-0 fw-bold">₹{{ number_format($order->subtotal, 2) }}</h5>
               </div>
             </div>
             <div class="col-md-3 mb-3">
               <div class="p-3 bg-light rounded">
                 <label class="text-muted small fw-semibold mb-1 d-block">Tax Amount</label>
-                <h5 class="mb-0 fw-bold text-info">₹{{ number_format($quotation->tax_amount, 2) }}</h5>
+                <h5 class="mb-0 fw-bold text-info">₹{{ number_format($order->tax_amount, 2) }}</h5>
               </div>
             </div>
             <div class="col-md-3 mb-3">
               <div class="p-3 bg-light rounded">
                 <label class="text-muted small fw-semibold mb-1 d-block">Discount</label>
-                <h5 class="mb-0 fw-bold text-danger">₹{{ number_format($quotation->discount_amount, 2) }}</h5>
+                <h5 class="mb-0 fw-bold text-danger">₹{{ number_format($order->discount_amount, 2) }}</h5>
               </div>
             </div>
             <div class="col-md-3 mb-3">
               <div class="p-3 bg-warning bg-opacity-10 rounded border border-warning">
                 <label class="text-muted small fw-semibold mb-1 d-block">Total Amount</label>
-                <h5 class="mb-0 fw-bold text-warning">₹{{ number_format($quotation->total_amount, 2) }}</h5>
+                <h5 class="mb-0 fw-bold text-warning">₹{{ number_format($order->total_amount, 2) }}</h5>
               </div>
             </div>
           </div>
@@ -132,7 +132,7 @@
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-white border-0 p-4">
       <h5 class="mb-0 fw-semibold">
-        <i class="bi bi-box-seam me-2 text-warning"></i>Quotation Items
+        <i class="bi bi-box-seam me-2 text-warning"></i>Order Items
       </h5>
     </div>
     <div class="card-body p-0">
@@ -149,7 +149,7 @@
             </tr>
           </thead>
           <tbody>
-            @foreach($quotation->items as $i => $it)
+            @foreach($order->items as $i => $it)
             <tr>
               <td class="px-4 py-3">
                 <span class="badge bg-secondary bg-opacity-10 text-secondary">{{ $i+1 }}</span>
@@ -184,57 +184,57 @@
                       Event Duration:
                   </td>
                   <td class="px-4 py-3 text-end fw-semibold">
-                      {{ $quotation->total_days }}
-                      Day{{ $quotation->total_days > 1 ? 's' : '' }}
+                      {{ $order->total_days }}
+                      Day{{ $order->total_days > 1 ? 's' : '' }}
                   </td>
               </tr>
 
               {{-- Total Tax --}}
-              @if($quotation->tax_amount > 0)
+              @if($order->tax_amount > 0)
               <tr>
                   <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
                       Total Tax:
                   </td>
                   <td class="px-4 py-3 text-end fw-semibold">
-                      ₹{{ number_format($quotation->tax_amount, 2) }}
+                      ₹{{ number_format($order->tax_amount, 2) }}
                   </td>
               </tr>
               @endif
 
               {{-- Extra Charges --}}
-              @if($quotation->extra_charge_type === 'delivery')
+              @if($order->extra_charge_type === 'delivery')
               <tr>
                   <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
                       Delivery Charges:
                   </td>
                   <td class="px-4 py-3 text-end fw-semibold">
-                      ₹{{ number_format($quotation->extra_charge_total, 2) }}
+                      ₹{{ number_format($order->extra_charge_total, 2) }}
                   </td>
               </tr>
               @endif
 
-              @if($quotation->extra_charge_type === 'staff')
+              @if($order->extra_charge_type === 'staff')
               <tr>
                   <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
                       Support Staff
-                      (₹{{ number_format($quotation->extra_charge_rate, 2) }} ×
-                      {{ $quotation->total_days }}
-                      Day{{ $quotation->total_days > 1 ? 's' : '' }}):
+                      (₹{{ number_format($order->extra_charge_rate, 2) }} ×
+                      {{ $order->total_days }}
+                      Day{{ $order->total_days > 1 ? 's' : '' }}):
                   </td>
                   <td class="px-4 py-3 text-end fw-semibold">
-                      ₹{{ number_format($quotation->extra_charge_total, 2) }}
+                      ₹{{ number_format($order->extra_charge_total, 2) }}
                   </td>
               </tr>
               @endif
 
               {{-- Discount --}}
-              @if($quotation->discount_amount > 0)
+              @if($order->discount_amount > 0)
               <tr>
                   <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
                       Discount:
                   </td>
                   <td class="px-4 py-3 text-end fw-semibold text-danger">
-                      − ₹{{ number_format($quotation->discount_amount, 2) }}
+                      − ₹{{ number_format($order->discount_amount, 2) }}
                   </td>
               </tr>
               @endif
@@ -246,7 +246,7 @@
                   </td>
                   <td class="px-4 py-3 text-end">
                       <span class="fs-5 fw-bold text-warning">
-                          ₹{{ number_format($quotation->total_amount, 2) }}
+                          ₹{{ number_format($order->total_amount, 2) }}
                       </span>
                   </td>
               </tr>
@@ -260,7 +260,7 @@
   </div>
 
   <!-- Notes Section -->
-  @if($quotation->notes)
+  @if($order->notes)
   <div class="card border-0 shadow-sm">
     <div class="card-header bg-white border-0 p-4">
       <h5 class="mb-0 fw-semibold">
@@ -268,7 +268,7 @@
       </h5>
     </div>
     <div class="card-body p-4">
-      <p class="mb-0 text-muted">{{ $quotation->notes }}</p>
+      <p class="mb-0 text-muted">{{ $order->notes }}</p>
     </div>
   </div>
   @endif
@@ -277,7 +277,7 @@
 <!-- Email Modal -->
 <div class="modal fade" id="emailModal" tabindex="-1" aria-labelledby="emailModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <form action="{{ route('quotations.sendEmail', $quotation) }}" method="POST" id="sendEmailForm">
+    <form action="{{ route('orders.sendEmail', $order) }}" method="POST" id="sendEmailForm">
       @csrf
       <div class="modal-content border-0 shadow">
         <div class="modal-header bg-success bg-opacity-10 border-0 p-4">
@@ -289,11 +289,11 @@
         <div class="modal-body p-4">
           <div class="mb-3">
             <label class="form-label fw-semibold">To Email</label>
-            <input name="to_email" class="form-control" value="{{ $quotation->client_email }}" required>
+            <input name="to_email" class="form-control" value="{{ $order->client_email }}" required>
           </div>
           <div class="mb-0">
             <label class="form-label fw-semibold">Message</label>
-            <textarea name="message" class="form-control" rows="4" required>Hello {{ $quotation->client_name }}, Please find attached the quotation {{ $quotation->code }}.</textarea>
+            <textarea name="message" class="form-control" rows="4" required>Hello {{ $order->client_name }}, Please find attached the order {{ $order->code }}.</textarea>
           </div>
         </div>
         <div class="modal-footer border-0 p-4">
@@ -314,7 +314,7 @@
 <!-- WhatsApp Modal -->
 <div class="modal fade" id="waModal" tabindex="-1" aria-labelledby="waModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <form action="{{ route('quotations.sendWhatsapp', $quotation) }}" method="POST" target="_blank">
+    <form action="{{ route('orders.sendWhatsapp', $order) }}" method="POST" target="_blank">
       @csrf
       <div class="modal-content border-0 shadow">
         <div class="modal-header bg-info bg-opacity-10 border-0 p-4">
@@ -326,11 +326,11 @@
         <div class="modal-body p-4">
           <div class="mb-3">
             <label class="form-label fw-semibold">To Phone</label>
-            <input name="to_phone" class="form-control" value="{{ $quotation->client_phone }}" required>
+            <input name="to_phone" class="form-control" value="{{ $order->client_phone }}" required>
           </div>
           <div class="mb-0">
             <label class="form-label fw-semibold">Message</label>
-            <textarea name="message" class="form-control" rows="4" required>Hello {{ $quotation->client_name }}, Here is the quotation {{ $quotation->code }}. Please download from the link and reply to confirm.</textarea>
+            <textarea name="message" class="form-control" rows="4" required>Hello {{ $order->client_name }}, Here is the order {{ $order->code }}. Please download from the link and reply to confirm.</textarea>
           </div>
         </div>
         <div class="modal-footer border-0 p-4">

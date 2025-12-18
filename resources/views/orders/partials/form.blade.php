@@ -1,5 +1,5 @@
 @php
-    $items = old('items') ?: ($quotation ? $quotation->items->toArray() : []);
+    $items = old('items') ?: ($order ? $order->items->toArray() : []);
 @endphp
 
 <!-- Client Information Card -->
@@ -13,15 +13,15 @@
     <div class="row g-3">
       <div class="col-md-6">
         <label class="form-label fw-semibold">Client Name <span class="text-danger">*</span></label>
-        <input name="client_name" class="form-control" value="{{ old('client_name', $quotation->client_name ?? '') }}" required>
+        <input name="client_name" class="form-control" value="{{ old('client_name', $order->client_name ?? '') }}" required>
       </div>
       <div class="col-md-3">
         <label class="form-label fw-semibold">Client Email</label>
-        <input type="email" name="client_email" class="form-control" value="{{ old('client_email', $quotation->client_email ?? '') }}">
+        <input type="email" name="client_email" class="form-control" value="{{ old('client_email', $order->client_email ?? '') }}">
       </div>
       <div class="col-md-3">
         <label class="form-label fw-semibold">Client Phone</label>
-        <input name="client_phone" class="form-control" value="{{ old('client_phone', $quotation->client_phone ?? '') }}">
+        <input name="client_phone" class="form-control" value="{{ old('client_phone', $order->client_phone ?? '') }}">
       </div>
     </div>
 
@@ -30,13 +30,13 @@
       <div class="col-md-6">
           <label class="form-label fw-semibold">Event From</label>
           <input type="date" name="event_from" id="event_from" class="form-control"
-          value="{{ old('event_from', $quotation && $quotation->event_from ? \Carbon\Carbon::parse($quotation->event_from)->format('Y-m-d') : '') }}">
+          value="{{ old('event_from', $order && $order->event_from ? \Carbon\Carbon::parse($order->event_from)->format('Y-m-d') : '') }}">
       </div>
 
       <div class="col-md-6">
           <label class="form-label fw-semibold">Event To</label>
           <input type="date" name="event_to" id="event_to" class="form-control"
-          value="{{ old('event_to', $quotation && $quotation->event_to ? \Carbon\Carbon::parse($quotation->event_to)->format('Y-m-d') : '') }}">
+          value="{{ old('event_to', $order && $order->event_to ? \Carbon\Carbon::parse($order->event_to)->format('Y-m-d') : '') }}">
       </div>
 
     <div class="col-md-12">
@@ -46,7 +46,7 @@
             id="notes_editor"
             class="form-control"
             rows="4"
-        >{{ old('notes', $quotation->notes ?? '') }}</textarea>
+        >{{ old('notes', $order->notes ?? '') }}</textarea>
     </div>
 
 
@@ -56,11 +56,11 @@
       <div class="col-md-6">
         <label class="form-label fw-semibold">Event From</label>
         <input type="date" name="event_from" class="form-control" 
-        value="{{ old('event_from', $quotation && $quotation->event_from ? \Carbon\Carbon::parse($quotation->event_from)->format('Y-m-d') : '') }}">
+        value="{{ old('event_from', $order && $order->event_from ? \Carbon\Carbon::parse($order->event_from)->format('Y-m-d') : '') }}">
       </div>
       <div class="col-md-6">
         <label class="form-label fw-semibold">Notes</label>
-        <textarea name="notes" class="form-control" rows="1">{{ old('notes', $quotation->notes ?? '') }}</textarea>
+        <textarea name="notes" class="form-control" rows="1">{{ old('notes', $order->notes ?? '') }}</textarea>
       </div>
     </div> -->
   </div>
@@ -71,7 +71,7 @@
   <div class="card-header bg-white border-0 p-4">
     <div class="d-flex justify-content-between align-items-center">
       <h5 class="mb-0 fw-semibold">
-        <i class="bi bi-box-seam me-2 text-warning"></i>Quotation Items
+        <i class="bi bi-box-seam me-2 text-warning"></i>Order Items
       </h5>
       <button type="button" id="add-row" class="btn btn-success btn-sm">
         <i class="bi bi-plus-circle me-2"></i>Add Item
@@ -168,13 +168,13 @@
                       type="radio"
                       name="extra_charge_type"
                       id="delivery_charge_option"
-                      value="delivery" {{ old('extra_charge_type', $quotation->extra_charge_type ?? '') === 'delivery' ? 'checked' : '' }}>
+                      value="delivery" {{ old('extra_charge_type', $order->extra_charge_type ?? '') === 'delivery' ? 'checked' : '' }}>
                 <label class="form-check-label fw-semibold" for="delivery_charge_option">
                     Delivery Charges
                 </label>
             </div>
 
-            <div id="delivery_charge_input" class="ms-4 mb-3" style="{{ old('extra_charge_type', $quotation->extra_charge_type ?? '') === 'delivery' ? '' : 'display:none;' }}">
+            <div id="delivery_charge_input" class="ms-4 mb-3" style="{{ old('extra_charge_type', $order->extra_charge_type ?? '') === 'delivery' ? '' : 'display:none;' }}">
                 <div class="input-group" style="max-width:200px;">
                     <span class="input-group-text">₹</span>
                     <input type="number"
@@ -182,7 +182,7 @@
                           name="delivery_charge_amount"
                           class="form-control extra-charge-amount"
                           id="delivery_charge_amount"
-                          value="{{ old('extra_charge_total', $quotation->extra_charge_total ?? '') }}"
+                          value="{{ old('extra_charge_total', $order->extra_charge_total ?? '') }}"
                           placeholder="Enter amount">
                 </div>
             </div>
@@ -193,14 +193,14 @@
                       type="radio"
                       name="extra_charge_type"
                       id="staff_charge_option"
-                      value="staff" {{ old('extra_charge_type', $quotation->extra_charge_type ?? '') === 'staff' ? 'checked' : '' }}>
+                      value="staff" {{ old('extra_charge_type', $order->extra_charge_type ?? '') === 'staff' ? 'checked' : '' }}>
                 <label class="form-check-label fw-semibold" for="staff_charge_option">
                     Attendance / Support Staff <span class="text-muted">(Per Day)</span>
                 </label>
 
               <div id="staff_charge_input"
                   class="ms-4 mb-2"
-                  style="{{ old('extra_charge_type', $quotation->extra_charge_type ?? '') === 'staff' ? '' : 'display:none;' }}">
+                  style="{{ old('extra_charge_type', $order->extra_charge_type ?? '') === 'staff' ? '' : 'display:none;' }}">
                   <div class="input-group mb-1" style="max-width:200px;">
                       <span class="input-group-text">₹</span>
                       <input type="number"
@@ -208,7 +208,7 @@
                             class="form-control"
                             name="extra_charge_rate"
                             id="staff_charge_amount"
-                            value="{{ old('extra_charge_rate', $quotation->extra_charge_rate ?? '') }}"
+                            value="{{ old('extra_charge_rate', $order->extra_charge_rate ?? '') }}"
                             placeholder="Per day amount">
                   </div>
 
@@ -240,9 +240,23 @@
             <label class="text-muted mb-0">Discount:</label>
             <div class="input-group" style="width: 150px;">
               <span class="input-group-text">₹</span>
-              <input type="number" step="0.01" name="discount_amount" id="discount" class="form-control" value="{{ old('discount_amount', $quotation->discount_amount ?? 0) }}">
+              <input type="number" step="0.01" name="discount_amount" id="discount" class="form-control" value="{{ old('discount_amount', $order->discount_amount ?? 0) }}">
             </div>
           </div>
+
+          <!-- ✅ ADVANCE PAID (ORDER ONLY) -->
+          <div class="d-flex justify-content-between mb-3">
+            <label class="fw-semibold mb-0">
+              Advance Paid <span class="text-danger">*</span>
+            </label>
+            <input type="number"
+                   step="0.01"
+                   name="advance_paid"
+                   class="form-control form-control-sm"
+                   style="width:150px;"
+                   required>
+          </div>
+
           <hr class="my-3">
           <div class="d-flex justify-content-between">
             <span class="fs-5 fw-bold">Total Amount:</span>
@@ -264,7 +278,7 @@
   <div class="card-body p-4">
     <div class="alert alert-info border-0 mb-3">
       <i class="bi bi-info-circle me-2"></i>
-      These actions will be available after saving the quotation.
+      These actions will be available after saving the order.
     </div>
     <div class="d-flex flex-wrap gap-2">
       <button type="button" id="generate-pdf" class="btn btn-outline-primary" disabled>
@@ -560,15 +574,15 @@ document.addEventListener('DOMContentLoaded', function(){
 
     // Info buttons
     document.getElementById('generate-pdf').addEventListener('click', function(){
-        alert('Please save the quotation first. After saving, you can generate PDF from the quotation details page.');
+        alert('Please save the order first. After saving, you can generate PDF from the order details page.');
     });
 
     document.getElementById('send-email').addEventListener('click', function(){
-        alert('Please save the quotation first. After saving, you can send email from the quotation details page.');
+        alert('Please save the order first. After saving, you can send email from the order details page.');
     });
 
     document.getElementById('send-whatsapp').addEventListener('click', function(){
-        alert('Please save the quotation first. After saving, you can send WhatsApp message from the quotation details page.');
+        alert('Please save the order first. After saving, you can send WhatsApp message from the order details page.');
     });
 });
 </script> -->
