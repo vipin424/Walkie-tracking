@@ -14,7 +14,7 @@ class Order extends Model
         'extra_charge_type','extra_charge_rate','extra_charge_total',
         'discount_amount','total_amount',
         'advance_paid','balance_amount',
-        'status','created_by'
+        'status','created_by','pdf_path'
     ];
 
     public function items() {

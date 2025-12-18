@@ -125,7 +125,7 @@ class OrderController extends Controller
 
                 'discount_amount' => $discount,
                 'total_amount' => $total,
-
+                'security_deposit' => floatval($request->security_deposit ?? 0),
                 'advance_paid'  => $request->advance_paid,
                 'balance_amount'=> $total - $request->advance_paid,
 
@@ -159,6 +159,57 @@ class OrderController extends Controller
             ->route('orders.show', $order)
             ->with('success', 'Order created successfully.');
     }
+
+
+    public function complete(Request $request, Order $order)
+    {
+        $request->validate([
+            'damage_charge' => 'nullable|numeric|min:0',
+            'late_fee'      => 'nullable|numeric|min:0',
+        ]);
+
+        $damage = floatval($request->damage_charge ?? 0);
+        $late   = floatval($request->late_fee ?? 0);
+
+        // remaining rent still unpaid
+        $remaining = $order->balance_amount;
+
+        // adjust from deposit
+        $depositRemaining = $order->security_deposit - ($remaining + $damage + $late);
+
+        if ($depositRemaining >= 0) {
+            // refund to client
+            $order->refund_amount = $depositRemaining;
+            $order->amount_due    = 0;
+        } else {
+            // customer still owes
+            $order->refund_amount = 0;
+            $order->amount_due    = abs($depositRemaining);
+        }
+
+        $order->update([
+            'damage_charge'  => $damage,
+            'late_fee'       => $late,
+            'settlement_status' => 'pending',
+            'status'             => 'completed',
+        ]);
+
+        return redirect()->route('orders.show',$order)
+            ->with('success',"Order marked completed. Please proceed with settlement.");
+    }
+
+
+    public function settle(Order $order)
+    {
+        $order->update([
+            'settlement_status' => 'settled',
+        ]);
+
+        return redirect()->route('orders.show',$order)
+            ->with('success','Settlement completed. Final invoice ready.');
+    }
+
+
 
 
     // public function store(Request $request)
@@ -373,7 +424,7 @@ class OrderController extends Controller
         $html = view('orders.pdf', compact('order'))->render();
         $pdf = PDF::loadHTML($html)->setPaper('a4', 'portrait');
 
-        $fileName = $order->code . '.pdf';
+        $fileName = $order->order_code . '.pdf';
         Storage::disk('public')->put('orders/'.$fileName, $pdf->output());
 
 
@@ -382,12 +433,12 @@ class OrderController extends Controller
         $order->save();
 
         // log
-        OrderLog::create([
-            'order_id' => $order->id,
-            'user_id' => Auth::id(),
-            'action' => 'generated_pdf',
-            'meta' => json_encode(['path' => $order->pdf_path]),
-        ]);
+        // OrderLog::create([
+        //     'order_id' => $order->id,
+        //     'user_id' => Auth::id(),
+        //     'action' => 'generated_pdf',
+        //     'meta' => json_encode(['path' => $order->pdf_path]),
+        // ]);
 
         return redirect()->back()->with('success','PDF generated and stored.');
     }

@@ -272,6 +272,79 @@
     </div>
   </div>
   @endif
+  @if($order->status == 'completed' && $order->settlement_status == 'pending')
+  <div class="card border-0 shadow-sm mt-4">
+      <div class="card-header bg-white border-0 p-4">
+          <h5 class="mb-0 fw-semibold">
+              <i class="bi bi-cash-coin text-success me-2"></i>
+              Final Settlement
+          </h5>
+      </div>
+
+      <div class="card-body p-4">
+
+          <div class="row mb-3">
+              <div class="col-md-6">
+                  <label class="form-label fw-semibold">Total Rent</label>
+                  <input class="form-control" value="₹{{ number_format($order->total_amount,2) }}" disabled>
+              </div>
+
+              <div class="col-md-6">
+                  <label class="form-label fw-semibold">Advance Paid</label>
+                  <input class="form-control" value="₹{{ number_format($order->advance_paid,2) }}" disabled>
+              </div>
+          </div>
+
+          <div class="row mb-3">
+              <div class="col-md-6">
+                  <label class="form-label fw-semibold">Security Deposit</label>
+                  <input class="form-control" value="₹{{ number_format($order->security_deposit,2) }}" disabled>
+              </div>
+
+              <div class="col-md-6">
+                  <label class="form-label fw-semibold">Remaining Rent payable</label>
+                  <input class="form-control"
+                        value="₹{{ number_format($order->balance_amount,2) }}"
+                        disabled>
+              </div>
+          </div>
+
+          <form action="{{ route('orders.complete', $order) }}" method="POST" id="settle-form">
+              @csrf
+
+              <hr class="my-4">
+
+              <h5 class="fw-bold mb-3">Deductions (if applicable)</h5>
+
+              <div class="row mb-3">
+                  <div class="col-md-6">
+                      <label class="form-label fw-semibold">Damage Charges</label>
+                      <input type="number" step="0.01" name="damage_charge"
+                             class="form-control" value="0">
+                  </div>
+                  <div class="col-md-6">
+                      <label class="form-label fw-semibold">Late Fee</label>
+                      <input type="number" step="0.01" name="late_fee"
+                             class="form-control" value="0">
+                  </div>
+              </div>
+
+              <div class="alert alert-info mt-4">
+                  <strong>Note:</strong> Damage/Late fee will be settled from security deposit first.
+              </div>
+
+              <button class="btn btn-success mt-3">
+                  <i class="bi bi-check-circle me-2"></i>
+                  Proceed Settlement
+              </button>
+
+          </form>
+
+      </div>
+  </div>
+  @endif
+
+
 </div>
 
 <!-- Email Modal -->

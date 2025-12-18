@@ -29,7 +29,7 @@
           Marol, Andheri East, Mumbai,<br>
           Maharashtra – 400059
       </div>
-    <div>Phone: +91-9324465314 | Email: info@crewrent.com</div>
+    <div>Phone: +91-9324465314 | Email: info@crewrent.in</div>
     </div>
     <div class="client">
       <h2>Quotation</h2>
