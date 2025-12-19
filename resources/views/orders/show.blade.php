@@ -272,7 +272,7 @@
     </div>
   </div>
   @endif
-  @if($order->status == 'completed' && $order->settlement_status == 'pending')
+  @if($order->status == 'completed' || $order->settlement_status == 'pending')
   <div class="card border-0 shadow-sm mt-4">
       <div class="card-header bg-white border-0 p-4">
           <h5 class="mb-0 fw-semibold">

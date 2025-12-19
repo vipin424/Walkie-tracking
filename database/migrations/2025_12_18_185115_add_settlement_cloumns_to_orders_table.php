@@ -12,12 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('orders', function (Blueprint $table) {
-            $table->decimal('security_deposit',10,2)->nullable();     // Deposit collected
-            $table->decimal('damage_charge',10,2)->nullable();        // If damaged
-            $table->decimal('late_fee',10,2)->nullable();             // If returned late
-            $table->decimal('refund_amount',10,2)->nullable();        // Refund to customer
-            $table->decimal('amount_due',10,2)->nullable();           // customer needs to pay
-            $table->enum('settlement_status',['pending','settled'])->default('pending');
+            $table->decimal('security_deposit',10,2)->nullable()->after('pdf_path');     // Deposit collected
+            $table->decimal('damage_charge',10,2)->nullable()->after('security_deposit');        
+            $table->decimal('deposit_adjusted',10,2)->nullable()->after('damage_charge'); 
+            $table->decimal('late_fee',10,2)->nullable()->after('deposit_adjusted');             // If returned late
+            $table->decimal('refund_amount',10,2)->nullable()->after('late_fee');        // Refund to customer
+            $table->decimal('amount_due',10,2)->nullable()->after('refund_amount');           // customer needs to pay
+            $table->enum('settlement_status',['pending','settled'])->default('pending')->after('amount_due'); // Settlement status
+            $table->date('settlement_date')->nullable()->after('settlement_status');
+            $table->decimal('final_payable',10,2)->nullable()->after('settlement_date'); // Final amount payable after settlement
         });
     }
 
@@ -30,10 +33,13 @@ return new class extends Migration
             $table->dropColumn([
                 'security_deposit',
                 'damage_charge',
+                'deposit_adjusted',
                 'late_fee',
                 'refund_amount',
                 'amount_due',
-                'settlement_status'
+                'settlement_status',
+                'settlement_date',
+                'final_payable'
             ]);
         });
     }
