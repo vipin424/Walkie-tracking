@@ -239,14 +239,38 @@
               </tr>
               @endif
 
+            {{-- Sub Total --}}
+              <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold">
+                      Sub Total:
+                  </td>
+                  <td class="px-4 py-3 text-end">
+                      <span class="fs-5 fw-bold text-warning">
+                          ₹{{ number_format($order->total_amount, 2) }}
+                      </span>
+                  </td>
+              </tr>
+
+              {{-- Advance Payment --}}
+              @if($order->advance_paid > 0)
+              <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
+                      Advance Paid:
+                  </td>
+                  <td class="px-4 py-3 text-end fw-semibold text-danger">
+                      - ₹{{ number_format($order->advance_paid, 2) }}
+                  </td>
+              </tr>
+              @endif
+
               {{-- Grand Total --}}
               <tr>
                   <td colspan="5" class="px-4 py-3 text-end fw-semibold">
                       Grand Total:
                   </td>
                   <td class="px-4 py-3 text-end">
-                      <span class="fs-5 fw-bold text-warning">
-                          ₹{{ number_format($order->total_amount, 2) }}
+                      <span class="fs-5 fw-bold text-success">
+                          ₹{{ number_format($order->balance_amount, 2) }}
                       </span>
                   </td>
               </tr>

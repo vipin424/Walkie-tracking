@@ -12,6 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('orders', function (Blueprint $table) {
+            $table->text('notes')->nullable()->after('created_by');
             $table->decimal('security_deposit',10,2)->nullable()->after('pdf_path');     // Deposit collected
             $table->decimal('damage_charge',10,2)->nullable()->after('security_deposit');        
             $table->decimal('deposit_adjusted',10,2)->nullable()->after('damage_charge'); 
@@ -31,6 +32,7 @@ return new class extends Migration
     {
         Schema::table('orders', function (Blueprint $table) {
             $table->dropColumn([
+                'notes',
                 'security_deposit',
                 'damage_charge',
                 'deposit_adjusted',

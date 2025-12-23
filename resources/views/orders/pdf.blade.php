@@ -2,154 +2,290 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>{{ $order->order_code }} - Order</title>
+    <title>{{ $order->order_code }} - {{ $order->settlement_status === 'settled' ? 'Invoice' : 'Order' }}</title>
     <style>
-      body{font-family: DejaVu Sans, Arial, sans-serif; font-size:12px; color:#222;}
-      .header{display:flex; justify-content:space-between; align-items:center;}
-      .company {text-align:left;}
-      .company img{height:60px;}
-      .client {text-align:right;}
-      table {width:100%; border-collapse:collapse; margin-top:20px;}
-      th, td {padding:8px; border:1px solid #e1e1e1;}
-      th {background:#ff9800; text-align:left;}
-      .right {text-align:right;}
-      .total-row td {font-weight:bold;}
-      .notes {margin-top:20px; font-size:11px;}
-      .footer {position:fixed; bottom:20px; font-size:10px; width:100%; text-align:center; color:#888;}
+        body {
+            font-family: DejaVu Sans, Arial, sans-serif;
+            font-size: 12px;
+            color: #222;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .company img {
+            height: 70px;
+            margin-bottom: 5px;
+        }
+        .client {
+            text-align: right;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 8px;
+            border: 1px solid #e1e1e1;
+        }
+        th {
+            background: #ff9800;
+            color: #000;
+        }
+        .right {
+            text-align: right;
+        }
+        .total-row td {
+            font-weight: bold;
+        }
+        .section-title {
+            background: #ff9800;
+            color: #000;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        .subsection-title {
+            background: #fff3e0;
+            font-weight: bold;
+        }
+        .calculation-row td {
+            font-size: 11px;
+            color: #555;
+            font-weight: normal;
+        }
+        .highlight-row {
+            background: #fff8e1;
+        }
+        .final-amount-row {
+            background: #ffe0b2;
+            font-size: 14px;
+        }
+        .notes {
+            margin-top: 20px;
+            font-size: 11px;
+        }
+        .footer {
+            position: fixed;
+            bottom: 20px;
+            font-size: 10px;
+            width: 100%;
+            text-align: center;
+            color: #888;
+        }
     </style>
 </head>
 <body>
-  <div class="header">
+
+{{-- ================= HEADER ================= --}}
+<div class="header">
     <div class="company">
-     <img src="{{ public_path('image/logo.png') }}" style="width:150px; height:150px; object-fit:contain;" alt="Company Logo">
-
-      <div><strong>Crewrent Enterprises</strong></div>  
-      <div style="font-size:11px; line-height:1.5; color:#444; margin-bottom:4px;">
-          The Avenue, IA Project Rd, Chimatpada,<br>
-          Marol, Andheri East, Mumbai,<br>
-          Maharashtra – 400059
-      </div>
-    <div>Phone: +91-9324465314 | Email: info@crewrent.in</div>
+        <img src="{{ public_path('image/logo.png') }}" alt="Logo">
+        <div><strong>Crewrent Enterprises</strong></div>
+        <div style="font-size:11px; line-height:1.5;">
+            The Avenue, IA Project Rd, Chimatpada,<br>
+            Marol, Andheri East, Mumbai – 400059
+        </div>
+        <div>Phone: +91-9324465314 | Email: info@crewrent.in</div>
     </div>
+
     <div class="client">
-      <h2>Order Confirmed</h2>
-      <div><strong>{{ $order->order_code }}</strong></div>
-      <div>Date: {{ optional($order->created_at)->format('d M Y') }}</div>
-      <div>To: <strong>{{ $order->client_name }}</strong></div>
-      <div>{{ $order->client_email }}</div>
-      <div>{{ $order->client_phone }}</div>
+        <h2>{{ $order->settlement_status === 'settled' ? 'Invoice' : 'Order Confirmed' }}</h2>
+        <div><strong>{{ $order->order_code }}</strong></div>
+        <div>Date: {{ optional($order->created_at)->format('d M Y') }}</div>
+        <div>To: <strong>{{ $order->client_name }}</strong></div>
+        <div>{{ $order->client_email }}</div>
+        <div>{{ $order->client_phone }}</div>
     </div>
-  </div>
+</div>
 
-  <table>
+{{-- ================= ITEMS TABLE ================= --}}
+<table>
     <thead>
-      <tr>
-        <th>#</th>
-        <th>Items</th>
-        <th>Type</th>
-        <th class="right">Qty</th>
-        <th class="right">Rate / Item / Day</th>
-        <th class="right">Tax %</th>
-        <th class="right">Total</th>
-      </tr>
+        <tr>
+            <th>#</th>
+            <th>Items</th>
+            <th>Type</th>
+            <th class="right">Qty</th>
+            <th class="right">Rate/Item/Day</th>
+            <th class="right">Days</th>
+            <th class="right">Tax %</th>
+            <th class="right">Total</th>
+        </tr>
     </thead>
     <tbody>
-      @foreach($order->items as $i => $item)
-      <tr>
-        <td>{{ $i+1 }}</td>
-        <td>
-          <strong>{{ $item->item_name }}</strong><br>
-          <div style="font-size:11px; color:#555;">{{ $item->description }}</div>
-        </td>
-        <td>{{ $item->item_type }}</td>
-        <td class="right">{{ $item->quantity }}</td>
-        <td class="right">{{ number_format($item->unit_price,2) }}</td>
-        <td class="right">{{ $item->tax_percent ?? 0 }}</td>
-        <td class="right">{{ number_format($item->total_price,2) }}</td>
-      </tr>
-      @endforeach
+        @foreach($order->items as $i => $item)
+        <tr>
+            <td>{{ $i + 1 }}</td>
+            <td>
+                <strong>{{ $item->item_name }}</strong><br>
+                <span style="font-size:11px; color:#555;">
+                    {{ $item->description }}
+                </span>
+            </td>
+            <td>{{ $item->item_type }}</td>
+            <td class="right">{{ $item->quantity }}</td>
+            <td class="right">₹{{ number_format($item->unit_price,2) }}</td>
+            <td class="right">{{ $order->total_days }}</td>
+            <td class="right">{{ $item->tax_percent ?? 0 }}%</td>
+            <td class="right">₹{{ number_format($item->total_price,2) }}</td>
+        </tr>
+        @endforeach
     </tbody>
-  <tfoot>
 
-      {{-- Event Duration --}}
-      <tr class="total-row">
-          <td colspan="6" class="right">
-              Event Duration
-          </td>
-          <td class="right">
-              {{ $order->total_days }}
-              Day{{ $order->total_days > 1 ? 's' : '' }}
-          </td>
-      </tr>
+    {{-- ================= PRICE BREAKUP ================= --}}
+    <tfoot>
+        <tr class="section-title">
+            <td colspan="8">Price Breakup</td>
+        </tr>
 
-      {{-- Subtotal --}}
-      <tr class="total-row">
-          <td colspan="6" class="right">Subtotal</td>
-          <td class="right">{{ number_format($order->subtotal, 2) }}</td>
-      </tr>
+        {{-- Event Duration --}}
+        <tr class="highlight-row">
+            <td colspan="7" class="right"><strong>Event Duration</strong></td>
+            <td class="right"><strong>{{ $order->total_days }} Day{{ $order->total_days > 1 ? 's' : '' }}</strong></td>
+        </tr>
 
-      {{-- Tax (only if > 0) --}}
-      @if($order->tax_amount > 0)
-      <tr class="total-row">
-          <td colspan="6" class="right">Tax</td>
-          <td class="right">{{ number_format($order->tax_amount, 2) }}</td>
-      </tr>
-      @endif
+        {{-- Subtotal --}}
+        <tr class="total-row">
+            <td colspan="7" class="right">Item Subtotal (Before Tax)</td>
+            <td class="right">₹{{ number_format($order->subtotal - $order->tax_amount, 2) }}</td>
+        </tr>
 
-      {{-- Extra Charges --}}
-      @if($order->extra_charge_type === 'delivery')
-      <tr class="total-row">
-          <td colspan="6" class="right">
-              Delivery Charges
-          </td>
-          <td class="right">
-              {{ number_format($order->extra_charge_total, 2) }}
-          </td>
-      </tr>
-      @endif
+        {{-- Tax --}}
+        @if($order->tax_amount > 0)
+        <tr class="total-row">
+            <td colspan="7" class="right">Tax Amount</td>
+            <td class="right">₹{{ number_format($order->tax_amount,2) }}</td>
+        </tr>
+        <tr class="total-row highlight-row">
+            <td colspan="7" class="right"><strong>Item Total (With Tax)</strong></td>
+            <td class="right"><strong>₹{{ number_format($order->subtotal,2) }}</strong></td>
+        </tr>
+        @endif
 
-      @if($order->extra_charge_type === 'staff')
-      <tr class="total-row">
-          <td colspan="6" class="right">
-              Support Staff
-              ({{ number_format($order->extra_charge_rate, 2) }}
-              × {{ $order->total_days }} Day{{ $order->total_days > 1 ? 's' : '' }})
-          </td>
-          <td class="right">
-              {{ number_format($order->extra_charge_total, 2) }}
-          </td>
-      </tr>
-      @endif
+        {{-- Additional Charges Section --}}
+        @if($order->extra_charge_type === 'delivery' || $order->extra_charge_type === 'staff')
+        <tr class="subsection-title">
+            <td colspan="8">Additional Charges</td>
+        </tr>
+        @endif
 
-      {{-- Discount (only if > 0) --}}
-      @if($order->discount_amount > 0)
-      <tr class="total-row">
-          <td colspan="6" class="right">Discount</td>
-          <td class="right">
-              - {{ number_format($order->discount_amount, 2) }}
-          </td>
-      </tr>
-      @endif
+        @if($order->extra_charge_type === 'delivery')
+        <tr class="total-row">
+            <td colspan="7" class="right">Delivery & Setup Charges</td>
+            <td class="right">₹{{ number_format($order->extra_charge_total,2) }}</td>
+        </tr>
+        @endif
 
-      {{-- Grand Total --}}
-      <tr class="total-row">
-          <td colspan="6" class="right"><strong>Grand Total</strong></td>
-          <td class="right"><strong>{{ number_format($order->total_amount, 2) }}</strong></td>
-      </tr>
+        @if($order->extra_charge_type === 'staff')
+        <tr class="calculation-row">
+            <td colspan="7" class="right">Support Staff: ₹{{ number_format($order->extra_charge_rate,2) }}/day × {{ $order->total_days }} days</td>
+            <td class="right">₹{{ number_format($order->extra_charge_total,2) }}</td>
+        </tr>
+        @endif
 
-  </tfoot>
+        {{-- Discount --}}
+        @if($order->discount_amount > 0)
+        <tr class="subsection-title">
+            <td colspan="8">Discount Applied</td>
+        </tr>
+        <tr class="total-row">
+            <td colspan="7" class="right">Discount</td>
+            <td class="right" style="color: #4caf50;">- ₹{{ number_format($order->discount_amount,2) }}</td>
+        </tr>
+        @endif
 
-  </table>
+        {{-- Grand Total --}}
+        <tr class="final-amount-row total-row">
+            <td colspan="7" class="right"><strong>GRAND TOTAL</strong></td>
+            <td class="right"><strong>₹{{ number_format($order->total_amount,2) }}</strong></td>
+        </tr>
 
-  <div class="notes">
-    <strong>Notes & Terms:</strong>
-    <div>
-    {!! $order->notes !!}
-    </div>
-  </div>
+        {{-- ================= PAYMENT SUMMARY ================= --}}
+        <tr class="section-title">
+            <td colspan="8">Payment Summary</td>
+        </tr>
 
-  <div class="footer">
-    This order is computer generated by Crewrent Enterprises.
-  </div>
+        <tr class="total-row">
+            <td colspan="7" class="right">Advance Paid</td>
+            <td class="right" style="color: #4caf50;">₹{{ number_format($order->advance_paid ?? 0,2) }}</td>
+        </tr>
+
+        <tr class="total-row">
+            <td colspan="7" class="right">Security Deposit (Refundable)</td>
+            <td class="right">₹{{ number_format($order->security_deposit ?? 0,2) }}</td>
+        </tr>
+
+        <tr class="calculation-row">
+            <td colspan="7" class="right">Calculation: Grand Total - Advance Paid</td>
+            <td class="right">₹{{ number_format($order->total_amount - ($order->advance_paid ?? 0), 2) }}</td>
+        </tr>
+
+        <tr class="highlight-row total-row">
+            <td colspan="7" class="right"><strong>Remaining Rent Payable</strong></td>
+            <td class="right"><strong>₹{{ number_format($order->balance_amount ?? 0,2) }}</strong></td>
+        </tr>
+
+        {{-- ================= SETTLEMENT ================= --}}
+        @if($order->settlement_status === 'settled')
+
+        <tr class="section-title">
+            <td colspan="8">Final Settlement Details</td>
+        </tr>
+
+        @if(($order->damage_charge ?? 0) > 0)
+        <tr class="total-row">
+            <td colspan="7" class="right">Damage Charges</td>
+            <td class="right" style="color: #f44336;">₹{{ number_format($order->damage_charge,2) }}</td>
+        </tr>
+        @endif
+
+        @if(($order->late_fee ?? 0) > 0)
+        <tr class="total-row">
+            <td colspan="7" class="right">Late Return Fee</td>
+            <td class="right" style="color: #f44336;">₹{{ number_format($order->late_fee,2) }}</td>
+        </tr>
+        @endif
+
+        <tr class="total-row">
+            <td colspan="7" class="right">Security Deposit Adjusted</td>
+            <td class="right">₹{{ number_format($order->deposit_adjusted ?? 0,2) }}</td>
+        </tr>
+
+        @if(($order->final_payable ?? 0) > 0)
+        <tr class="final-amount-row total-row">
+            <td colspan="7" class="right"><strong>FINAL AMOUNT PAYABLE</strong></td>
+            <td class="right"><strong style="color: #f44336;">₹{{ number_format($order->final_payable,2) }}</strong></td>
+        </tr>
+        @endif
+
+        @if(($order->refund_amount ?? 0) > 0)
+        <tr class="final-amount-row total-row">
+            <td colspan="7" class="right"><strong>REFUND AMOUNT</strong></td>
+            <td class="right"><strong style="color: #4caf50;">₹{{ number_format($order->refund_amount,2) }}</strong></td>
+        </tr>
+        @endif
+
+        @endif
+
+    </tfoot>
+</table>
+
+{{-- ================= NOTES ================= --}}
+@if($order->notes)
+<div class="notes">
+    <strong>Terms & Conditions:</strong>
+    <div>{!! $order->notes !!}</div>
+</div>
+@endif
+
+<div class="footer">
+    {{ $order->settlement_status === 'settled'
+        ? 'This invoice is computer generated by Crewrent Enterprises.'
+        : 'This order is computer generated by Crewrent Enterprises.'
+    }}
+</div>
+
 </body>
 </html>

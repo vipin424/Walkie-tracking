@@ -253,9 +253,21 @@
                    step="0.01"
                    name="advance_paid"
                    class="form-control form-control-sm"
-                   style="width:150px;"
+                   style="width:150px;" value="{{ old('advance_paid', $order->advance_paid ?? 0) }}"
                    required>
           </div>
+          
+          <div class="d-flex justify-content-between mb-3">
+            <label class="fw-semibold mb-0">
+              Security Deposit
+            </label>
+            <input type="number"
+                   step="0.01"
+                   name="security_deposit"
+                   class="form-control form-control-sm"
+                   style="width:150px;" value="{{ old('security_deposit', $order->security_deposit ?? '') }}">
+          </div>
+         
 
           <hr class="my-3">
           <div class="d-flex justify-content-between">

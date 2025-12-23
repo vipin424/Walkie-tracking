@@ -114,6 +114,7 @@ class OrderController extends Controller
 
                 'event_from' => $request->event_from,
                 'event_to'   => $request->event_to,
+                'notes'      => $request->notes,
                 'total_days' => $totalDays,
 
                 'subtotal' => $subtotal,
@@ -160,7 +161,7 @@ class OrderController extends Controller
             ->with('success', 'Order created successfully.');
     }
 
-
+    
     public function complete(Request $request, Order $order)
     {
         $request->validate([
@@ -171,32 +172,77 @@ class OrderController extends Controller
         $damage = floatval($request->damage_charge ?? 0);
         $late   = floatval($request->late_fee ?? 0);
 
-        // remaining rent still unpaid
-        $remaining = $order->balance_amount;
+        $deposit = floatval($order->security_deposit);
+        $balance = floatval($order->balance_amount);
 
-        // adjust from deposit
-        $depositRemaining = $order->security_deposit - ($remaining + $damage + $late);
+        $depositRemaining = $deposit - ($damage + $late);
 
         if ($depositRemaining >= 0) {
-            // refund to client
-            $order->refund_amount = $depositRemaining;
-            $order->amount_due    = 0;
-        } else {
-            // customer still owes
-            $order->refund_amount = 0;
-            $order->amount_due    = abs($depositRemaining);
-        }
+            // deposit covers damages
+            $finalPayable = $balance - $depositRemaining;
 
+            if ($finalPayable <= 0) {
+                $refund = abs($finalPayable);
+                $finalPayable = 0;
+            } else {
+                $refund = 0;
+            }
+
+        } else {
+            // deposit not enough
+            $finalPayable = $balance + abs($depositRemaining);
+            $refund = 0;
+        }
+ 
         $order->update([
-            'damage_charge'  => $damage,
-            'late_fee'       => $late,
-            'settlement_status' => 'pending',
-            'status'             => 'completed',
+            'damage_charge'   => $damage,
+            'late_fee'        => $late,
+            'deposit_adjusted'=> max($depositRemaining, 0),
+            'refund_amount'   => $refund,
+            'final_payable'   => $finalPayable,
+            'settlement_status'=>'settled',
+            'settlement_date' => now(),
         ]);
 
-        return redirect()->route('orders.show',$order)
-            ->with('success',"Order marked completed. Please proceed with settlement.");
+        return back()->with('success','Settlement completed.');
     }
+
+    // public function complete(Request $request, Order $order)
+    // {
+    //     $request->validate([
+    //         'damage_charge' => 'nullable|numeric|min:0',
+    //         'late_fee'      => 'nullable|numeric|min:0',
+    //     ]);
+
+    //     $damage = floatval($request->damage_charge ?? 0);
+    //     $late   = floatval($request->late_fee ?? 0);
+
+    //     // remaining rent still unpaid
+    //     $remaining = $order->balance_amount;
+
+    //     // adjust from deposit
+    //     $depositRemaining = $order->security_deposit - ($remaining + $damage + $late);
+
+    //     if ($depositRemaining >= 0) {
+    //         // refund to client
+    //         $order->refund_amount = $depositRemaining;
+    //         $order->amount_due    = 0;
+    //     } else {
+    //         // customer still owes
+    //         $order->refund_amount = 0;
+    //         $order->amount_due    = abs($depositRemaining);
+    //     }
+
+    //     $order->update([
+    //         'damage_charge'  => $damage,
+    //         'late_fee'       => $late,
+    //         'settlement_status' => 'pending',
+    //         'status'             => 'completed',
+    //     ]);
+
+    //     return redirect()->route('orders.show',$order)
+    //         ->with('success',"Order marked completed. Please proceed with settlement.");
+    // }
 
 
     public function settle(Order $order)
@@ -376,6 +422,9 @@ class OrderController extends Controller
                 'extra_charge_rate'  => $extraRate,
                 'extra_charge_total' => $extraTotal,
                 'total_amount' => $total,
+                'security_deposit' => floatval($request->security_deposit ?? 0),
+                'advance_paid'  => $request->advance_paid,
+                'balance_amount'=> $total - $request->advance_paid
             ]);
 
             /** 🔹 REPLACE ITEMS */
@@ -595,6 +644,9 @@ class OrderController extends Controller
     //     return redirect()->route('orders.show', $order)
     //         ->with('success','Order converted to Order.');
     // }
+
+
+
 
 
 }
