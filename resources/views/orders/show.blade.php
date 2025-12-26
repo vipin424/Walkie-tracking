@@ -54,6 +54,17 @@
             <i class="bi bi-eye me-2"></i>View PDF
           </a>
         @endif
+
+        @if($order->agreement_required && optional($order->agreement)->status !== 'signed')
+        <form action="{{ route('orders.generateAgreement', $order) }}" method="POST">
+            @csrf
+            <button class="btn btn-warning">
+                <i class="bi bi-file-earmark-text me-2"></i>
+                Generate Agreement Link
+            </button>
+        </form>
+        @endif
+
       </div>
     </div>
   </div>
@@ -367,6 +378,97 @@
       </div>
   </div>
   @endif
+@if($order->agreement_required || optional($order->agreement)->aadhaar_status !== 'uploaded')
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white border-0 p-4">
+        <h5 class="mb-0 fw-semibold">
+            <i class="bi bi-credit-card-2-front me-2 text-warning"></i>
+            Aadhaar Upload (Admin Only)
+        </h5>
+    </div>
+
+    <div class="card-body p-4">
+
+        @if(optional($order->agreement)->aadhaar_status === 'uploaded')
+            <div class="alert alert-success">
+                Aadhaar uploaded successfully.
+            </div>
+        @else
+
+        <form action="{{ route('orders.uploadAadhaar', $order) }}"
+              method="POST"
+              enctype="multipart/form-data">
+            @csrf
+
+            {{-- Aadhaar Type --}}
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Aadhaar Type</label>
+
+                <div class="form-check">
+                    <input class="form-check-input"
+                           type="radio"
+                           name="aadhaar_type"
+                           id="aadhaar_fb"
+                           value="front_back"
+                           checked>
+                    <label class="form-check-label" for="aadhaar_fb">
+                        Front & Back
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input"
+                           type="radio"
+                           name="aadhaar_type"
+                           id="aadhaar_full"
+                           value="full">
+                    <label class="form-check-label" for="aadhaar_full">
+                        Full Aadhaar
+                    </label>
+                </div>
+            </div>
+
+            {{-- Front & Back --}}
+            <div id="aadhaar-front-back">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Aadhaar Front</label>
+                        <input type="file"
+                               name="aadhaar_front"
+                               class="form-control aadhaar-input"
+                               accept="image/*">
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Aadhaar Back</label>
+                        <input type="file"
+                               name="aadhaar_back"
+                               class="form-control aadhaar-input"
+                               accept="image/*">
+                    </div>
+                </div>
+            </div>
+
+            {{-- Full Aadhaar --}}
+            <div id="aadhaar-full" class="d-none">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Full Aadhaar</label>
+                    <input type="file"
+                           name="aadhaar_full"
+                           class="form-control aadhaar-input"
+                           accept="image/*,application/pdf">
+                </div>
+            </div>
+
+            <button class="btn btn-primary mt-3">
+                <i class="bi bi-upload me-2"></i>Upload Aadhaar
+            </button>
+        </form>
+
+        @endif
+    </div>
+</div>
+@endif
 
 
 </div>
@@ -440,6 +542,27 @@
     </form>
   </div>
 </div>
+<!-- Crop Modal -->
+<div class="modal fade" id="cropModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Crop Aadhaar Image</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <img id="cropperImage" style="max-width:100%;">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" id="cropConfirmBtn">Crop & Use</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
 
 <style>
   .table-hover tbody tr:hover {
@@ -464,6 +587,8 @@
     border-radius: 0.5rem;
   }
 </style>
+
+<script src="{{ asset('js/aadhaar-crop.js') }}"></script>
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -484,6 +609,33 @@ document.addEventListener('DOMContentLoaded', function () {
         btnText.innerHTML = 'Sending...';
     });
 
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+
+    const frontBackRadio = document.getElementById('aadhaar_fb');
+    const fullRadio = document.getElementById('aadhaar_full');
+
+    const frontBackDiv = document.getElementById('aadhaar-front-back');
+    const fullDiv = document.getElementById('aadhaar-full');
+
+    function toggleAadhaarInputs() {
+        if (frontBackRadio.checked) {
+            frontBackDiv.classList.remove('d-none');
+            fullDiv.classList.add('d-none');
+        }
+
+        if (fullRadio.checked) {
+            fullDiv.classList.remove('d-none');
+            frontBackDiv.classList.add('d-none');
+        }
+    }
+
+    frontBackRadio.addEventListener('change', toggleAadhaarInputs);
+    fullRadio.addEventListener('change', toggleAadhaarInputs);
+
+    // Initial load
+    toggleAadhaarInputs();
 });
 </script>
 @endpush

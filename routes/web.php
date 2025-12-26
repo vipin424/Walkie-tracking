@@ -10,7 +10,8 @@ use App\Http\Controllers\{
     PaymentController,
     InvoiceController,
     OrderController,
-    QuotationController
+    QuotationController,
+    AgreementController
 };
 
 Route::get('/', function () {
@@ -50,7 +51,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('orders/{order}/send-whatsapp', [OrderController::class, 'sendWhatsapp'])->name('orders.sendWhatsapp');
     Route::get('orders/{order}/download',[OrderController::class, 'download'])->name('orders.download');
     Route::post('/orders/{order}/settle',[OrderController::class,'settle'])->name('orders.settle');
-
+    Route::post('/orders/{order}/agreement',[OrderController::class, 'generateAgreement'])->name('orders.generateAgreement');
+    Route::post('/orders/{order}/upload-aadhaar',[OrderController::class, 'uploadAadhaar'])->name('orders.uploadAadhaar');
+    Route::get('/agreement/sign/{code}',[AgreementController::class, 'show'])->name('agreement.sign')->middleware('signed');
+    Route::post('/agreement/{code}', [AgreementController::class, 'submit'])->name('agreement.submit');
     // Quotation → Order
     Route::post(
         'quotations/{quotation}/convert-to-order',

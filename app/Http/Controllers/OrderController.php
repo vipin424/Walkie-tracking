@@ -9,13 +9,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use App\Mail\OrderMailable;
+use App\Traits\ImageCompress;
+use Str;
 use PDF;
 use Carbon\Carbon;
 use DB;
 
 class OrderController extends Controller
 {
+    use ImageCompress;
     /**
      * Display a listing of the resource.
      */
@@ -52,6 +56,7 @@ class OrderController extends Controller
 
             'event_from' => 'required|date',
             'event_to'   => 'required|date|after_or_equal:event_from',
+            'agreement_required' => $request->pickup_type === 'self',
 
             'items' => 'required|array|min:1',
             'items.*.item_name' => 'required|string',
@@ -129,6 +134,7 @@ class OrderController extends Controller
                 'security_deposit' => floatval($request->security_deposit ?? 0),
                 'advance_paid'  => $request->advance_paid,
                 'balance_amount'=> $total - $request->advance_paid,
+                'agreement_required' => $request->pickup_type === 'self',
 
                 'status' => 'confirmed',
                 'created_by' => auth()->id(),
@@ -595,6 +601,61 @@ class OrderController extends Controller
             $order->code . '.pdf'
         );
     }
+
+    public function generateAgreement(Order $order)
+    {
+        abort_if(!$order->agreement_required, 403);
+
+        $agreement = $order->agreement()->create([
+            'agreement_code' => 'AGR-' . Str::upper(Str::random(10)),
+            'expires_at' => now()->addHours(48),
+        ]);
+
+        $signedUrl = URL::temporarySignedRoute(
+            'agreement.sign',
+            $agreement->expires_at,
+            ['code' => $agreement->agreement_code]
+        );
+
+        return $signedUrl;
+    }
+
+    public function uploadAadhaar(Request $request, Order $order)
+    {
+       
+        $agreement = $order->agreement;
+
+        // abort_if(!$agreement || $agreement->status !== 'signed', 403);
+
+        $request->validate([
+            'aadhaar_type' => 'required|in:front_back,full',
+
+            'aadhaar_front' => 'required_if:aadhaar_type,front_back|image|mimes:jpg,jpeg,png|max:5120',
+            'aadhaar_back'  => 'required_if:aadhaar_type,front_back|image|mimes:jpg,jpeg,png|max:5120',
+
+            'aadhaar_full'  => 'required_if:aadhaar_type,full|image|mimes:jpg,jpeg,png|max:5120',
+        ]);
+        
+        $data = [
+            'aadhaar_uploaded_at' => now(),
+            'aadhaar_uploaded_by' => auth()->id(),
+            'aadhaar_status' => 'uploaded',
+        ];
+
+        if ($request->aadhaar_type === 'front_back') {
+            $data['aadhaar_front'] = $this->compressAndStore($request->aadhaar_front);
+            $data['aadhaar_back']  = $this->compressAndStore($request->aadhaar_back);
+        }
+
+        if ($request->aadhaar_type === 'full') {
+            $data['aadhaar_full'] = $this->compressAndStore($request->aadhaar_full);
+        }
+
+        $agreement->update($data);
+
+        return back()->with('success', 'Aadhaar uploaded successfully.');
+    }
+
 
 
     // public function storeFromQuotation(Request $request, Order $order)

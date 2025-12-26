@@ -13,9 +13,14 @@ class Order extends Model
         'subtotal','tax_amount',
         'extra_charge_type','extra_charge_rate','extra_charge_total',
         'discount_amount','total_amount',
-        'advance_paid','balance_amount',
+        'advance_paid','balance_amount','agreement_required',
         'status','created_by','notes','pdf_path','security_deposit','damage_charge','late_fee','refund_amount','deposit_adjusted','amount_due','settlement_status','settlement_date','final_payable'
     ];
+
+    public function agreement()
+    {
+        return $this->hasOne(OrderAgreement::class);
+    }
 
     public function items() {
         return $this->hasMany(OrderItem::class);
