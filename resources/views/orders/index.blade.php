@@ -63,7 +63,7 @@
         <table class="table table-hover align-middle mb-0">
           <thead class="bg-light">
             <tr>
-              <th class="px-4 py-3 text-muted fw-semibold">order Code</th>
+              <th class="px-4 py-3 text-muted fw-semibold">Order Code</th>
               <th class="px-4 py-3 text-muted fw-semibold">Client</th>
               <th class="px-4 py-3 text-muted fw-semibold">Total Amount</th>
               <th class="px-4 py-3 text-muted fw-semibold">Status</th>
@@ -76,7 +76,7 @@
               <tr>
                 <td class="px-4 py-3">
                   <a href="{{ route('orders.show',$q) }}" class="text-decoration-none fw-semibold text-primary">
-                    <i class="bi bi-file-text me-2"></i>{{ $q->code }}
+                    <i class="bi bi-file-text me-2"></i>{{ $q->order_code }}
                   </a>
                 </td>
                 <td class="px-4 py-3">
