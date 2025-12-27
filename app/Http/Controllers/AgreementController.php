@@ -22,7 +22,7 @@ class AgreementController extends Controller
     public function submit(Request $request, $code)
     {
         $agreement = OrderAgreement::where('agreement_code', $code)->firstOrFail();
-
+        //dd($agreement);
         // Safety checks
         abort_if($agreement->status === 'signed', 403);
         abort_if(now()->greaterThan($agreement->expires_at), 403);
@@ -40,14 +40,12 @@ class AgreementController extends Controller
         Storage::disk('public')->put($signaturePath, $signatureData);
 
         $agreement->update([
-            'signature_path' => $signaturePath,
+            'signature_image' => $signaturePath,
             'signed_at' => now(),
             'status' => 'signed',        
         ]);
-
-        return redirect()
-        ->route('agreement.sign', $agreement->agreement_code)
-        ->with('agreement_signed', true);
+        //dd($agreement);
+        return redirect()->back()->with('agreement_signed', true);
     }
 
 }

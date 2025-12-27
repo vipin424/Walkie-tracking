@@ -25,14 +25,72 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $q= Order::query();
+        $q = Order::query();
+
+        // 🔍 Search logic (unchanged, but grouped safely)
         if ($request->filled('search')) {
             $s = $request->search;
-            $q->where('code','like',"%{$s}%")
-              ->orWhere('client_name','like',"%{$s}%")
-              ->orWhere('client_phone','like',"%{$s}%");
+
+            $q->where(function ($query) use ($s) {
+                $query->where('order_code', 'like', "%{$s}%")
+                    ->orWhere('client_name', 'like', "%{$s}%")
+                    ->orWhere('client_phone', 'like', "%{$s}%");
+            });
         }
+
+        // 📄 Fetch paginated orders
         $orders = $q->latest()->paginate(20);
+
+        /**
+         * 🗓️ ADD EVENT DATE LOGIC
+         * - total days
+         * - days left
+         * - event state (upcoming / running / completed)
+         */
+        $orders->getCollection()->transform(function ($order) {
+
+            $today = Carbon::today();
+            $eventFrom = Carbon::parse($order->event_from);
+            $eventTo   = Carbon::parse($order->event_to);
+
+            $order->event_days = $order->total_days
+                ?? ($eventFrom->diffInDays($eventTo) + 1);
+
+            if ($today->lt($eventFrom)) {
+                // UPCOMING
+                $diff = $today->diffInDays($eventFrom);
+
+                $order->event_state = 'upcoming';
+
+                if ($diff === 1) {
+                    $order->days_label = 'Tomorrow';
+                } else {
+                    $order->days_label = $diff . ' days to start';
+                }
+
+            } elseif ($today->between($eventFrom, $eventTo)) {
+                // RUNNING
+                $diff = $today->diffInDays($eventTo);
+
+                $order->event_state = 'running';
+
+                if ($diff === 0) {
+                    $order->days_label = 'Ends today';
+                } elseif ($diff === 1) {
+                    $order->days_label = '1 day left';
+                } else {
+                    $order->days_label = $diff . ' days left';
+                }
+
+            } else {
+                // COMPLETED
+                $order->event_state = 'completed';
+                $order->days_label = 'Completed';
+            }
+
+            return $order;
+        });
+
         return view('orders.index', compact('orders'));
     }
 
@@ -49,6 +107,7 @@ class OrderController extends Controller
      */
     public function store(Request $request)
     {
+        // dd($request->all());
         $request->validate([
             'client_name'   => 'required|string',
             'client_email'  => 'nullable|email',
@@ -56,8 +115,7 @@ class OrderController extends Controller
 
             'event_from' => 'required|date',
             'event_to'   => 'required|date|after_or_equal:event_from',
-            'agreement_required' => $request->pickup_type === 'self',
-
+            'pickup_type' => 'required|string',
             'items' => 'required|array|min:1',
             'items.*.item_name' => 'required|string',
             'items.*.quantity' => 'required|numeric|min:1',
@@ -604,13 +662,20 @@ class OrderController extends Controller
 
     public function generateAgreement(Order $order)
     {
-        abort_if(!$order->agreement_required, 403);
+        abort_if(!$order->agreement_required, 403, 'Agreement not required for this order');
 
-        $agreement = $order->agreement()->create([
-            'agreement_code' => 'AGR-' . Str::upper(Str::random(10)),
-            'expires_at' => now()->addHours(48),
-        ]);
+        $agreement = $order->agreement()->updateOrCreate(
+            ['order_id' => $order->id], // condition
+            [
+                'agreement_code' => 'AGR-' . strtoupper(Str::random(10)),
+                'expires_at'     => now()->addHours(48),
+                'status'         => 'pending',
+            ]
+        );
 
+        /**
+         * ✅ Generate temporary signed URL
+         */
         $signedUrl = URL::temporarySignedRoute(
             'agreement.sign',
             $agreement->expires_at,
@@ -622,11 +687,7 @@ class OrderController extends Controller
 
     public function uploadAadhaar(Request $request, Order $order)
     {
-       
-        $agreement = $order->agreement;
-
-        // abort_if(!$agreement || $agreement->status !== 'signed', 403);
-
+        // ✅ Validate request
         $request->validate([
             'aadhaar_type' => 'required|in:front_back,full',
 
@@ -635,26 +696,58 @@ class OrderController extends Controller
 
             'aadhaar_full'  => 'required_if:aadhaar_type,full|image|mimes:jpg,jpeg,png|max:5120',
         ]);
-        
+
+        /**
+         * ✅ GET OR CREATE AGREEMENT
+         * Agar agreement exist nahi karta → create
+         * Agar exist karta → wahi use hoga
+         */
+        $agreement = $order->agreement()->firstOrCreate(
+            ['order_id' => $order->id],
+            [
+                'agreement_code' => 'AGR-' . strtoupper(\Str::random(10)), 
+                'expires_at' => now()->addHours(48),
+            ]
+        );
+
+        /**
+         * ✅ Prepare update data
+         */
         $data = [
             'aadhaar_uploaded_at' => now(),
             'aadhaar_uploaded_by' => auth()->id(),
-            'aadhaar_status' => 'uploaded',
+            'aadhaar_status'      => 'uploaded',
         ];
 
+        /**
+         * ✅ Aadhaar upload logic
+         */
         if ($request->aadhaar_type === 'front_back') {
-            $data['aadhaar_front'] = $this->compressAndStore($request->aadhaar_front);
-            $data['aadhaar_back']  = $this->compressAndStore($request->aadhaar_back);
+
+            $data['aadhaar_front'] = $this->compressAndStore($request->file('aadhaar_front'));
+            $data['aadhaar_back']  = $this->compressAndStore($request->file('aadhaar_back'));
+
+            // clear full if previously uploaded
+            $data['aadhaar_full'] = null;
         }
 
         if ($request->aadhaar_type === 'full') {
-            $data['aadhaar_full'] = $this->compressAndStore($request->aadhaar_full);
+
+            $data['aadhaar_full'] = $this->compressAndStore($request->file('aadhaar_full'));
+
+            // clear front/back if previously uploaded
+            $data['aadhaar_front'] = null;
+            $data['aadhaar_back']  = null;
         }
 
+        /**
+         * ✅ Update agreement
+         */
         $agreement->update($data);
 
         return back()->with('success', 'Aadhaar uploaded successfully.');
     }
+
 
 
 

@@ -583,8 +583,11 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 @if(session('agreement_signed'))
 <script>
+document.addEventListener('DOMContentLoaded', function () {
     Swal.fire({
         icon: 'success',
         title: 'Agreement Signed Successfully!',
@@ -592,12 +595,11 @@
         confirmButtonText: 'OK',
         confirmButtonColor: '#198754'
     }).then(() => {
-        // Optional redirect after OK
-        window.location.href = "{{ route('agreement.success') ?? '#' }}";
+        window.location.href = "https://crewrent.in";
     });
+});
 </script>
 @endif
-
 
 <script>
     // Initialize signature pad with proper canvas sizing

@@ -64,6 +64,8 @@
           <thead class="bg-light">
             <tr>
               <th class="px-4 py-3 text-muted fw-semibold">Order Code</th>
+              <th class="px-4 py-3 text-muted fw-semibold">Event Period</th>
+              <th class="px-4 py-3 text-muted fw-semibold">Duration</th>
               <th class="px-4 py-3 text-muted fw-semibold">Client</th>
               <th class="px-4 py-3 text-muted fw-semibold">Total Amount</th>
               <th class="px-4 py-3 text-muted fw-semibold">Status</th>
@@ -79,6 +81,33 @@
                     <i class="bi bi-file-text me-2"></i>{{ $q->order_code }}
                   </a>
                 </td>
+                {{-- Event Period --}}
+                <td class="px-4 py-3">
+                    <div class="fw-medium">
+                        {{ \Carbon\Carbon::parse($q->event_from)->format('d M') }}
+                        →
+                        {{ \Carbon\Carbon::parse($q->event_to)->format('d M Y') }}
+                    </div>
+
+                  @if($q->event_state === 'running')
+                      <span class="badge bg-success">Live</span>
+                  @elseif($q->event_state === 'upcoming')
+                      <span class="badge bg-info">
+                          Starts in {{ $q->days_left }} days
+                      </span>
+                  @else
+                      <span class="badge bg-secondary">Completed</span>
+                  @endif
+
+                </td>
+
+                {{-- Duration --}}
+                <td class="px-4 py-3">
+                    <span class="badge bg-primary bg-opacity-10 text-primary">
+                        {{ $q->event_days }} Day{{ $q->event_days > 1 ? 's' : '' }}
+                    </span>
+                </td>
+
                 <td class="px-4 py-3">
                   <div class="d-flex align-items-center">
                     <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-2">

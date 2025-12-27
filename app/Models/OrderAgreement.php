@@ -18,6 +18,7 @@ class OrderAgreement extends Model
         'aadhaar_uploaded_at',
         'aadhaar_uploaded_by',
         'aadhaar_status',
+        'signature_image',
         'status',
     ];
 
