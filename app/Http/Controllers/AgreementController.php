@@ -61,7 +61,7 @@ class AgreementController extends Controller
             'signed_pdf' => $pdfPath,
         ]);
 
-        /** 🔹 EMAIL TO CLIENT WITH ATTACHMENT */
+        /** 🔹 EMAIL TO CLIENT WITH ATTACHMENTs */
         $agreement = $agreement->fresh();
 
         if ($agreement->order->client_email) {
