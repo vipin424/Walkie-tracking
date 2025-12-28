@@ -29,45 +29,101 @@
   <!-- Action Buttons -->
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-body p-4">
-      <div class="d-flex flex-wrap gap-2">
-        <a href="{{ route('orders.edit', $order) }}" class="btn btn-warning">
-          <i class="bi bi-pencil-square me-2"></i>Edit Order
-        </a>
-
-        <form action="{{ route('orders.generatePdf', $order) }}" method="POST" class="d-inline">
-          @csrf
-          <button class="btn btn-primary">
-            <i class="bi bi-file-earmark-pdf me-2"></i>Generate PDF
-          </button>
-        </form>
-
-        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#emailModal">
-          <i class="bi bi-envelope me-2"></i>Send Email
-        </button>
-
-        <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#waModal">
-          <i class="bi bi-whatsapp me-2"></i>Send WhatsApp
-        </button>
-
-        @if($order->pdf_path)
-          <a href="{{ Storage::url(str_replace('storage/','public/',$order->pdf_path)) }}" target="_blank" class="btn btn-outline-secondary">
-            <i class="bi bi-eye me-2"></i>View PDF
+      
+      <!-- Primary Actions -->
+      <div class="mb-3">
+        <h6 class="text-muted mb-3 fw-semibold">Order Actions</h6>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="{{ route('orders.edit', $order) }}" class="btn btn-warning">
+            <i class="bi bi-pencil-square me-2"></i>Edit Order
           </a>
-        @endif
 
-        @if($order->agreement_required && optional($order->agreement)->status !== 'signed')
-        <form action="{{ route('orders.generateAgreement', $order) }}" method="POST">
+          <form action="{{ route('orders.generatePdf', $order) }}" method="POST" class="d-inline">
             @csrf
-            <button class="btn btn-warning">
-                <i class="bi bi-file-earmark-text me-2"></i>
-                Generate Agreement Link
+            <button class="btn btn-primary">
+              <i class="bi bi-file-earmark-pdf me-2"></i>Generate PDF
             </button>
-        </form>
-        @endif
+          </form>
 
+          <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#emailModal">
+            <i class="bi bi-envelope me-2"></i>Send Email
+          </button>
+
+          <button class="btn btn-info text-white" data-bs-toggle="modal" data-bs-target="#waModal">
+            <i class="bi bi-whatsapp me-2"></i>Send WhatsApp
+          </button>
+
+          @if($order->pdf_path)
+            <a href="{{ Storage::url(str_replace('storage/','public/',$order->pdf_path)) }}" 
+              target="_blank" 
+              class="btn btn-outline-secondary">
+              <i class="bi bi-eye me-2"></i>View PDF
+            </a>
+          @endif
+        </div>
       </div>
+
+      <!-- Agreement Actions -->
+      @if($order->agreement_required)
+        <hr class="my-3">
+        
+        <div>
+          <h6 class="text-muted mb-3 fw-semibold">Agreement Actions</h6>
+          
+          @if($order->agreement && $order->agreement->status === 'signed')
+            <!-- Agreement Signed Status -->
+            <div class="alert alert-success d-inline-flex align-items-center mb-0 py-2">
+              <i class="bi bi-check-circle-fill me-2"></i>
+              <strong>Agreement Signed</strong>
+            </div>
+            
+          @else
+            <!-- Agreement Actions -->
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              
+              @if(!$order->agreement || $order->agreement->status !== 'signed')
+                <form action="{{ route('orders.generateAgreement', $order) }}" method="POST" class="d-inline">
+                  @csrf
+                  <button class="btn btn-warning">
+                    <i class="bi bi-file-earmark-text me-2"></i>Generate Agreement Link
+                  </button>
+                </form>
+              @endif
+
+              @if($order->agreement && $order->agreement->status !== 'signed')
+
+               @if ($order->agreement && $order->agreement->signed_url)
+                      <a href="{{ route('orders.sendAgreementEmail', $order) }}"
+                        class="btn btn-success">
+                        <i class="bi bi-envelope me-2"></i>Send Agreement Email
+                      </a>
+
+                      <a href="{{ route('orders.sendAgreementWhatsapp', $order) }}"
+                        class="btn btn-info text-white">
+                        <i class="bi bi-whatsapp me-2"></i>Send Agreement WhatsApp
+                      </a>
+
+                      <button type="button"
+                            class="btn btn-outline-secondary"
+                            id="copyLinkBtn"
+                            data-link="{{ $order->agreement->signed_url }}">
+                      <i class="bi bi-clipboard me-2"></i>Copy Link
+                    </button>
+                @endif
+                
+                <span class="badge bg-warning text-dark py-2 px-3">
+                  <i class="bi bi-clock-history me-1"></i>Pending Signature
+                </span>
+              @endif
+              
+            </div>
+          @endif
+        </div>
+      @endif
+
     </div>
   </div>
+
 
   <div class="row">
     <!-- Client Information -->
@@ -561,7 +617,19 @@
   </div>
 </div>
 
-
+<!-- Toast Container -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+  <div id="copyToast" class="toast hide" role="alert">
+    <div class="toast-header bg-success text-white">
+      <i class="bi bi-check-circle me-2"></i>
+      <strong class="me-auto">Success</strong>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body">
+      Agreement link copied to clipboard!
+    </div>
+  </div>
+</div>
 
 
 <style>
@@ -639,5 +707,65 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 @endpush
-
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const copyBtn = document.getElementById('copyLinkBtn');
+  
+  if (copyBtn) {
+    copyBtn.addEventListener('click', function() {
+      const link = this.getAttribute('data-link');
+      
+      // Fallback function for older browsers
+      function fallbackCopyTextToClipboard(text) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.top = "-999999px";
+        textArea.style.left = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+          const successful = document.execCommand('copy');
+          document.body.removeChild(textArea);
+          return successful;
+        } catch (err) {
+          document.body.removeChild(textArea);
+          return false;
+        }
+      }
+      
+      // Try modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(link).then(function() {
+          showToast();
+        }).catch(function(err) {
+          // Fallback to old method
+          if (fallbackCopyTextToClipboard(link)) {
+            showToast();
+          } else {
+            alert('Failed to copy link. Please copy manually: ' + link);
+          }
+        });
+      } else {
+        // Use fallback for non-secure contexts
+        if (fallbackCopyTextToClipboard(link)) {
+          showToast();
+        } else {
+          alert('Failed to copy link. Please copy manually: ' + link);
+        }
+      }
+    });
+  }
+  
+  function showToast() {
+    const toastEl = document.getElementById('copyToast');
+    const toast = new bootstrap.Toast(toastEl);
+    toast.show();
+  }
+});
+</script>
+@endpush
 @endsection

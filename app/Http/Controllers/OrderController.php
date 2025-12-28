@@ -682,7 +682,9 @@ class OrderController extends Controller
             ['code' => $agreement->agreement_code]
         );
 
-        return $signedUrl;
+        $agreement->update(['signed_url' => $signedUrl]);
+
+        return redirect()->back()->with('success', 'Agreement url generated successfully.');
     }
 
     public function uploadAadhaar(Request $request, Order $order)

@@ -17,6 +17,12 @@ class Order extends Model
         'status','created_by','notes','pdf_path','security_deposit','damage_charge','late_fee','refund_amount','deposit_adjusted','amount_due','settlement_status','settlement_date','final_payable'
     ];
 
+    protected $casts = [
+    'event_from' => 'date',
+    'event_to'   => 'date',
+    ];
+
+
     public function agreement()
     {
         return $this->hasOne(OrderAgreement::class);

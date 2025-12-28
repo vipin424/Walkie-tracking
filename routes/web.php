@@ -55,6 +55,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/orders/{order}/upload-aadhaar',[OrderController::class, 'uploadAadhaar'])->name('orders.uploadAadhaar');
     Route::get('/agreement/sign/{code}',[AgreementController::class, 'show'])->name('agreement.sign')->middleware('signed');
     Route::post('/agreement/{code}', [AgreementController::class, 'submit'])->name('agreement.submit');
+    Route::get('/orders/{order}/agreement/send-email', [AgreementController::class, 'sendEmail'])->name('orders.sendAgreementEmail');
+    Route::get('/orders/{order}/agreement/send-whatsapp', [AgreementController::class, 'sendWhatsapp'])->name('orders.sendAgreementWhatsapp');
     // Quotation → Order
     Route::post(
         'quotations/{quotation}/convert-to-order',

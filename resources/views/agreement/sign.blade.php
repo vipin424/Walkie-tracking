@@ -85,7 +85,7 @@
             height: 4px;
             background: var(--secondary-color);
         }
-/*         
+       
         .company-logo {
             width: 120px;
             height: 120px;
@@ -98,11 +98,11 @@
             box-shadow: 0 8px 24px rgba(0,0,0,0.2);
             overflow: hidden;
             border: 4px solid var(--secondary-color);
-        } */
+        } 
         
         .company-logo img {
-            width: 15%;
-            height: 15%;
+            width: 120%;
+            height: 120%;
             object-fit: cover;
         }
         
