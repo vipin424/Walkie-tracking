@@ -580,8 +580,14 @@ class OrderController extends Controller
             // generate
             $this->generatePdf($order);
         }
+        // ✅ Signed URL (7 days valid)
+        $downloadUrl = URL::temporarySignedRoute(
+            'orders.download',
+            now()->addDays(7),
+            ['order' => $order->id]
+        );
 
-        Mail::to($request->to_email)->send(new OrderMailable($order, $request->message));
+        Mail::to($request->to_email)->send(new OrderMailable($order, $request->message, $downloadUrl));
 
         $order->update(['status' => 'sent']);
         QuotationLog::create([
@@ -618,13 +624,13 @@ class OrderController extends Controller
         );
         /** ✅ WhatsApp message */
         $messageText =
-            "Hello {$order->client_name},\n\n" .
-            "Your order {$order->order_code} is confirmed.\n\n" .
+            "Hello *{$order->client_name}*,\n\n" .
+            "Your order *{$order->order_code}* is confirmed.\n\n" .
             "Total Amount: ₹" . number_format($order->total_amount, 2) . "\n\n" .
             "Download Order PDF:\n{$url}\n\n" .
             "This link is valid for 7 days.\n\n" .
             "Please reply to confirm.\n\n" .
-            "– Crewrent Enterprises";
+            "– *Crewrent Enterprises*";
 
         /** ✅ Normalize phone number */
         $phone = preg_replace('/\D+/', '', $request->to_phone);

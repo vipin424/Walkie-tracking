@@ -13,17 +13,19 @@ class OrderMailable extends Mailable
 
     public Order $order;
     public ?string $customMessage;
+    public $downloadUrl;
 
-    public function __construct(Order $order, ?string $customMessage = null)
+    public function __construct(Order $order, ?string $customMessage = null, $downloadUrl = null)
     {
         $this->order = $order;
         $this->customMessage = $customMessage;
+        $this->downloadUrl = $downloadUrl;      
     }
 
     public function build()
     {
         return $this
-            ->subject('Order - ' . $this->order->order_code)
+            ->subject('Order Confirmed - ' . $this->order->order_code)
             ->view('emails.order')
             ->with([
                 'order' => $this->order,
