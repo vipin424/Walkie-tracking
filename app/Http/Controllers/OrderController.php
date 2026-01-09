@@ -601,28 +601,32 @@ class OrderController extends Controller
             'message'  => 'nullable|string',
         ]);
 
-        // Ensure PDF exists
+        /** ✅ Ensure PDF exists */
         if (
             !$order->pdf_path ||
-            !Storage::exists(str_replace('storage/', 'public/', $order->pdf_path))
+            !Storage::disk('public')->exists($order->pdf_path)
         ) {
             $this->generatePdf($order);
             $order->refresh();
         }
 
-        $url = \URL::signedRoute(
+        /** ✅ Generate signed download URL (7 days valid) */
+        $url = URL::temporarySignedRoute(
             'orders.download',
-            ['order' => $order->id],
-            now()->addDays(7)
+            now()->addDays(7),
+            ['order' => $order->id]
         );
-
+        /** ✅ WhatsApp message */
         $messageText =
             "Hello {$order->client_name},\n\n" .
-            "Here is the order {$order->code}.\n\n" .
+            "Your order {$order->order_code} is confirmed.\n\n" .
             "Total Amount: ₹" . number_format($order->total_amount, 2) . "\n\n" .
-            "Download Order:\n{$url}\n\n" .
-            "Please reply to confirm.";
+            "Download Order PDF:\n{$url}\n\n" .
+            "This link is valid for 7 days.\n\n" .
+            "Please reply to confirm.\n\n" .
+            "– Crewrent Enterprises";
 
+        /** ✅ Normalize phone number */
         $phone = preg_replace('/\D+/', '', $request->to_phone);
         if (strlen($phone) <= 10) {
             $phone = '91' . $phone;
@@ -630,35 +634,44 @@ class OrderController extends Controller
 
         $waLink = 'https://wa.me/' . $phone . '?text=' . rawurlencode($messageText);
 
+        /** ✅ Log */
         QuotationLog::create([
-            'quotation_id' => $order->id,
+            'quotation_id' => $order->id, // (optional rename later)
             'user_id'      => Auth::id(),
             'action'       => 'sent_whatsapp_link',
-            'meta'         => json_encode(['to' => $phone, 'link' => $url]),
+            'meta'         => json_encode([
+                'to'   => $phone,
+                'link' => $url,
+            ]),
         ]);
 
         return redirect($waLink);
     }
 
-
-
     public function download(Order $order)
     {
-        // Ensure PDF exists
-        if (
-            !$order->pdf_path ||
-            !Storage::exists(str_replace('storage/', 'public/', $order->pdf_path))
-        ) {
+        if (!request()->hasValidSignature()) {
+            abort(403, 'This download link has expired or is invalid.');
+        }
+
+        if (!$order->pdf_path) {
             abort(404, 'Order PDF not found.');
         }
 
-        $path = str_replace('storage/', 'public/', $order->pdf_path);
-
-        return Storage::download(
-            $path,
-            $order->code . '.pdf'
+        $filePath = storage_path(
+            'app/public/' . str_replace('storage/', '', $order->pdf_path)
         );
+
+        if (!file_exists($filePath)) {
+            abort(404, 'Order PDF not found.');
+        }
+
+        return response()->file($filePath, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$order->order_code.'.pdf"',
+        ]);
     }
+
 
     public function generateAgreement(Order $order)
     {

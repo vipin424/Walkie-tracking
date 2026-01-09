@@ -76,6 +76,6 @@ Route::middleware(['auth'])->group(function () {
     Route::post('payments/{dispatch}', [PaymentController::class, 'storeOrUpdate'])->name('payments.store');
 });
     Route::get('quotations/{quotation}/download',[QuotationController::class, 'download'])->name('quotations.download');
-    Route::get('orders/{order}/download',[OrderController::class, 'download'])->name('orders.download');
+    Route::get('/orders/{order}/download',[OrderController::class, 'download'])->name('orders.download')->middleware('signed');
     Route::get('/agreement/sign/{code}',[AgreementController::class, 'show'])->name('agreement.sign');
     Route::post('/agreement/{code}', [AgreementController::class, 'submit'])->name('agreement.submit');
