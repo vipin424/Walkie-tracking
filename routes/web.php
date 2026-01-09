@@ -39,7 +39,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('quotations/{quotation}/generate-pdf', [QuotationController::class, 'generatePdf'])->name('quotations.generatePdf');
     Route::post('quotations/{quotation}/send-email', [QuotationController::class, 'sendEmail'])->name('quotations.sendEmail');
     Route::post('quotations/{quotation}/send-whatsapp', [QuotationController::class, 'sendWhatsapp'])->name('quotations.sendWhatsapp');
-    Route::get('quotations/{quotation}/download',[QuotationController::class, 'download'])->name('quotations.download');
+    //Route::get('quotations/{quotation}/download',[QuotationController::class, 'download'])->name('quotations.download');
 
     Route::resource('orders', OrderController::class);
         // Direct order create
@@ -49,7 +49,6 @@ Route::middleware(['auth'])->group(function () {
     Route::post('orders/{order}/generate-pdf', [OrderController::class, 'generatePdf'])->name('orders.generatePdf');
     Route::post('orders/{order}/send-email', [OrderController::class, 'sendEmail'])->name('orders.sendEmail');
     Route::post('orders/{order}/send-whatsapp', [OrderController::class, 'sendWhatsapp'])->name('orders.sendWhatsapp');
-    Route::get('orders/{order}/download',[OrderController::class, 'download'])->name('orders.download');
     Route::post('/orders/{order}/settle',[OrderController::class,'settle'])->name('orders.settle');
     Route::post('/orders/{order}/agreement',[OrderController::class, 'generateAgreement'])->name('orders.generateAgreement');
     Route::post('/orders/{order}/upload-aadhaar',[OrderController::class, 'uploadAadhaar'])->name('orders.uploadAadhaar');
@@ -77,5 +76,6 @@ Route::middleware(['auth'])->group(function () {
     Route::post('payments/{dispatch}', [PaymentController::class, 'storeOrUpdate'])->name('payments.store');
 });
     Route::get('quotations/{quotation}/download',[QuotationController::class, 'download'])->name('quotations.download');
+    Route::get('orders/{order}/download',[OrderController::class, 'download'])->name('orders.download');
     Route::get('/agreement/sign/{code}',[AgreementController::class, 'show'])->name('agreement.sign');
     Route::post('/agreement/{code}', [AgreementController::class, 'submit'])->name('agreement.submit');
