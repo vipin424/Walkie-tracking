@@ -1,14 +1,14 @@
 @extends('layouts.app')
-@section('title','Orders')
+@section('title','Quotations')
 @section('content')
 <div class="container-fluid px-4 py-4">
   <!-- Header -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <h4 class="mb-1 fw-bold">Orders</h4>
-      <p class="text-muted mb-0">Manage and track all orders</p>
+      <h4 class="mb-1 fw-bold">Quotation</h4>
+      <p class="text-muted mb-0">Manage and track all quotation</p>
     </div>
-    <a class="btn btn-warning btn-md shadow-sm" href="{{ route('orders.create') }}">
+    <a class="btn btn-warning btn-md shadow-sm" href="{{ route('quotations.create') }}">
       <i class="bi bi-plus-circle me-2"></i>New Quotation
     </a>
   </div>
@@ -38,7 +38,7 @@
           </div>
           @if(request('status') || request('search'))
           <div class="col-md-2">
-            <a href="{{ route('orders.index') }}" class="btn btn-outline-secondary btn-md w-100">
+            <a href="{{ route('quotations.index') }}" class="btn btn-outline-secondary btn-md w-100">
               <i class="bi bi-x-circle me-2"></i>Clear
             </a>
           </div>
@@ -48,12 +48,12 @@
     </div>
   </div>
 
-  <!-- Orders Table -->
+  <!-- Quotations Table -->
   <div class="card border-0 shadow-sm">
     <div class="card-header bg-white border-0 p-4">
       <div class="d-flex justify-content-between align-items-center">
         <h5 class="mb-0 fw-semibold">
-          <i class="bi bi-file-earmark-text me-2 text-warning"></i>All Orders
+          <i class="bi bi-file-earmark-text me-2 text-warning"></i>All Quotations
         </h5>
         <span class="badge bg-warning bg-opacity-10 text-warning fs-6">{{ $quotations->total() }} Total</span>
       </div>
@@ -131,7 +131,7 @@
                 <td colspan="6" class="text-center py-5">
                   <div class="text-muted">
                     <i class="bi bi-inbox display-4 d-block mb-3"></i>
-                    <p class="mb-0">No Orders found</p>
+                    <p class="mb-0">No quotation found</p>
                   </div>
                 </td>
               </tr>
