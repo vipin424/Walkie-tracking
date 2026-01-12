@@ -80,17 +80,45 @@ class AgreementController extends Controller
      * Send Agreement link via Email
      */
 
-    public function sendEmail(Order $order)
+    public function sendEmail(Request $request, Order $order)
     {
         $agreement = $order->agreement;
 
         abort_if(!$agreement || !$agreement->signed_url, 403);
 
-        Mail::to($order->client_email)->send(
-            new AgreementLinkMail($order, $agreement->signed_url)
-        );
+        // ✅ Validation (modal se aayega)
+        $request->validate([
+            'to_email'  => 'required|email',
+            'cc_emails' => 'nullable|string',
+            'message'   => 'nullable|string',
+        ]);
 
-        $agreement->update(['sent_at' => now()]);
+        // ✅ CC emails parse
+        $cc = [];
+
+        if ($request->filled('cc_emails')) {
+            $cc = collect(explode(',', $request->cc_emails))
+                ->map(fn ($email) => trim($email))
+                ->filter(fn ($email) => filter_var($email, FILTER_VALIDATE_EMAIL))
+                ->values()
+                ->toArray();
+        }
+
+        // ✅ Send mail (existing mailable reused)
+        Mail::to($request->to_email)
+            ->cc($cc)
+            ->send(
+                new AgreementLinkMail(
+                    $order,
+                    $agreement->signed_url
+                    //$request->message // optional message support
+                )
+            );
+
+        // ✅ Update sent timestamp
+        $agreement->update([
+            'sent_at' => now(),
+        ]);
 
         return back()->with('success', 'Agreement link sent via email.');
     }

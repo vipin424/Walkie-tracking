@@ -93,10 +93,12 @@
               @if($order->agreement && $order->agreement->status !== 'signed')
 
                @if ($order->agreement && $order->agreement->signed_url)
-                      <a href="{{ route('orders.sendAgreementEmail', $order) }}"
-                        class="btn btn-success">
-                        <i class="bi bi-envelope me-2"></i>Send Agreement Email
-                      </a>
+                      <button type="button"
+                              class="btn btn-success"
+                              data-bs-toggle="modal"
+                              data-bs-target="#sendAgreementMailModal">
+                          <i class="bi bi-envelope me-2"></i>Send Agreement Email
+                      </button>
 
                       <a href="{{ route('orders.sendAgreementWhatsapp', $order) }}"
                         class="btn btn-info text-white">
@@ -110,7 +112,8 @@
                       <i class="bi bi-clipboard me-2"></i>Copy Link
                     </button>
                 @endif
-                
+                  {{-- Include Modal --}}
+                  @include('orders.partials.agreement-email-modal')
                 <span class="badge bg-warning text-dark py-2 px-3">
                   <i class="bi bi-clock-history me-1"></i>Pending Signature
                 </span>
