@@ -33,10 +33,9 @@ class OrderReminder extends Command
     public function handle()
     {
 
-        $targetDate = now()->addDays(2)->toDateString();
-
+        $targetDate = now()->addDays(3)->toDateString();
         $orders = Order::with('client')
-            ->where('start_date', $targetDate)
+            ->where('event_from', $targetDate)
             ->where('status', '!=', 'dispatched')
             ->get();
 

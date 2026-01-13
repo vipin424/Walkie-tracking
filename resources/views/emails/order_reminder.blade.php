@@ -62,7 +62,7 @@
                                                     <strong>Client:</strong>
                                                 </td>
                                                 <td style="padding: 8px 0; color: #111827; font-size: 14px;">
-                                                    {{ $order->client->name }}
+                                                    {{ $order->client_name }}
                                                 </td>
                                             </tr>
                                         </table>
@@ -74,7 +74,7 @@
                                                     <strong>Start Date:</strong>
                                                 </td>
                                                 <td style="padding: 8px 0; color: #111827; font-size: 14px;">
-                                                    {{ \Carbon\Carbon::parse($order->start_date)->format('l, F j, Y') }}
+                                                    {{ \Carbon\Carbon::parse($order->event_from)->format('l, F j, Y') }}
                                                 </td>
                                             </tr>
                                         </table>
