@@ -5,17 +5,47 @@
     <title>{{ $quotation->code }} - Quotation</title>
     <style>
       body{font-family: DejaVu Sans, Arial, sans-serif; font-size:12px; color:#222;}
-      .header{display:flex; justify-content:space-between; align-items:center;}
-      .company {text-align:left;}
+      .header{margin-bottom:20px;}
+      .company {text-align:left; margin-bottom:20px;}
       .company img{height:60px;}
-      .client {text-align:right;}
+      
+      /* Bill To and Client Info Container */
+      .billing-section {
+          display:table;
+          width:100%;
+      }
+      
+      .bill-to {
+          display:table-cell;
+          width:50%; 
+          font-size:11px;
+          text-align:left;
+        }
+      
+      .client-info {
+          display:table-cell;
+          width:50%;
+          text-align:right;
+          vertical-align:top;
+      }
+      
+      .client-info h2 {
+          margin-top:0;
+          margin-bottom:10px;
+          font-size:24px;
+      }
+      
+      .client-info div {
+          margin-bottom:5px;
+      }
+      
       table {width:100%; border-collapse:collapse; margin-top:20px;}
       th, td {padding:8px; border:1px solid #e1e1e1;}
       th {background:#ff9800; text-align:left;}
       .right {text-align:right;}
       .total-row td {font-weight:bold;}
       .notes {margin-top:20px; font-size:11px;}
-      .footer {position:fixed; bottom:20px; font-size:10px; width:100%; text-align:center; color:#888;}
+      .footer {position:fixed; bottom:0px; font-size:10px; width:100%; text-align:center; color:#888;}
     </style>
 </head>
 <body>
@@ -29,10 +59,25 @@
           Marol, Andheri East, Mumbai,<br>
           Maharashtra – 400059
       </div>
-    <div>Phone: +91-9324465314 | Email: info@crewrent.in</div>
+      <div>Phone: +91-9324465314 | Email: info@crewrent.in</div>
     </div>
-    <div class="client">
-      <h2>Quotation</h2>
+  </div>
+
+  <!-- Bill To and Client Info Side by Side -->
+  <div class="billing-section">
+    <!-- BILL TO (Left) -->
+    @if(!empty($quotation->bill_to))
+    <div class="bill-to">
+        <h3>Bill To</h3>
+        {!! $quotation->bill_to !!}
+    </div>
+    @else
+    <div class="bill-to"></div>
+    @endif
+    
+    <!-- Client Info (Right) -->
+    <div class="client-info">
+      <h3>Quotation</h3>
       <div><strong>{{ $quotation->code }}</strong></div>
       <div>Date: {{ $quotation->created_at->format('d M Y') }}</div>
       <div>To: <strong>{{ $quotation->client_name }}</strong></div>

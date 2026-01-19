@@ -178,6 +178,7 @@ class OrderController extends Controller
                 'event_from' => $request->event_from,
                 'event_to'   => $request->event_to,
                 'notes'      => $request->notes,
+                'bill_to'    => $request->bill_to,
                 'total_days' => $totalDays,
 
                 'subtotal' => $subtotal,
@@ -479,6 +480,7 @@ class OrderController extends Controller
                 'event_to' => $request->event_to,
                 'total_days' => $totalDays,
                 'notes' => $request->notes,
+                'bill_to'    => $request->bill_to,
                 'subtotal' => $subtotal,
                 'tax_amount' => $tax_amount,
                 'discount_amount' => $discount,

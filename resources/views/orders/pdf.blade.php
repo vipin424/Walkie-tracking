@@ -14,9 +14,21 @@
             justify-content: space-between;
             align-items: flex-start;
         }
-        .company img {
-            height: 70px;
+        .company img{
+            height: 100px !important;
             margin-bottom: 5px;
+        }
+        /* Bill To and Client Info Container */
+      .billing-section {
+          display:table;
+          width:100%;
+      }
+      
+      .bill-to {
+          display:table-cell;
+          width:50%; 
+          font-size:11px;
+          text-align:left;
         }
         .client {
             text-align: right;
@@ -68,7 +80,7 @@
         }
         .footer {
             position: fixed;
-            bottom: 20px;
+            bottom: 0px;
             font-size: 10px;
             width: 100%;
             text-align: center;
@@ -90,8 +102,20 @@
         <div>Phone: +91-9324465314 | Email: info@crewrent.in</div>
     </div>
 
+      <!-- Bill To and Client Info Side by Side -->
+  <div class="billing-section">
+    <!-- BILL TO (Left) -->
+    @if(!empty($order->bill_to))
+    <div class="bill-to">
+        <h3>Bill To</h3>
+        {!! $order->bill_to !!}
+    </div>
+    @else
+    <div class="bill-to"></div>
+    @endif
+
     <div class="client">
-        <h2>{{ $order->settlement_status === 'settled' ? 'Invoice' : 'Order Confirmed' }}</h2>
+        <h3>{{ $order->settlement_status === 'settled' ? 'Invoice' : 'Order Confirmed' }}</h3>
         <div><strong>{{ $order->order_code }}</strong></div>
         <div>Date: {{ optional($order->created_at)->format('d M Y') }}</div>
         <div>To: <strong>{{ $order->client_name }}</strong></div>
