@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\QuotationLog;
+use App\Models\OrderLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -590,8 +590,8 @@ class OrderController extends Controller
         Mail::to($request->to_email)->send(new OrderMailable($order, $request->message, $downloadUrl));
 
         $order->update(['status' => 'sent']);
-        QuotationLog::create([
-            'quotation_id' => $order->id,
+        OrderLog::create([
+            'order_id' => $order->id,
             'user_id' => Auth::id(),
             'action' => 'sent_email',
             'meta' => json_encode(['to' => $request->to_email]),
@@ -641,8 +641,8 @@ class OrderController extends Controller
         $waLink = 'https://wa.me/' . $phone . '?text=' . rawurlencode($messageText);
 
         /** ✅ Log */
-        QuotationLog::create([
-            'quotation_id' => $order->id, // (optional rename later)
+        OrderLog::create([
+            'order_id' => $order->id,
             'user_id'      => Auth::id(),
             'action'       => 'sent_whatsapp_link',
             'meta'         => json_encode([
