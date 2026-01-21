@@ -25,6 +25,16 @@
       </div>
     </div>
 
+    <div class="col-md-12">
+        <label class="form-label fw-semibold">Bill To</label>
+        <textarea
+            name="bill_to"
+            id="bill_editor"
+            class="form-control"
+            rows="4"
+        >{{ old('bill_to', $quotation->bill_to ?? '') }}</textarea>
+    </div>
+
     <div class="row g-3 mt-2">
 
       <div class="col-md-6">
@@ -455,6 +465,19 @@ document.addEventListener('DOMContentLoaded', function(){
 <script>
     ClassicEditor
         .create(document.querySelector('#notes_editor'), {
+            toolbar: [
+                'bold', 'italic', 'underline',
+                '|',
+                'bulletedList', 'numberedList',
+                '|',
+                'undo', 'redo'
+            ]
+        })
+        .catch(error => {
+            console.error(error);
+        });
+    ClassicEditor
+        .create(document.querySelector('#bill_editor'), {
             toolbar: [
                 'bold', 'italic', 'underline',
                 '|',

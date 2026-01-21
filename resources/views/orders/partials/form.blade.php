@@ -25,6 +25,16 @@
       </div>
     </div>
 
+    <div class="col-md-12">
+        <label class="form-label fw-semibold">Bill To</label>
+        <textarea
+            name="bill_to"
+            id="bill_editor"
+            class="form-control"
+            rows="4"
+        >{{ old('bill_to', $order->bill_to ?? '') }}</textarea>
+    </div>
+
     <div class="row g-3 mt-2">
 
       <div class="col-md-4">
@@ -39,7 +49,7 @@
           value="{{ old('event_to', $order && $order->event_to ? \Carbon\Carbon::parse($order->event_to)->format('Y-m-d') : '') }}">
       </div>
       <div class="col-md-4">
-          <label class="form-label fw-semibold">Pickup Type</label>
+          <label class="form-label fw-semibold">Pickup Type <span class="text-danger">*</span></label>
 
           <select name="pickup_type" class="form-select" required>
               <option value="">Select</option>
@@ -489,6 +499,20 @@ document.addEventListener('DOMContentLoaded', function(){
 <script>
     ClassicEditor
         .create(document.querySelector('#notes_editor'), {
+            toolbar: [
+                'bold', 'italic', 'underline',
+                '|',
+                'bulletedList', 'numberedList',
+                '|',
+                'undo', 'redo'
+            ]
+        })
+        .catch(error => {
+            console.error(error);
+        });
+
+    ClassicEditor
+        .create(document.querySelector('#bill_editor'), {
             toolbar: [
                 'bold', 'italic', 'underline',
                 '|',
