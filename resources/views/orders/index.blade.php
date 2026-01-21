@@ -92,8 +92,8 @@
                   @if($q->event_state === 'running')
                       <span class="badge bg-success">Live</span>
                   @elseif($q->event_state === 'upcoming')
-                      <span class="badge bg-info">
-                          Starts in {{ $q->days_left }} days
+                      <span class="badge bg-danger">
+                         {{ $q->days_label }} 
                       </span>
                   @else
                       <span class="badge bg-secondary">Completed</span>

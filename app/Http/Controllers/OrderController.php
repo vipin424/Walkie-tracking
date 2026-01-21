@@ -50,8 +50,8 @@ class OrderController extends Controller
         $orders->getCollection()->transform(function ($order) {
 
             $today = Carbon::today();
-            $eventFrom = Carbon::parse($order->event_from);
-            $eventTo   = Carbon::parse($order->event_to);
+            $eventFrom = Carbon::parse($order->event_from)->startOfDay();
+            $eventTo   = Carbon::parse($order->event_to)->startOfDay();
 
             $order->event_days = $order->total_days
                 ?? ($eventFrom->diffInDays($eventTo) + 1);
@@ -61,8 +61,7 @@ class OrderController extends Controller
                 $diff = $today->diffInDays($eventFrom);
 
                 $order->event_state = 'upcoming';
-
-                if ($diff === 1) {
+                if ((int) $diff === 1) {
                     $order->days_label = 'Tomorrow';
                 } else {
                     $order->days_label = $diff . ' days to start';
@@ -74,9 +73,9 @@ class OrderController extends Controller
 
                 $order->event_state = 'running';
 
-                if ($diff === 0) {
+                if ((int) $diff === 0) {
                     $order->days_label = 'Ends today';
-                } elseif ($diff === 1) {
+                } elseif ((int) $diff === 1) {
                     $order->days_label = '1 day left';
                 } else {
                     $order->days_label = $diff . ' days left';
