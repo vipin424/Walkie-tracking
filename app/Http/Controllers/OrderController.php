@@ -633,11 +633,15 @@ class OrderController extends Controller
         $messageText =
             "Hello *{$order->client_name}*,\n\n" .
             "Your order *{$order->order_code}* is confirmed.\n\n" .
+            "📅 *Event Date:* " .
+            \Carbon\Carbon::parse($order->event_from)->format('d M Y') .
+            " to " .
+            \Carbon\Carbon::parse($order->event_to)->format('d M Y') . "\n\n" .
             "Total Amount: ₹" . number_format($order->total_amount, 2) . "\n\n" .
             "Download Order PDF:\n{$url}\n\n" .
-            "This link is valid for 7 days.\n\n" .
-            "Please reply to confirm.\n\n" .
+            "This link is valid for 7 days.\n\n" .  
             "– *Crewrent Enterprises*";
+
 
         /** ✅ Normalize phone number */
         $phone = preg_replace('/\D+/', '', $request->to_phone);

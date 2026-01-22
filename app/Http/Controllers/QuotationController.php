@@ -483,18 +483,20 @@ class QuotationController extends Controller
 
     public function download(Quotation $quotation)
     {
-        // Ensure PDF exists
-        if (
-            !$quotation->pdf_path ||
-            !Storage::exists(str_replace('storage/', 'public/', $quotation->pdf_path))
-        ) {
-            abort(404, 'Quotation PDF not found.');
+        if (!$quotation->pdf_path) {
+            abort(404, 'PDF not found');
         }
 
-        $path = str_replace('storage/', 'public/', $quotation->pdf_path);
+        // convert storage path → disk path
+        $diskPath = str_replace('storage/', '', $quotation->pdf_path);
+        // now: quotations/QTN-20260122-249.pdf
 
-        return Storage::download(
-            $path,
+        if (!Storage::disk('public')->exists($diskPath)) {
+            abort(404, 'File not found');
+        }
+
+        return Storage::disk('public')->download(
+            $diskPath,
             $quotation->code . '.pdf'
         );
     }
