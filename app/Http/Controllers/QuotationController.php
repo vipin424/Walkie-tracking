@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\QuotationMailable;
 use PDF;
+use Illuminate\Support\Facades\URL;
 use Carbon\Carbon;
 
 
@@ -428,40 +429,51 @@ class QuotationController extends Controller
             'message'  => 'nullable|string',
         ]);
 
-        // Ensure PDF exists
+        /** ✅ Ensure quotation PDF exists */
         if (
             !$quotation->pdf_path ||
-            !Storage::exists(str_replace('storage/', 'public/', $quotation->pdf_path))
+            !Storage::disk('public')->exists($quotation->pdf_path)
         ) {
             $this->generatePdf($quotation);
             $quotation->refresh();
         }
 
-        $url = \URL::signedRoute(
+        /** ✅ Generate signed quotation download URL (7 days valid) */
+        $url = URL::temporarySignedRoute(
             'quotations.download',
-            ['quotation' => $quotation->id],
-            now()->addDays(7)
+            now()->addDays(7),
+            ['quotation' => $quotation->id]
         );
 
+        /** ✅ WhatsApp message */
         $messageText =
-            "Hello {$quotation->client_name},\n\n" .
-            "Here is the quotation {$quotation->code}.\n\n" .
+            "Hello *{$quotation->client_name}*,\n\n" .
+            "Here is your quotation *{$quotation->code}*.\n\n" .
             "Total Amount: ₹" . number_format($quotation->total_amount, 2) . "\n\n" .
-            "Download Quotation:\n{$url}\n\n" .
-            "Please reply to confirm.";
+            "Download Quotation PDF:\n{$url}\n\n" .
+            "This link is valid for 7 days.\n\n" .
+            "Please reply to confirm.\n\n" .
+            "– *Crewrent Enterprises*";
 
+        /** ✅ Normalize phone number */
         $phone = preg_replace('/\D+/', '', $request->to_phone);
+
         if (strlen($phone) <= 10) {
             $phone = '91' . $phone;
         }
 
+        /** ✅ WhatsApp redirect link */
         $waLink = 'https://wa.me/' . $phone . '?text=' . rawurlencode($messageText);
 
+        /** ✅ Log activity */
         QuotationLog::create([
             'quotation_id' => $quotation->id,
             'user_id'      => Auth::id(),
             'action'       => 'sent_whatsapp_link',
-            'meta'         => json_encode(['to' => $phone, 'link' => $url]),
+            'meta'         => json_encode([
+                'to'   => $phone,
+                'link' => $url,
+            ]),
         ]);
 
         return redirect($waLink);

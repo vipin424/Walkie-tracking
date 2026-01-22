@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\OrderAgreement;
+use App\Models\Client;
+use App\Models\Quotation;
 use App\Models\OrderItem;
 use App\Models\OrderLog;
 use Illuminate\Http\Request;
@@ -114,7 +117,7 @@ class OrderController extends Controller
 
             'event_from' => 'required|date',
             'event_to'   => 'required|date|after_or_equal:event_from',
-            'pickup_type' => 'required|string',
+            'handle_type' => 'required|string',
             'items' => 'required|array|min:1',
             'items.*.item_name' => 'required|string',
             'items.*.quantity' => 'required|numeric|min:1',
@@ -176,6 +179,7 @@ class OrderController extends Controller
 
                 'event_from' => $request->event_from,
                 'event_to'   => $request->event_to,
+                'handle_type' => $request->handle_type === 'self' ? 1 : 0,
                 'notes'      => $request->notes,
                 'bill_to'    => $request->bill_to,
                 'total_days' => $totalDays,
@@ -192,7 +196,7 @@ class OrderController extends Controller
                 'security_deposit' => floatval($request->security_deposit ?? 0),
                 'advance_paid'  => $request->advance_paid,
                 'balance_amount'=> $total - $request->advance_paid,
-                'agreement_required' => $request->pickup_type === 'self',
+                'agreement_required' => $request->handle_type === 'self',
 
                 'status' => 'confirmed',
                 'created_by' => auth()->id(),
@@ -420,6 +424,7 @@ class OrderController extends Controller
 
                 'event_from' => 'required|date',
                 'event_to'   => 'required|date|after_or_equal:event_from',
+                'handle_type' => 'required|string',
 
                 'items' => 'required|array|min:1',
                 'items.*.item_name' => 'required|string',
@@ -477,6 +482,7 @@ class OrderController extends Controller
                 'client_phone' => $request->client_phone,
                 'event_from' => $request->event_from,
                 'event_to' => $request->event_to,
+                'handle_type' => $request->handle_type === 'self' ? 1 : 0,
                 'total_days' => $totalDays,
                 'notes' => $request->notes,
                 'bill_to'    => $request->bill_to,
@@ -773,53 +779,65 @@ class OrderController extends Controller
 
 
 
-    // public function storeFromQuotation(Request $request, Order $order)
-    // {
-    //     $request->validate([
-    //         'advance_paid' => 'required|numeric|min:0|max:' . $order->total_amount,
-    //     ]);
+    public function storeFromQuotation(Request $request, Quotation $quotation)
+    {
+        $request->validate([
+            'advance_paid' => 'required|numeric|min:0|max:' . $quotation->total_amount,
+        ]);
 
-    //     DB::transaction(function () use ($order, $request, &$order) {
+        DB::transaction(function () use ($quotation, $request, &$order) {
 
-    //         $order = Order::create([
-    //             'order_code' => Order::generateCode(),
-    //             'quotation_id' => $order->id,
+            /** ✅ CREATE ORDER */
+            $order = Order::create([
+                'order_code'   => Order::generateCode(),
+                'quotation_id' => $quotation->id,
 
-    //             'client_name' => $order->client_name,
-    //             'client_email'=> $order->client_email,
-    //             'client_phone'=> $order->client_phone,
+                'client_name'  => $quotation->client_name,
+                'client_email' => $quotation->client_email,
+                'client_phone' => $quotation->client_phone,
 
-    //             'event_from' => $order->event_from,
-    //             'event_to'   => $order->event_to,
-    //             'total_days' => $order->total_days,
+                'event_from' => $quotation->event_from,
+                'event_to'   => $quotation->event_to,
+                'handle_type' => $quotation->handle_type,
+                'notes'      => $quotation->notes,
+                'bill_to'    => $quotation->bill_to,
+                'total_days' => $quotation->total_days,
 
-    //             'subtotal' => $order->subtotal,
-    //             'tax_amount' => $order->tax_amount,
+                'subtotal' => $quotation->subtotal,
+                'tax_amount' => $quotation->tax_amount,
 
-    //             'extra_charge_type' => $order->extra_charge_type,
-    //             'extra_charge_rate' => $order->extra_charge_rate,
-    //             'extra_charge_total'=> $order->extra_charge_total,
+                'extra_charge_type'  => $quotation->extra_charge_type,
+                'extra_charge_rate'  => $quotation->extra_charge_rate,
+                'extra_charge_total' => $quotation->extra_charge_total,
 
-    //             'discount_amount' => $order->discount_amount,
-    //             'total_amount' => $order->total_amount,
+                'discount_amount' => $quotation->discount_amount,
+                'total_amount'    => $quotation->total_amount,
 
-    //             'advance_paid' => $request->advance_paid,
-    //             'balance_amount' => $order->total_amount - $request->advance_paid,
+                'advance_paid' => $request->advance_paid,
+                'balance_amount' =>
+                    $quotation->total_amount - $request->advance_paid,
 
-    //             'status' => 'confirmed',
-    //             'created_by' => auth()->id(),
-    //         ]);
+                'status'     => 'confirmed',
+                'created_by' => auth()->id(),
+                'agreement_required' => $quotation->handle_type,
+            ]);
 
-    //         foreach ($order->items as $item) {
-    //             $order->items()->create($item->toArray());
-    //         }
+            /** ✅ COPY ITEMS */
+            foreach ($quotation->items as $item) {
+                $order->items()->create($item->toArray());
+            }
 
-    //         $order->update(['status' => 'accepted']);
-    //     });
+            /** ✅ UPDATE QUOTATION STATUS */
+            $quotation->update([
+                'status' => 'accepted'
+            ]);
+        });
 
-    //     return redirect()->route('orders.show', $order)
-    //         ->with('success','Order converted to Order.');
-    // }
+        return redirect()
+            ->route('orders.show', $order)
+            ->with('success', 'Quotation converted to Order successfully.');
+    }
+
 
 
 

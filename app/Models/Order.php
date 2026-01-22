@@ -9,7 +9,7 @@ class Order extends Model
     protected $fillable = [
         'order_code','quotation_id',
         'client_name','client_email','client_phone',
-        'event_from','event_to','total_days',
+        'event_from','event_to','handle_type','total_days',
         'subtotal','tax_amount',
         'extra_charge_type','extra_charge_rate','extra_charge_total',
         'discount_amount','total_amount',

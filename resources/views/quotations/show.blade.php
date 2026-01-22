@@ -54,6 +54,18 @@
             <i class="bi bi-eye me-2"></i>View PDF
           </a>
         @endif
+        @if($quotation->status === 'draft' || $quotation->status === 'sent')
+
+          <button
+              class="btn btn-success"
+              data-bs-toggle="modal"
+              data-bs-target="#convertModal">
+
+              <i class="bi bi-arrow-repeat"></i>
+              Convert to Order
+          </button>
+
+        @endif
       </div>
     </div>
   </div>
@@ -273,6 +285,9 @@
   </div>
   @endif
 </div>
+
+
+@include('quotations.partials.convert-order-modal')
 
 <!-- Email Modal -->
 <div class="modal fade" id="emailModal" tabindex="-1" aria-labelledby="emailModalLabel" aria-hidden="true">

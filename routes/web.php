@@ -56,9 +56,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/orders/{order}/agreement/send-whatsapp', [AgreementController::class, 'sendWhatsapp'])->name('orders.sendAgreementWhatsapp');
     // Quotation → Order
     Route::post(
-        'quotations/{quotation}/convert-to-order',
+        'quotations/{quotation}/convert',
         [OrderController::class, 'storeFromQuotation']
-    )->name('orders.fromQuotation');
+    )->name('quotations.convertToOrder');
+
 
     // View
     Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');

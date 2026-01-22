@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 class Quotation extends Model
 {
     protected $fillable = [
-        'code','client_name','client_email','client_phone','event_from','event_to','total_days',
+        'code','client_name','client_email','client_phone','event_from','event_to','handle_type','total_days',
         'notes','bill_to','subtotal','tax_amount','discount_amount','extra_charge_type','extra_charge_rate','extra_charge_total','total_amount','status','created_by','pdf_path'
     ];
 

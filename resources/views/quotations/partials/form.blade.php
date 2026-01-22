@@ -37,16 +37,26 @@
 
     <div class="row g-3 mt-2">
 
-      <div class="col-md-6">
+      <div class="col-md-4">
           <label class="form-label fw-semibold">Event From</label>
           <input type="date" name="event_from" id="event_from" class="form-control"
           value="{{ old('event_from', $quotation && $quotation->event_from ? \Carbon\Carbon::parse($quotation->event_from)->format('Y-m-d') : '') }}">
       </div>
 
-      <div class="col-md-6">
+      <div class="col-md-4">
           <label class="form-label fw-semibold">Event To</label>
           <input type="date" name="event_to" id="event_to" class="form-control"
           value="{{ old('event_to', $quotation && $quotation->event_to ? \Carbon\Carbon::parse($quotation->event_to)->format('Y-m-d') : '') }}">
+      </div>
+
+      <div class="col-md-4">
+          <label class="form-label fw-semibold">Handling Type <span class="text-danger">*</span></label>
+
+          <select name="handle_type" class="form-select" required>
+              <option value="">Select</option>
+              <option value="staff">Our Staff Onsite</option>
+              <option value="self">Client Pickup (Self)</option>
+          </select>
       </div>
 
     <div class="col-md-12">

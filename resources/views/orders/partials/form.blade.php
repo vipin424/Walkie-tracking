@@ -49,13 +49,16 @@
           value="{{ old('event_to', $order && $order->event_to ? \Carbon\Carbon::parse($order->event_to)->format('Y-m-d') : '') }}">
       </div>
       <div class="col-md-4">
-          <label class="form-label fw-semibold">Pickup Type <span class="text-danger">*</span></label>
-
-          <select name="pickup_type" class="form-select" required>
-              <option value="">Select</option>
-              <option value="staff">Our Staff Onsite</option>
-              <option value="self">Client Pickup (Self)</option>
-          </select>
+          <label class="form-label fw-semibold">Handling Type <span class="text-danger">*</span></label>
+            <select name="handle_type" class="form-select" required>
+                <option value="">Select</option>
+                <option value="staff" {{ old('handle_type', optional($order)->handle_type) == 0 ? 'selected' : '' }}>
+                    Our Staff Onsite
+                </option>
+                <option value="self" {{ old('handle_type', optional($order)->handle_type) == 1 ? 'selected' : '' }}>
+                    Client Pickup (Self)
+                </option>
+            </select>
       </div>
     <div class="col-md-12">
         <label class="form-label fw-semibold">Notes</label>
