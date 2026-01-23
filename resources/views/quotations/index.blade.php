@@ -64,6 +64,8 @@
           <thead class="bg-light">
             <tr>
               <th class="px-4 py-3 text-muted fw-semibold">Quotation Code</th>
+              <th class="px-4 py-3 text-muted fw-semibold">Event Period</th>
+              <th class="px-4 py-3 text-muted fw-semibold">Duration</th>
               <th class="px-4 py-3 text-muted fw-semibold">Client</th>
               <th class="px-4 py-3 text-muted fw-semibold">Total Amount</th>
               <th class="px-4 py-3 text-muted fw-semibold">Status</th>
@@ -78,6 +80,23 @@
                   <a href="{{ route('quotations.show',$q) }}" class="text-decoration-none fw-semibold text-primary">
                     <i class="bi bi-file-text me-2"></i>{{ $q->code }}
                   </a>
+                </td>
+                @php
+                    $from = \Carbon\Carbon::parse($q->event_from)->startOfDay();
+                    $to   = \Carbon\Carbon::parse($q->event_to)->startOfDay();
+
+                    // +1 because event days usually include start & end date
+                    $days = $from->diffInDays($to) + 1;
+                @endphp
+                <td class="px-4 py-3">
+                    <div class="fw-medium">
+                        {{ \Carbon\Carbon::parse($q->event_from)->format('d M') }}
+                        →
+                        {{ \Carbon\Carbon::parse($q->event_to)->format('d M Y') }}
+                    </div>
+                </td>
+                <td class="px-4 py-3">
+                  <span class="text-muted">{{ $days }} days</span>
                 </td>
                 <td class="px-4 py-3">
                   <div class="d-flex align-items-center">
