@@ -32,10 +32,12 @@ class OrderReminder extends Command
      */
     public function handle()
     {
+        $today = now()->startOfDay();
+        $threeDaysLater = now()->addDays(3)->endOfDay();
 
-        $targetDate = now()->addDays(3)->toDateString();
         $orders = Order::with('client')
-            ->where('event_from', $targetDate)
+            ->whereDate('event_from', '>=', $today)
+            ->whereDate('event_from', '<=', $threeDaysLater)
             ->where('status', '!=', 'dispatched')
             ->get();
 
@@ -44,7 +46,6 @@ class OrderReminder extends Command
                 ->send(new OrderReminderMail($order));
         }
 
-        $this->info('Order reminders sent successfully.');
-
+        $this->info('Daily order reminders sent successfully.');
     }
 }
