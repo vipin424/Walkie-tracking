@@ -54,12 +54,13 @@
           </button>
 
           @if($order->pdf_path)
-            <a href="{{ Storage::url(str_replace('storage/','public/',$order->pdf_path)) }}" 
-              target="_blank" 
-              class="btn btn-outline-secondary">
-              <i class="bi bi-eye me-2"></i>View PDF
-            </a>
+          <a href="{{ Storage::url(str_replace('storage/','public/',$order->pdf_path)) }}?v={{ $order->updated_at->timestamp }}"
+            target="_blank"
+            class="btn btn-outline-secondary">
+            <i class="bi bi-eye me-2"></i> View PDF
+          </a>
           @endif
+
         </div>
       </div>
 

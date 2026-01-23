@@ -552,14 +552,6 @@ class OrderController extends Controller
         $order->pdf_path = 'storage/orders/' . $fileName;
         $order->save();
 
-        // log
-        // OrderLog::create([
-        //     'order_id' => $order->id,
-        //     'user_id' => Auth::id(),
-        //     'action' => 'generated_pdf',
-        //     'meta' => json_encode(['path' => $order->pdf_path]),
-        // ]);
-
         return redirect()->back()->with('success','PDF generated and stored.');
     }
 
