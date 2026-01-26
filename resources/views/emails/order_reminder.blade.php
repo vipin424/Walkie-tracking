@@ -66,7 +66,7 @@
                             </p>
                             
                             <p class="mobile-text" style="margin: 0 0 30px; color: #6b7280; font-size: 15px; line-height: 1.7;">
-                                This is a friendly reminder that the following order is scheduled in <strong style="color: #ff9800;">2 days</strong>. Please ensure all items are prepared and ready.
+                                This is a friendly reminder that the following order is scheduled in <strong style="color: #ff9800;">{{ $reminderText }}</strong>. Please ensure all items are prepared and ready.
                             </p>
 
                             <!-- Order Details Card -->

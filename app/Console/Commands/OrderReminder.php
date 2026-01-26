@@ -42,8 +42,22 @@ class OrderReminder extends Command
             ->get();
 
         foreach ($orders as $order) {
+
+            // 🔥 Calculate days left
+            $eventDate = Carbon::parse($order->event_from)->startOfDay();
+            $daysLeft = $today->diffInDays($eventDate, false);
+
+            // 🔥 Text based on days
+            if ((int) $daysLeft === 0) {
+                $reminderText = 'Today';
+            } elseif ((int) $daysLeft === 1) {
+                $reminderText = 'Tomorrow';
+            } else {
+                $reminderText = $daysLeft . ' days';
+            }
+
             Mail::to('reelrententerprises@gmail.com')
-                ->send(new OrderReminderMail($order));
+                ->send(new OrderReminderMail($order, $reminderText));
         }
 
         $this->info('Daily order reminders sent successfully.');

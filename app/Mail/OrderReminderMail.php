@@ -18,10 +18,12 @@ class OrderReminderMail extends Mailable
      * Create a new message instance.
      */
     public $order;
+    public $reminderText;
 
-    public function __construct(Order $order)
+    public function __construct(Order $order, $reminderText)
     {
         $this->order = $order;
+        $this->reminderText = $reminderText;
     }
 
     /**
