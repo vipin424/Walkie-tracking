@@ -235,12 +235,12 @@
             <td colspan="7" class="right">Advance Paid</td>
             <td class="right" style="color: #4caf50;">₹{{ number_format($order->advance_paid ?? 0,2) }}</td>
         </tr>
-
+       @if(($order->security_deposit ?? 0) > 0)
         <tr class="total-row">
             <td colspan="7" class="right">Security Deposit (Refundable)</td>
             <td class="right">₹{{ number_format($order->security_deposit ?? 0,2) }}</td>
         </tr>
-
+       @endif
         <tr class="calculation-row">
             <td colspan="7" class="right">Calculation: Grand Total - Advance Paid</td>
             <td class="right">₹{{ number_format($order->total_amount - ($order->advance_paid ?? 0), 2) }}</td>
@@ -271,11 +271,13 @@
             <td class="right" style="color: #f44336;">₹{{ number_format($order->late_fee,2) }}</td>
         </tr>
         @endif
-
+     
+      @if(($order->deposit_adjusted ?? 0) != 0)
         <tr class="total-row">
             <td colspan="7" class="right">Security Deposit Adjusted</td>
             <td class="right">₹{{ number_format($order->deposit_adjusted ?? 0,2) }}</td>
         </tr>
+     @endif
 
         @if(($order->final_payable ?? 0) > 0)
         <tr class="final-amount-row total-row">

@@ -8,7 +8,7 @@
         @csrf @method('PUT')
         @include('orders.partials.form', ['order' => $order])
 
-        <button class="btn btn-primary">Update Order</button>
+        <button class="btn btn-primary mt-2">Update Order</button>
     </form>
 </div>
 @endsection

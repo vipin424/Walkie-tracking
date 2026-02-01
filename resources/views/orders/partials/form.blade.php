@@ -301,32 +301,6 @@
   </div>
 </div>
 
-<!-- Action Buttons Card (Optional - for after save actions) -->
-<div class="card border-0 shadow-sm mt-4">
-  <div class="card-header bg-white border-0 p-4">
-    <h5 class="mb-0 fw-semibold">
-      <i class="bi bi-send me-2 text-warning"></i>Additional Actions
-    </h5>
-  </div>
-  <div class="card-body p-4">
-    <div class="alert alert-info border-0 mb-3">
-      <i class="bi bi-info-circle me-2"></i>
-      These actions will be available after saving the order.
-    </div>
-    <div class="d-flex flex-wrap gap-2">
-      <button type="button" id="generate-pdf" class="btn btn-outline-primary" disabled>
-        <i class="bi bi-file-earmark-pdf me-2"></i>Generate PDF
-      </button>
-      <button type="button" id="send-email" class="btn btn-outline-success" disabled>
-        <i class="bi bi-envelope me-2"></i>Send Email
-      </button>
-      <button type="button" id="send-whatsapp" class="btn btn-outline-info" disabled>
-        <i class="bi bi-whatsapp me-2"></i>Send WhatsApp
-      </button>
-    </div>
-  </div>
-</div>
-
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function(){

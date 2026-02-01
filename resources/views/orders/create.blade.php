@@ -17,7 +17,7 @@
         @csrf
         @include('orders.partials.form', ['order' => null])
 
-        <button class="btn btn-primary">Save Order</button>
+        <button class="btn btn-primary mt-2">Save Order</button>
     </form>
 </div>
 @endsection
