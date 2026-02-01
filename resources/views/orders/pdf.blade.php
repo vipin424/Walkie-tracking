@@ -301,9 +301,11 @@
 {{-- ================= NOTES ================= --}}
 @if($order->notes)
 <div class="notes">
-    $order->settlement_status === 'settled'
-        ? <strong>Invoice Notes:</strong>
-        :strong>Terms & Conditions:</strong>
+    @if($order->settlement_status === 'settled')
+    <strong>Invoice Notes:</strong>
+    @else
+    <strong>Terms & Conditions:</strong>
+    @endif
     <div>{!! $order->notes !!}</div>
 </div>
 @endif
