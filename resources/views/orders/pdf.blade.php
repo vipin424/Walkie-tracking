@@ -240,7 +240,7 @@
             <td colspan="7" class="right">Security Deposit (Refundable)</td>
             <td class="right">₹{{ number_format($order->security_deposit ?? 0,2) }}</td>
         </tr>
-       @endif
+    @endif
         <tr class="calculation-row">
             <td colspan="7" class="right">Calculation: Grand Total - Advance Paid</td>
             <td class="right">₹{{ number_format($order->total_amount - ($order->advance_paid ?? 0), 2) }}</td>
@@ -301,7 +301,9 @@
 {{-- ================= NOTES ================= --}}
 @if($order->notes)
 <div class="notes">
-    <strong>Terms & Conditions:</strong>
+    $order->settlement_status === 'settled'
+        ? <strong>Invoice Notes:</strong>
+        :strong>Terms & Conditions:</strong>
     <div>{!! $order->notes !!}</div>
 </div>
 @endif
