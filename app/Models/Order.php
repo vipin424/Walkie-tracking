@@ -44,4 +44,54 @@ class Order extends Model
     {
         return 'ORD-' . now()->format('Ymd') . '-' . rand(100,999);
     }
+
+    /**
+     * Get all payment transactions for this order
+     */
+    public function payments()
+    {
+        return $this->hasMany(PaymentTransaction::class);
+    }
+
+    /**
+     * Get all payment reminders sent for this order
+     */
+    public function paymentReminders()
+    {
+        return $this->hasMany(PaymentReminder::class);
+    }
+
+    /**
+     * Get total amount paid for this order
+     */
+    public function getTotalPaidAttribute()
+    {
+        return $this->payments()->sum('amount');
+    }
+
+    /**
+     * Get the latest payment transaction
+     */
+    public function latestPayment()
+    {
+        return $this->hasOne(PaymentTransaction::class)->latestOfMany('paid_at');
+    }
+
+    /**
+     * Check if order is fully paid
+     */
+    public function isFullyPaid()
+    {
+        return $this->payment_status === 'paid' && $this->final_payable <= 0;
+    }
+
+    /**
+     * Check if payment is overdue (for orders with event passed)
+     */
+    public function isPaymentOverdue()
+    {
+        return $this->payment_status !== 'paid' 
+            && $this->final_payable > 0 
+            && now()->greaterThan($this->event_to);
+    }
 }

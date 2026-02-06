@@ -11,7 +11,7 @@ use App\Http\Controllers\{
     InvoiceController,
     OrderController,
     QuotationController,
-    AgreementController
+    AgreementController,
 };
 
 Route::get('/', function () {
@@ -59,6 +59,18 @@ Route::middleware(['auth'])->group(function () {
         'quotations/{quotation}/convert',
         [OrderController::class, 'storeFromQuotation']
     )->name('quotations.convertToOrder');
+
+        // Send payment reminder
+    Route::post('/orders/{order}/send-reminder', [PaymentController::class, 'sendReminder'])
+        ->name('orders.send-reminder');
+    
+    // Record payment
+    Route::post('/orders/{order}/record-payment', [PaymentController::class, 'recordPayment'])
+        ->name('orders.record-payment');
+    
+    // Get payment history
+    Route::get('/orders/{order}/payment-history', [PaymentController::class, 'getPaymentHistory'])
+        ->name('orders.payment-history');
 
 
     // View
