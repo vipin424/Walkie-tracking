@@ -28,18 +28,23 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $q = Order::query();
+        $q = Order::query()
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $s = $request->search;
 
-        // 🔍 Search logic (unchanged, but grouped safely)
-        if ($request->filled('search')) {
-            $s = $request->search;
-
-            $q->where(function ($query) use ($s) {
-                $query->where('order_code', 'like', "%{$s}%")
+                $query->where(function ($q) use ($s) {
+                    $q->where('order_code', 'like', "%{$s}%")
                     ->orWhere('client_name', 'like', "%{$s}%")
                     ->orWhere('client_phone', 'like', "%{$s}%");
+                });
+            })
+            ->when($request->filled('status'), function ($query) use ($request) {
+                $query->where('status', $request->status);
+            })
+            ->when($request->filled('payment_status'), function ($query) use ($request) {
+                $query->where('payment_status', $request->payment_status);
             });
-        }
+
 
         // 📄 Fetch paginated orders
         $orders = $q->latest()->paginate(20);

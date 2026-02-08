@@ -114,6 +114,7 @@ class PaymentController extends Controller
      */
     public function recordPayment(Request $request, Order $order)
     {
+       // dd($request->all());
         $request->validate([
             'amount' => 'required|numeric|min:0.01',
             'payment_method' => 'required|in:gpay,paytm,phonepe,cash,bank_transfer,upi,other',
@@ -147,7 +148,8 @@ class PaymentController extends Controller
             $totalPaid = PaymentTransaction::where('order_id', $order->id)->sum('amount');
             
             // Update order
-            $remainingAmount = max(0, $order->total_amount - $totalPaid);
+            $remainingAmount = max(0, $order->balance_amount - $totalPaid);
+
             
             if ($remainingAmount == 0) {
                 $order->payment_status = 'paid';

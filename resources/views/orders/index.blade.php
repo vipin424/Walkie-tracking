@@ -230,7 +230,7 @@
 <div class="modal fade" id="reminderModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 shadow">
-      <div class="modal-header" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #0a5b4dff 0%, #004d40 100%); color: white;">
         <h5 class="modal-title">
           <i class="bi bi-bell-fill me-2"></i>Send Payment Reminder
         </h5>
@@ -310,7 +310,7 @@
 <div class="modal fade" id="paymentModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 shadow">
-      <div class="modal-header" style="background: linear-gradient(135deg, #28a745 0%, #218838 100%); color: white;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #086051ff 0%, #004d408 100%); color: white;">
         <h5 class="modal-title">
           <i class="bi bi-cash-coin me-2"></i>Record Payment
         </h5>
