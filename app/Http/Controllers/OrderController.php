@@ -202,6 +202,7 @@ class OrderController extends Controller
                 'advance_paid'  => $request->advance_paid,
                 'balance_amount'=> $total - $request->advance_paid,
                 'agreement_required' => $request->handle_type === 'self',
+                'payment_status' => $request->advance_paid >= $total ? 'paid' : 'partial',
 
                 'status' => 'confirmed',
                 'created_by' => auth()->id(),
@@ -275,6 +276,7 @@ class OrderController extends Controller
             'final_payable'   => $finalPayable,
             'settlement_status'=>'settled',
             'settlement_date' => now(),
+            'payment_status'  => $finalPayable > 0 ? 'partial' : 'paid',
         ]);
 
         return back()->with('success','Settlement completed.');
@@ -500,7 +502,8 @@ class OrderController extends Controller
                 'total_amount' => $total,
                 'security_deposit' => floatval($request->security_deposit ?? 0),
                 'advance_paid'  => $request->advance_paid,
-                'balance_amount'=> $total - $request->advance_paid
+                'balance_amount'=> $total - $request->advance_paid,
+                'payment_status' => $request->advance_paid >= $total ? 'paid' : 'partial',
             ]);
 
             /** 🔹 REPLACE ITEMS */

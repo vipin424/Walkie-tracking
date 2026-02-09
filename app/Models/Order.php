@@ -14,7 +14,7 @@ class Order extends Model
         'extra_charge_type','extra_charge_rate','extra_charge_total',
         'discount_amount','total_amount',
         'advance_paid','balance_amount','agreement_required',
-        'status','created_by','notes','bill_to','pdf_path','security_deposit','damage_charge','late_fee','refund_amount','deposit_adjusted','amount_due','settlement_status','settlement_date','final_payable'
+        'status','created_by','notes','bill_to','pdf_path','security_deposit','damage_charge','late_fee','refund_amount','deposit_adjusted','amount_due','settlement_status','payment_status','settlement_date','final_payable'
     ];
 
     protected $casts = [
