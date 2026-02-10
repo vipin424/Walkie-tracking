@@ -28,77 +28,84 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $q = Order::query()
-            ->when($request->filled('search'), function ($query) use ($request) {
-                $s = $request->search;
+        if ($request->ajax()) {
+            return $this->getDataTable($request);
+        }
+        return view('orders.index');
+    }
 
-                $query->where(function ($q) use ($s) {
-                    $q->where('order_code', 'like', "%{$s}%")
-                    ->orWhere('client_name', 'like', "%{$s}%")
-                    ->orWhere('client_phone', 'like', "%{$s}%");
-                });
+    private function getDataTable($request)
+    {
+        $query = Order::query()
+            ->when($request->filled('status'), fn($q) => $q->where('status', $request->status))
+            ->when($request->filled('payment_status'), fn($q) => $q->where('payment_status', $request->payment_status))
+            ->orderByDesc('id');
+
+        return datatables()->eloquent($query)
+            ->addColumn('order_code', function ($order) {
+                return '<a href="'.route('orders.show', $order).'" class="text-decoration-none fw-semibold text-primary"><i class="bi bi-file-text me-2"></i>'.$order->order_code.'</a>';
             })
-            ->when($request->filled('status'), function ($query) use ($request) {
-                $query->where('status', $request->status);
+            ->addColumn('event_period', function ($order) {
+                $today = Carbon::today();
+                $from = Carbon::parse($order->event_from)->startOfDay();
+                $to = Carbon::parse($order->event_to)->startOfDay();
+                
+                $badge = '';
+                if ($today->lt($from)) {
+                    $diff = $today->diffInDays($from);
+                    $badge = '<span class="badge bg-danger">'.($diff == 1 ? 'Tomorrow' : "$diff days to start").'</span>';
+                } elseif ($today->between($from, $to)) {
+                    $badge = '<span class="badge bg-success">Live</span>';
+                } else {
+                    $badge = '<span class="badge bg-secondary">Completed</span>';
+                }
+                
+                return '<div class="fw-medium">'.Carbon::parse($order->event_from)->format('d M').' → '.Carbon::parse($order->event_to)->format('d M Y').'</div>'.$badge;
             })
-            ->when($request->filled('payment_status'), function ($query) use ($request) {
-                $query->where('payment_status', $request->payment_status);
-            });
-
-
-        // 📄 Fetch paginated orders
-        $orders = $q->latest()->paginate(20);
-
-        /**
-         * 🗓️ ADD EVENT DATE LOGIC
-         * - total days
-         * - days left
-         * - event state (upcoming / running / completed)
-         */
-        $orders->getCollection()->transform(function ($order) {
-
-            $today = Carbon::today();
-            $eventFrom = Carbon::parse($order->event_from)->startOfDay();
-            $eventTo   = Carbon::parse($order->event_to)->startOfDay();
-
-            $order->event_days = $order->total_days
-                ?? ($eventFrom->diffInDays($eventTo) + 1);
-
-            if ($today->lt($eventFrom)) {
-                // UPCOMING
-                $diff = $today->diffInDays($eventFrom);
-
-                $order->event_state = 'upcoming';
-                if ((int) $diff === 1) {
-                    $order->days_label = 'Tomorrow';
-                } else {
-                    $order->days_label = $diff . ' days to start';
+            ->addColumn('duration', function ($order) {
+                $days = $order->total_days ?? Carbon::parse($order->event_from)->diffInDays(Carbon::parse($order->event_to)) + 1;
+                return '<span class="badge bg-primary bg-opacity-10 text-primary">'.$days.' Day'.($days > 1 ? 's' : '').'</span>';
+            })
+            ->addColumn('client', function ($order) {
+                return '<div class="d-flex align-items-center"><div class="bg-warning bg-opacity-10 rounded-circle p-2 me-2"><i class="bi bi-person-fill text-warning"></i></div><div><span class="fw-medium d-block">'.$order->client_name.'</span><small class="text-muted">'.$order->client_phone.'</small></div></div>';
+            })
+            ->addColumn('status', function ($order) {
+                $colors = ['confirmed' => 'primary', 'completed' => 'success', 'sent' => 'danger'];
+                $color = $colors[$order->status] ?? 'secondary';
+                return '<span class="badge bg-'.$color.' px-3 py-2">'.ucfirst($order->status).'</span>';
+            })
+            ->addColumn('settlement', function ($order) {
+                $colors = ['pending' => 'warning', 'settled' => 'success', 'failed' => 'danger'];
+                $color = $colors[$order->settlement_status] ?? 'secondary';
+                return '<span class="badge bg-'.$color.' px-3 py-2">'.ucfirst($order->settlement_status).'</span>';
+            })
+            ->addColumn('total', function ($order) {
+                return '₹'.number_format($order->total_amount, 2);
+            })
+            ->addColumn('pending', function ($order) {
+                $class = $order->final_payable > 0 ? 'text-danger' : 'text-success';
+                return '<span class="fw-semibold '.$class.'">₹'.number_format($order->final_payable, 2).'</span>';
+            })
+            ->addColumn('payment', function ($order) {
+                $colors = ['pending' => 'warning', 'partial' => 'info', 'paid' => 'success'];
+                $color = $colors[$order->payment_status] ?? 'secondary';
+                return '<span class="badge bg-'.$color.' px-3 py-2">'.ucfirst($order->payment_status).'</span>';
+            })
+            ->addColumn('actions', function ($order) {
+                $html = '<div class="btn-group" role="group">';
+                $html .= '<a href="'.route('orders.show', $order).'" class="btn btn-sm btn-outline-primary" title="View"><i class="bi bi-eye"></i></a>';
+                $html .= '<a href="'.route('orders.edit', $order).'" class="btn btn-sm btn-outline-warning" title="Edit"><i class="bi bi-pencil"></i></a>';
+                
+                if ($order->payment_status !== 'paid' && $order->final_payable > 0) {
+                    $html .= '<button class="btn btn-sm btn-outline-info" onclick="openReminderModal('.$order->id.', \''.$order->order_code.'\', \''.$order->client_name.'\', '.$order->final_payable.')" title="Send Reminder"><i class="bi bi-bell-fill"></i></button>';
+                    $html .= '<button class="btn btn-sm btn-outline-success" onclick="openPaymentModal('.$order->id.', \''.$order->order_code.'\', '.$order->final_payable.')" title="Record Payment"><i class="bi bi-cash-coin"></i></button>';
                 }
-
-            } elseif ($today->between($eventFrom, $eventTo)) {
-                // RUNNING
-                $diff = $today->diffInDays($eventTo);
-
-                $order->event_state = 'running';
-
-                if ((int) $diff === 0) {
-                    $order->days_label = 'Ends today';
-                } elseif ((int) $diff === 1) {
-                    $order->days_label = '1 day left';
-                } else {
-                    $order->days_label = $diff . ' days left';
-                }
-
-            } else {
-                // COMPLETED
-                $order->event_state = 'completed';
-                $order->days_label = 'Completed';
-            }
-
-            return $order;
-        });
-
-        return view('orders.index', compact('orders'));
+                
+                $html .= '</div>';
+                return $html;
+            })
+            ->rawColumns(['order_code', 'event_period', 'duration', 'client', 'status', 'settlement', 'pending', 'payment', 'actions'])
+            ->make(true);
     }
 
     /**

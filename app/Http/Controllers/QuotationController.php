@@ -22,15 +22,50 @@ class QuotationController extends Controller
      */
     public function index(Request $request)
     {
-        $q = Quotation::query();
-        if ($request->filled('search')) {
-            $s = $request->search;
-            $q->where('code','like',"%{$s}%")
-              ->orWhere('client_name','like',"%{$s}%")
-              ->orWhere('client_phone','like',"%{$s}%");
+        if ($request->ajax()) {
+            return $this->getDataTable($request);
         }
-        $quotations = $q->latest()->paginate(20);
-        return view('quotations.index', compact('quotations'));
+        return view('quotations.index');
+    }
+
+    private function getDataTable($request)
+    {
+        $query = Quotation::query()
+            ->when($request->filled('status'), fn($q) => $q->where('status', $request->status))
+            ->orderByDesc('id');
+
+        return datatables()->eloquent($query)
+            ->addColumn('code', function ($q) {
+                return '<a href="'.route('quotations.show', $q).'" class="text-decoration-none fw-semibold text-primary"><i class="bi bi-file-text me-2"></i>'.$q->code.'</a>';
+            })
+            ->addColumn('event_period', function ($q) {
+                return '<div class="fw-medium">'.Carbon::parse($q->event_from)->format('d M').' → '.Carbon::parse($q->event_to)->format('d M Y').'</div>';
+            })
+            ->addColumn('duration', function ($q) {
+                $days = $q->total_days ?? Carbon::parse($q->event_from)->diffInDays(Carbon::parse($q->event_to)) + 1;
+                return '<span class="badge bg-primary bg-opacity-10 text-primary">'.$days.' Day'.($days > 1 ? 's' : '').'</span>';
+            })
+            ->addColumn('client', function ($q) {
+                return '<div class="d-flex align-items-center"><div class="bg-warning bg-opacity-10 rounded-circle p-2 me-2"><i class="bi bi-person-fill text-warning"></i></div><div><span class="fw-medium d-block">'.$q->client_name.'</span><small class="text-muted">'.$q->client_phone.'</small></div></div>';
+            })
+            ->addColumn('status', function ($q) {
+                $colors = ['draft' => 'secondary', 'sent' => 'info', 'accepted' => 'success', 'rejected' => 'danger'];
+                $color = $colors[$q->status] ?? 'secondary';
+                return '<span class="badge bg-'.$color.' px-3 py-2">'.ucfirst($q->status).'</span>';
+            })
+            ->addColumn('total', function ($q) {
+                return '₹'.number_format($q->total_amount, 2);
+            })
+            ->addColumn('actions', function ($q) {
+                $html = '<div class="btn-group" role="group">';
+                $html .= '<a href="'.route('quotations.show', $q).'" class="btn btn-sm btn-outline-primary" title="View"><i class="bi bi-eye"></i></a>';
+                $html .= '<a href="'.route('quotations.edit', $q).'" class="btn btn-sm btn-outline-warning" title="Edit"><i class="bi bi-pencil"></i></a>';
+                $html .= '<button class="btn btn-sm btn-outline-danger" onclick="deleteQuotation('.$q->id.')" title="Delete"><i class="bi bi-trash"></i></button>';
+                $html .= '</div>';
+                return $html;
+            })
+            ->rawColumns(['code', 'event_period', 'duration', 'client', 'status', 'actions'])
+            ->make(true);
     }
 
     /**
@@ -352,10 +387,10 @@ class QuotationController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Quotation $quotation)
     {
         $quotation->delete();
-        return redirect()->route('quotations.index')->with('success','Quotation deleted.');
+        return response()->json(['success' => true, 'message' => 'Quotation deleted successfully.']);
     }
 
     // Generate PDF and store it

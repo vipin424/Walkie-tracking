@@ -1,8 +1,12 @@
 @extends('layouts.app')
 @section('title','Orders')
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+@endpush
+
 @section('content')
 <div class="container-fluid px-4 py-4">
-  <!-- Header -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
       <h4 class="mb-1 fw-bold">Orders</h4>
@@ -13,63 +17,45 @@
     </a>
   </div>
 
-  <!-- Filters -->
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-body p-4">
-      <form method="get">
-        <div class="row g-3 align-items-end">
-          <div class="col-md-2">
-            <label class="form-label fw-semibold text-muted small">Status</label>
-            <select name="status" class="form-select form-select-md">
-              <option value="">All Status</option>
-              @foreach(['confirmed','completed','sent'] as $s)
-                <option value="{{ $s }}" @selected(request('status')===$s)>{{ ucfirst($s) }}</option>
-              @endforeach
-            </select>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label fw-semibold text-muted small">Payment</label>
-            <select name="payment_status" class="form-select form-select-md">
-              <option value="">All Payments</option>
-              <option value="pending" @selected(request('payment_status')==='pending')>Pending</option>
-              <option value="partial" @selected(request('payment_status')==='partial')>Partial</option>
-              <option value="paid" @selected(request('payment_status')==='paid')>Paid</option>
-            </select>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label fw-semibold text-muted small">Search</label>
-            <input class="form-control form-control-md" name="search" placeholder="Search by code or client..." value="{{ request('search') }}">
-          </div>
-          <div class="col-md-2">
-            <button class="btn btn-outline-warning btn-md w-100">
-              <i class="bi bi-funnel me-2"></i>Filter
-            </button>
-          </div>
-          @if(request('status') || request('search') || request('payment_status'))
-          <div class="col-md-2">
-            <a href="{{ route('orders.index') }}" class="btn btn-outline-secondary btn-md w-100">
-              <i class="bi bi-x-circle me-2"></i>Clear
-            </a>
-          </div>
-          @endif
+      <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold text-muted small">Status</label>
+          <select id="statusFilter" class="form-select form-select-md">
+            <option value="">All Status</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="completed">Completed</option>
+            <option value="sent">Sent</option>
+          </select>
         </div>
-      </form>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold text-muted small">Payment</label>
+          <select id="paymentFilter" class="form-select form-select-md">
+            <option value="">All Payments</option>
+            <option value="pending">Pending</option>
+            <option value="partial">Partial</option>
+            <option value="paid">Paid</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <button id="clearFilters" class="btn btn-outline-secondary btn-md w-100">
+            <i class="bi bi-x-circle me-2"></i>Clear Filters
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- orders Table -->
   <div class="card border-0 shadow-sm">
     <div class="card-header bg-white border-0 p-4">
-      <div class="d-flex justify-content-between align-items-center">
-        <h5 class="mb-0 fw-semibold">
-          <i class="bi bi-file-earmark-text me-2 text-warning"></i>All Orders
-        </h5>
-        <span class="badge bg-warning bg-opacity-10 text-warning fs-6">{{ $orders->total() }} Total</span>
-      </div>
+      <h5 class="mb-0 fw-semibold">
+        <i class="bi bi-file-earmark-text me-2 text-warning"></i>All Orders
+      </h5>
     </div>
-    <div class="card-body p-0">
+    <div class="card-body p-4">
       <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
+        <table id="ordersTable" class="table table-hover align-middle mb-0">
           <thead class="bg-light">
             <tr>
               <th class="px-4 py-3 text-muted fw-semibold">Order Code</th>
@@ -84,145 +70,9 @@
               <th class="px-4 py-3 text-muted fw-semibold text-center">Actions</th>
             </tr>
           </thead>
-          <tbody>
-            @forelse($orders as $q)
-              <tr>
-                <td class="px-4 py-3">
-                  <a href="{{ route('orders.show',$q) }}" class="text-decoration-none fw-semibold text-primary">
-                    <i class="bi bi-file-text me-2"></i>{{ $q->order_code }}
-                  </a>
-                </td>
-                
-                <td class="px-4 py-3">
-                    <div class="fw-medium">
-                        {{ \Carbon\Carbon::parse($q->event_from)->format('d M') }}
-                        →
-                        {{ \Carbon\Carbon::parse($q->event_to)->format('d M Y') }}
-                    </div>
-                  @if($q->event_state === 'running')
-                      <span class="badge bg-success">Live</span>
-                  @elseif($q->event_state === 'upcoming')
-                      <span class="badge bg-danger">{{ $q->days_label }}</span>
-                  @else
-                      <span class="badge bg-secondary">Completed</span>
-                  @endif
-                </td>
-
-                <td class="px-4 py-3">
-                    <span class="badge bg-primary bg-opacity-10 text-primary">
-                        {{ $q->event_days }} Day{{ $q->event_days > 1 ? 's' : '' }}
-                    </span>
-                </td>
-
-                <td class="px-4 py-3">
-                  <div class="d-flex align-items-center">
-                    <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-2">
-                      <i class="bi bi-person-fill text-warning"></i>
-                    </div>
-                    <div>
-                      <span class="fw-medium d-block">{{ $q->client_name }}</span>
-                      <small class="text-muted">{{ $q->client_phone }}</small>
-                    </div>
-                  </div>
-                </td>
-                
-                <td class="px-4 py-3">
-                  @php
-                    $statusColors = [
-                      'confirmed' => 'primary',
-                      'completed' => 'success',
-                      'sent' => 'danger'
-                    ];
-                    $color = $statusColors[$q->status] ?? 'secondary';
-                  @endphp
-                  <span class="badge bg-{{ $color }} px-3 py-2" style="background-color: rgba(var(--bs-{{ $color }}-rgb), 0.15) !important; color: var(--bs-{{ $color }}) !important;">
-                    {{ ucfirst($q->status) }}
-                  </span>
-                </td>
-                
-                <td class="px-4 py-3">
-                  @php
-                    $settlementColors = [
-                      'pending' => 'warning',
-                      'settled' => 'success',
-                      'failed' => 'danger'
-                    ];
-                    $color = $settlementColors[$q->settlement_status] ?? 'secondary';
-                  @endphp
-                  <span class="badge bg-{{ $color }} px-3 py-2" style="background-color: rgba(var(--bs-{{ $color }}-rgb), 0.15) !important; color: var(--bs-{{ $color }}) !important;">
-                    {{ ucfirst($q->settlement_status) }}
-                  </span>
-                </td>
-                
-                <td class="px-4 py-3">
-                  <span class="fw-semibold text-dark">₹{{ number_format($q->total_amount, 2) }}</span>
-                </td>
-                
-                <td class="px-4 py-3">
-                  <span class="fw-semibold {{ $q->final_payable > 0 ? 'text-danger' : 'text-success' }}">
-                    ₹{{ number_format($q->final_payable, 2) }}
-                  </span>
-                </td>
-                
-                <td class="px-4 py-3">
-                  @php
-                    $paymentColors = [
-                      'pending' => 'warning',
-                      'partial' => 'info',
-                      'paid' => 'success'
-                    ];
-                    $color = $paymentColors[$q->payment_status] ?? 'secondary';
-                  @endphp
-                  <span class="badge bg-{{ $color }} px-3 py-2" style="background-color: rgba(var(--bs-{{ $color }}-rgb), 0.15) !important; color: var(--bs-{{ $color }}) !important;">
-                    {{ ucfirst($q->payment_status) }}
-                  </span>
-                </td>
-                
-                <td class="px-4 py-3">
-                  <div class="btn-group" role="group">
-                    <a href="{{ route('orders.show',$q) }}" class="btn btn-sm btn-outline-primary" title="View">
-                      <i class="bi bi-eye"></i>
-                    </a>
-                    <a href="{{ route('orders.edit',$q) }}" class="btn btn-sm btn-outline-warning" title="Edit">
-                      <i class="bi bi-pencil"></i>
-                    </a>
-                    
-                    @if($q->payment_status !== 'paid' && $q->final_payable > 0)
-                      <button class="btn btn-sm btn-outline-info" 
-                              onclick="openReminderModal({{ $q->id }}, '{{ $q->order_code }}', '{{ $q->client_name }}', {{ $q->final_payable }})" 
-                              title="Send Reminder">
-                        <i class="bi bi-bell-fill"></i>
-                      </button>
-                      
-                      <button class="btn btn-sm btn-outline-success" 
-                              onclick="openPaymentModal({{ $q->id }}, '{{ $q->order_code }}', {{ $q->final_payable }})" 
-                              title="Record Payment">
-                        <i class="bi bi-cash-coin"></i>
-                      </button>
-                    @endif
-                  </div>
-                </td>
-              </tr>
-            @empty
-              <tr>
-                <td colspan="10" class="text-center py-5">
-                  <div class="text-muted">
-                    <i class="bi bi-inbox display-4 d-block mb-3"></i>
-                    <p class="mb-0">No orders found</p>
-                  </div>
-                </td>
-              </tr>
-            @endforelse
-          </tbody>
         </table>
       </div>
     </div>
-    
-    @if($orders->hasPages())
-      <div class="card-footer bg-white border-0 py-3 d-flex justify-content-center">
-        {{ $orders->links('pagination::bootstrap-5') }}
-      </div>
-    @endif
   </div>
 </div>
 
@@ -418,15 +268,58 @@
   }
 </style>
 
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
 <script>
 let currentOrderId = null;
 let currentPendingAmount = 0;
+let table;
 
-// Get CSRF token helper function
+$(document).ready(function() {
+  table = $('#ordersTable').DataTable({
+    processing: true,
+    serverSide: true,
+    ajax: {
+      url: '{{ route('orders.index') }}',
+      data: function(d) {
+        d.status = $('#statusFilter').val();
+        d.payment_status = $('#paymentFilter').val();
+      }
+    },
+    columns: [
+      { data: 'order_code', name: 'order_code' },
+      { data: 'event_period', name: 'event_from', orderable: false },
+      { data: 'duration', name: 'total_days', orderable: false },
+      { data: 'client', name: 'client_name' },
+      { data: 'status', name: 'status' },
+      { data: 'settlement', name: 'settlement_status' },
+      { data: 'total', name: 'total_amount' },
+      { data: 'pending', name: 'final_payable' },
+      { data: 'payment', name: 'payment_status' },
+      { data: 'actions', orderable: false, searchable: false }
+    ],
+    order: [[0, 'desc']],
+    pageLength: 10,
+    language: {
+      processing: '<div class="spinner-border text-warning" role="status"><span class="visually-hidden">Loading...</span></div>'
+    }
+  });
+
+  $('#statusFilter, #paymentFilter').change(function() {
+    table.draw();
+  });
+
+  $('#clearFilters').click(function() {
+    $('#statusFilter, #paymentFilter').val('');
+    table.draw();
+  });
+});
+
 function getCSRFToken() {
   let token = document.querySelector('meta[name="csrf-token"]');
   if (!token) {
-    // Try to find it in a form
     token = document.querySelector('input[name="_token"]');
   }
   return token ? token.getAttribute('content') || token.value : '';
@@ -498,7 +391,6 @@ function sendReminder() {
       bootstrap.Modal.getInstance(document.getElementById('reminderModal')).hide();
       showAlert('success', data.message);
       
-      // Open WhatsApp Web if WhatsApp selected
       if (data.whatsapp_link && (channel === 'whatsapp' || channel === 'both')) {
         setTimeout(() => {
           window.open(data.whatsapp_link, '_blank');
@@ -581,7 +473,7 @@ function recordPayment() {
       bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
       showAlert('success', '✅ ' + data.message);
       
-      setTimeout(() => location.reload(), 1500);
+      setTimeout(() => table.draw(), 1500);
     } else {
       showAlert('danger', data.message || 'Failed to record payment');
     }
