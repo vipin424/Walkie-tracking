@@ -84,7 +84,7 @@ class QuotationController extends Controller
         $request->validate([
             'client_name' => 'required|string',
             'client_email' => 'nullable|email',
-            'client_phone' => 'nullable|string',
+            'client_phone' => 'required|digits:10',
 
             'event_from' => 'required|date',
             'event_to'   => 'required|date|after_or_equal:event_from',
@@ -281,7 +281,7 @@ class QuotationController extends Controller
             $request->validate([
                 'client_name' => 'required|string',
                 'client_email' => 'nullable|email',
-                'client_phone' => 'nullable|string',
+                'client_phone' => 'required|digits:10',
 
                 'event_from' => 'required|date',
                 'event_to'   => 'required|date|after_or_equal:event_from',

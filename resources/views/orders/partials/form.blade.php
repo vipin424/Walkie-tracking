@@ -20,8 +20,8 @@
         <input type="email" name="client_email" class="form-control" value="{{ old('client_email', $order->client_email ?? '') }}">
       </div>
       <div class="col-md-3">
-        <label class="form-label fw-semibold">Client Phone</label>
-        <input name="client_phone" class="form-control" value="{{ old('client_phone', $order->client_phone ?? '') }}">
+        <label class="form-label fw-semibold">Client Phone <span class="text-danger">*</span></label>
+        <input type="tel" name="client_phone" class="form-control" value="{{ old('client_phone', $order->client_phone ?? '') }}" pattern="[0-9]{10}" maxlength="10" required>
       </div>
     </div>
 
