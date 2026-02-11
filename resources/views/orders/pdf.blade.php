@@ -233,7 +233,7 @@
 
         <tr class="total-row">
             <td colspan="7" class="right">Advance Paid</td>
-            <td class="right" style="color: #4caf50;">₹{{ number_format($order->advance_paid ?? 0,2) }}</td>
+            <td class="right" style="color: #4caf50;">- ₹{{ number_format($order->advance_paid ?? 0,2) }}</td>
         </tr>
        @if(($order->security_deposit ?? 0) > 0)
         <tr class="total-row">
@@ -241,10 +241,6 @@
             <td class="right">₹{{ number_format($order->security_deposit ?? 0,2) }}</td>
         </tr>
     @endif
-        <tr class="calculation-row">
-            <td colspan="7" class="right">Calculation: Grand Total - Advance Paid</td>
-            <td class="right">₹{{ number_format($order->total_amount - ($order->advance_paid ?? 0), 2) }}</td>
-        </tr>
 
         <tr class="highlight-row total-row">
             <td colspan="7" class="right"><strong>Remaining Rent Payable</strong></td>
@@ -271,24 +267,43 @@
             <td class="right" style="color: #f44336;">₹{{ number_format($order->late_fee,2) }}</td>
         </tr>
         @endif
+
+        @if((($order->damage_charge ?? 0) + ($order->late_fee ?? 0)) > 0)
+        <tr class="calculation-row">
+            <td colspan="7" class="right">Total Deductions: Damage (₹{{ number_format($order->damage_charge ?? 0,2) }}) + Late Fee (₹{{ number_format($order->late_fee ?? 0,2) }})</td>
+            <td class="right">₹{{ number_format(($order->damage_charge ?? 0) + ($order->late_fee ?? 0),2) }}</td>
+        </tr>
+        @endif
      
-      @if(($order->deposit_adjusted ?? 0) != 0)
+        @if(($order->security_deposit ?? 0) > 0)
         <tr class="total-row">
             <td colspan="7" class="right">Security Deposit Adjusted</td>
-            <td class="right">₹{{ number_format($order->deposit_adjusted ?? 0,2) }}</td>
+            <td class="right" style="color: #4caf50;">- ₹{{ number_format($order->security_deposit ?? 0,2) }}</td>
         </tr>
-     @endif
+        @endif
+
+        @if((($order->damage_charge ?? 0) + ($order->late_fee ?? 0) + ($order->security_deposit ?? 0)) > 0)
+        <tr class="calculation-row">
+            <td colspan="7" class="right">Calculation: Remaining Rent (₹{{ number_format($order->balance_amount ?? 0,2) }}) + Deductions (₹{{ number_format(($order->damage_charge ?? 0) + ($order->late_fee ?? 0),2) }}) - Security Deposit (₹{{ number_format($order->security_deposit ?? 0,2) }})</td>
+            <td class="right">₹{{ number_format(($order->balance_amount ?? 0) + ($order->damage_charge ?? 0) + ($order->late_fee ?? 0) - ($order->security_deposit ?? 0),2) }}</td>
+        </tr>
+        @endif
 
         @if(($order->final_payable ?? 0) > 0)
         <tr class="final-amount-row total-row">
-            <td colspan="7" class="right"><strong>FINAL AMOUNT PAYABLE</strong></td>
+            <td colspan="7" class="right"><strong>FINAL AMOUNT PAYABLE BY CLIENT</strong></td>
             <td class="right"><strong style="color: #f44336;">₹{{ number_format($order->final_payable,2) }}</strong></td>
+        </tr>
+        @elseif(($order->final_payable ?? 0) == 0 && ($order->refund_amount ?? 0) == 0)
+        <tr class="final-amount-row total-row">
+            <td colspan="7" class="right"><strong>SETTLEMENT STATUS</strong></td>
+            <td class="right"><strong style="color: #4caf50;">FULLY SETTLED - NO DUES</strong></td>
         </tr>
         @endif
 
         @if(($order->refund_amount ?? 0) > 0)
         <tr class="final-amount-row total-row">
-            <td colspan="7" class="right"><strong>REFUND AMOUNT</strong></td>
+            <td colspan="7" class="right"><strong>REFUND AMOUNT TO CLIENT</strong></td>
             <td class="right"><strong style="color: #4caf50;">₹{{ number_format($order->refund_amount,2) }}</strong></td>
         </tr>
         @endif
@@ -299,7 +314,7 @@
 </table>
 
 {{-- ================= NOTES ================= --}}
-@if($order->notes)
+@if($order->notes && !(($order->settlement_status === 'settled') && ($order->final_payable ?? 0) == 0 && ($order->refund_amount ?? 0) == 0))
 <div class="notes">
     @if($order->settlement_status === 'settled')
     <strong>Invoice Notes:</strong>

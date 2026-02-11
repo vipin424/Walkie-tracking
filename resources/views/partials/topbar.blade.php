@@ -1,5 +1,8 @@
 <header class="topbar d-flex align-items-center justify-content-between px-3 shadow-sm">
   <div class="d-flex align-items-center">
+    <button id="sidebarToggleMobile" class="btn btn-light btn-sm me-2 d-md-none">
+      <i class="bi bi-list"></i>
+    </button>
     <button id="sidebarToggleDesktop" class="btn btn-light btn-sm me-2 d-none d-md-inline">
       <i class="bi bi-list"></i>
     </button>

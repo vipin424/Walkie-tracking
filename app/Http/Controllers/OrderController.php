@@ -237,12 +237,64 @@ class OrderController extends Controller
             }
         });
 
+        // Generate WhatsApp link and store in session
+        $waLink = $this->generateWhatsAppLink($order);
+        session(['whatsapp_link' => $waLink]);
+
         return redirect()
             ->route('orders.show', $order)
             ->with('success', 'Order created successfully.');
     }
 
-    
+    private function generateWhatsAppLink($order)
+    {
+        // Ensure PDF exists
+        if (!$order->pdf_path || !Storage::disk('public')->exists($order->pdf_path)) {
+            $this->generatePdf($order);
+            $order->refresh();
+        }
+
+        // Generate signed download URL
+        $hash = substr(md5($order->id . config('app.key')), 0, 8);
+        $url = URL::temporarySignedRoute(
+            'orders.download',
+            now()->addDays(7),
+            ['hash' => $hash, 'ref' => $order->id]
+        );
+
+        // WhatsApp message
+        $messageText =
+            "Hello *{$order->client_name}*,\n\n" .
+            "Your order *{$order->order_code}* is confirmed.\n\n" .
+            "📅 *Event Date:* " .
+            Carbon::parse($order->event_from)->format('d M Y') .
+            " to " .
+            Carbon::parse($order->event_to)->format('d M Y') . "\n\n" .
+            "💰 *Payment Details:*\n" .
+            "Total Amount: ₹" . number_format($order->total_amount, 2) . "\n" .
+            "Advance Paid: ₹" . number_format($order->advance_paid, 2) . "\n" .
+            "Remaining Balance: ₹" . number_format($order->balance_amount, 2) . "\n\n" .
+            "Download Order PDF:\n{$url}\n\n" .
+            "This link is valid for 7 days.\n\n" .
+            "– *Crewrent Enterprises*";
+
+        // Normalize phone number
+        $phone = preg_replace('/\D+/', '', $order->client_phone);
+        if (strlen($phone) <= 10) {
+            $phone = '91' . $phone;
+        }
+
+        // Log
+        OrderLog::create([
+            'order_id' => $order->id,
+            'user_id' => Auth::id(),
+            'action' => 'auto_sent_whatsapp',
+            'meta' => json_encode(['to' => $phone, 'link' => $url]),
+        ]);
+
+        return 'https://wa.me/' . $phone . '?text=' . rawurlencode($messageText);
+    }
+
     public function complete(Request $request, Order $order)
     {
         $request->validate([
@@ -630,11 +682,12 @@ class OrderController extends Controller
             $order->refresh();
         }
 
-        /** ✅ Generate signed download URL (7 days valid) */
+        /** ✅ Generate signed download URL (7 days valid) with short hash */
+        $hash = substr(md5($order->id . config('app.key')), 0, 8);
         $url = URL::temporarySignedRoute(
             'orders.download',
             now()->addDays(7),
-            ['order' => $order->id]
+            ['hash' => $hash, 'ref' => $order->id]
         );
         /** ✅ WhatsApp message */
         $messageText =
@@ -644,7 +697,10 @@ class OrderController extends Controller
             \Carbon\Carbon::parse($order->event_from)->format('d M Y') .
             " to " .
             \Carbon\Carbon::parse($order->event_to)->format('d M Y') . "\n\n" .
-            "Total Amount: ₹" . number_format($order->total_amount, 2) . "\n\n" .
+            "💰 *Payment Details:*\n" .
+            "Total Amount: ₹" . number_format($order->total_amount, 2) . "\n" .
+            "Advance Paid: ₹" . number_format($order->advance_paid, 2) . "\n" .
+            "Remaining Balance: ₹" . number_format($order->balance_amount, 2) . "\n\n" .
             "Download Order PDF:\n{$url}\n\n" .
             "This link is valid for 7 days.\n\n" .  
             "– *Crewrent Enterprises*";
@@ -672,11 +728,20 @@ class OrderController extends Controller
         return redirect($waLink);
     }
 
-    public function download(Order $order)
+    public function download($hash, Request $request)
     {
         if (!request()->hasValidSignature()) {
             abort(403, 'This download link has expired or is invalid.');
         }
+
+        $orderId = $request->get('ref');
+        $expectedHash = substr(md5($orderId . config('app.key')), 0, 8);
+        
+        if ($hash !== $expectedHash) {
+            abort(403, 'Invalid link.');
+        }
+
+        $order = Order::findOrFail($orderId);
 
         if (!$order->pdf_path) {
             abort(404, 'Order PDF not found.');

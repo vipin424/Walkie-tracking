@@ -12,6 +12,7 @@ use App\Http\Controllers\{
     OrderController,
     QuotationController,
     AgreementController,
+    ItemController,
 };
 
 Route::get('/', function () {
@@ -34,6 +35,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('clients', ClientController::class);
+    Route::resource('items', ItemController::class);
+    Route::get('/items-data', [ItemController::class, 'getData'])->name('items.data');
+    Route::get('/items-search', [ItemController::class, 'search'])->name('items.search');
     Route::resource('quotations', QuotationController::class);
     // Extra custom routes for PDF, Email, WhatsApp
     Route::post('quotations/{quotation}/generate-pdf', [QuotationController::class, 'generatePdf'])->name('quotations.generatePdf');
@@ -89,6 +93,6 @@ Route::middleware(['auth'])->group(function () {
     Route::post('payments/{dispatch}', [PaymentController::class, 'storeOrUpdate'])->name('payments.store');
 });
     Route::get('quotations/{quotation}/download',[QuotationController::class, 'download'])->name('quotations.download');
-    Route::get('/orders/{order}/download',[OrderController::class, 'download'])->name('orders.download')->middleware('signed');
+    Route::get('/orders/{hash}/download',[OrderController::class, 'download'])->name('orders.download')->middleware('signed');
     Route::get('/agreement/sign/{code}',[AgreementController::class, 'show'])->name('agreement.sign');
     Route::post('/agreement/{code}', [AgreementController::class, 'submit'])->name('agreement.submit');

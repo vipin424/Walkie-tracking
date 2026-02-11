@@ -302,8 +302,47 @@
 </div>
 
 @push('scripts')
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+
 <script>
+// Autocomplete for item names
+function initAutocomplete(input) {
+    $(input).autocomplete({
+        source: function(request, response) {
+            $.ajax({
+                url: '{{ route('items.search') }}',
+                data: { q: request.term },
+                success: function(data) {
+                    response(data.map(item => ({
+                        label: item.name,
+                        value: item.name,
+                        item: item
+                    })));
+                }
+            });
+        },
+        minLength: 2,
+        select: function(event, ui) {
+            const row = $(this).closest('tr');
+            const item = ui.item.item;
+            
+            // Auto-fill fields
+            row.find('input[name*="[item_type]"]').val(item.type || '');
+            row.find('input[name*="[description]"]').val(item.description || '');
+            row.find('input[name*="[unit_price]"]').val(item.unit_price || 0);
+            row.find('input[name*="[tax_percent]"]').val(item.tax_percent || 0);
+            
+            // Trigger recalculation
+            setTimeout(() => recalcAll(), 100);
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function(){
+    // Initialize autocomplete for existing rows
+    document.querySelectorAll('.item-name').forEach(input => initAutocomplete(input));
 
     /* ======================
        TOTAL DAYS
@@ -440,7 +479,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const tr = document.createElement('tr');
         tr.classList.add('item-row');
         tr.innerHTML = `
-            <td><input name="items[${index}][item_name]" class="form-control form-control-sm"></td>
+            <td><input name="items[${index}][item_name]" class="form-control form-control-sm item-name"></td>
             <td><input name="items[${index}][item_type]" class="form-control form-control-sm"></td>
             <td><input name="items[${index}][description]" class="form-control form-control-sm"></td>
             <td><input name="items[${index}][quantity]" class="form-control form-control-sm qty text-center" value="1"></td>
@@ -450,6 +489,10 @@ document.addEventListener('DOMContentLoaded', function(){
             <td><button type="button" class="btn btn-sm btn-outline-danger remove-row">×</button></td>
         `;
         tbody.appendChild(tr);
+        
+        // Initialize autocomplete for new row
+        initAutocomplete(tr.querySelector('.item-name'));
+        
         recalcAll();
     });
 

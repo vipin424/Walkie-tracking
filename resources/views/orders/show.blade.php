@@ -328,23 +328,114 @@
                   <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
                       Advance Paid:
                   </td>
-                  <td class="px-4 py-3 text-end fw-semibold text-danger">
+                  <td class="px-4 py-3 text-end fw-semibold text-success">
                       - ₹{{ number_format($order->advance_paid, 2) }}
                   </td>
               </tr>
               @endif
 
-              {{-- Grand Total --}}
+              {{-- Security Deposit --}}
+              @if($order->security_deposit > 0)
               <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
+                      Security Deposit (Refundable):
+                  </td>
+                  <td class="px-4 py-3 text-end fw-semibold">
+                      ₹{{ number_format($order->security_deposit, 2) }}
+                  </td>
+              </tr>
+              @endif
+
+              {{-- Remaining Rent Payable --}}
+              <tr class="bg-warning bg-opacity-10">
                   <td colspan="5" class="px-4 py-3 text-end fw-semibold">
-                      Grand Total:
+                      Remaining Rent Payable:
                   </td>
                   <td class="px-4 py-3 text-end">
-                      <span class="fs-5 fw-bold text-success">
+                      <span class="fs-5 fw-bold text-warning">
                           ₹{{ number_format($order->balance_amount, 2) }}
                       </span>
                   </td>
               </tr>
+
+              {{-- Settlement Section --}}
+              @if($order->settlement_status === 'settled')
+              <tr class="bg-light">
+                  <td colspan="6" class="px-4 py-3">
+                      <strong class="text-muted">Final Settlement Details</strong>
+                  </td>
+              </tr>
+
+              @if(($order->damage_charge ?? 0) > 0)
+              <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
+                      Damage Charges:
+                  </td>
+                  <td class="px-4 py-3 text-end fw-semibold text-danger">
+                      + ₹{{ number_format($order->damage_charge, 2) }}
+                  </td>
+              </tr>
+              @endif
+
+              @if(($order->late_fee ?? 0) > 0)
+              <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
+                      Late Return Fee:
+                  </td>
+                  <td class="px-4 py-3 text-end fw-semibold text-danger">
+                      + ₹{{ number_format($order->late_fee, 2) }}
+                  </td>
+              </tr>
+              @endif
+
+              @if($order->security_deposit > 0)
+              <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
+                      Security Deposit Adjusted:
+                  </td>
+                  <td class="px-4 py-3 text-end fw-semibold text-success">
+                      - ₹{{ number_format($order->security_deposit, 2) }}
+                  </td>
+              </tr>
+              @endif
+
+              @if(($order->final_payable ?? 0) > 0)
+              <tr class="bg-danger bg-opacity-10">
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold">
+                      <strong>FINAL AMOUNT PAYABLE BY CLIENT:</strong>
+                  </td>
+                  <td class="px-4 py-3 text-end">
+                      <span class="fs-5 fw-bold text-danger">
+                          ₹{{ number_format($order->final_payable, 2) }}
+                      </span>
+                  </td>
+              </tr>
+              @elseif(($order->final_payable ?? 0) == 0 && ($order->refund_amount ?? 0) == 0)
+              <tr class="bg-success bg-opacity-10">
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold">
+                      <strong>SETTLEMENT STATUS:</strong>
+                  </td>
+                  <td class="px-4 py-3 text-end">
+                      <span class="fs-6 fw-bold text-success">
+                          ✓ FULLY SETTLED - NO DUES
+                      </span>
+                  </td>
+              </tr>
+              @endif
+
+              @if(($order->refund_amount ?? 0) > 0)
+              <tr class="bg-success bg-opacity-10">
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold">
+                      <strong>REFUND AMOUNT TO CLIENT:</strong>
+                  </td>
+                  <td class="px-4 py-3 text-end">
+                      <span class="fs-5 fw-bold text-success">
+                          ₹{{ number_format($order->refund_amount, 2) }}
+                      </span>
+                  </td>
+              </tr>
+              @endif
+              @endif
 
           </tfoot>
 
@@ -770,6 +861,13 @@ document.addEventListener('DOMContentLoaded', function() {
     toast.show();
   }
 });
+</script>
+@endpush
+@push('scripts')
+<script>
+@if(session('whatsapp_link'))
+  window.open('{{ session('whatsapp_link') }}', '_blank');
+@endif
 </script>
 @endpush
 @endsection
