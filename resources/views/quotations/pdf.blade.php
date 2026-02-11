@@ -108,9 +108,9 @@
         </td>
         <td>{{ $item->item_type }}</td>
         <td class="right">{{ $item->quantity }}</td>
-        <td class="right">{{ number_format($item->unit_price,2) }}</td>
+        <td class="right">₹{{ number_format($item->unit_price,2) }}</td>
         <td class="right">{{ $item->tax_percent ?? 0 }}</td>
-        <td class="right">{{ number_format($item->total_price,2) }}</td>
+        <td class="right">₹{{ number_format($item->total_price,2) }}</td>
       </tr>
       @endforeach
     </tbody>
@@ -130,14 +130,14 @@
       {{-- Subtotal --}}
       <tr class="total-row">
           <td colspan="6" class="right">Subtotal</td>
-          <td class="right">{{ number_format($quotation->subtotal, 2) }}</td>
+          <td class="right">₹{{ number_format($quotation->subtotal, 2) }}</td>
       </tr>
 
       {{-- Tax (only if > 0) --}}
       @if($quotation->tax_amount > 0)
       <tr class="total-row">
           <td colspan="6" class="right">Tax</td>
-          <td class="right">{{ number_format($quotation->tax_amount, 2) }}</td>
+          <td class="right">₹{{ number_format($quotation->tax_amount, 2) }}</td>
       </tr>
       @endif
 
@@ -148,7 +148,7 @@
               Delivery Charges
           </td>
           <td class="right">
-              {{ number_format($quotation->extra_charge_total, 2) }}
+              ₹{{ number_format($quotation->extra_charge_total, 2) }}
           </td>
       </tr>
       @endif
@@ -157,11 +157,11 @@
       <tr class="total-row">
           <td colspan="6" class="right">
               Support Staff
-              ({{ number_format($quotation->extra_charge_rate, 2) }}
+              (₹{{ number_format($quotation->extra_charge_rate, 2) }}
               × {{ $quotation->total_days }} Day{{ $quotation->total_days > 1 ? 's' : '' }})
           </td>
           <td class="right">
-              {{ number_format($quotation->extra_charge_total, 2) }}
+              ₹{{ number_format($quotation->extra_charge_total, 2) }}
           </td>
       </tr>
       @endif
@@ -171,7 +171,7 @@
       <tr class="total-row">
           <td colspan="6" class="right">Discount</td>
           <td class="right" style="color: #dc3545;">
-              - {{ number_format($quotation->discount_amount, 2) }}
+              - ₹{{ number_format($quotation->discount_amount, 2) }}
           </td>
       </tr>
       @endif
@@ -179,7 +179,7 @@
       {{-- Grand Total --}}
       <tr class="total-row">
           <td colspan="6" class="right"><strong>Grand Total</strong></td>
-          <td class="right"><strong>{{ number_format($quotation->total_amount, 2) }}</strong></td>
+          <td class="right"><strong>₹{{ number_format($quotation->total_amount, 2) }}</strong></td>
       </tr>
 
   </tfoot>
