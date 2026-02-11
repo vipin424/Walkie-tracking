@@ -170,7 +170,7 @@
       @if($quotation->discount_amount > 0)
       <tr class="total-row">
           <td colspan="6" class="right">Discount</td>
-          <td class="right">
+          <td class="right" style="color: #dc3545;">
               - {{ number_format($quotation->discount_amount, 2) }}
           </td>
       </tr>
