@@ -95,6 +95,7 @@ class OrderController extends Controller
                 $html = '<div class="btn-group" role="group">';
                 $html .= '<a href="'.route('orders.show', $order).'" class="btn btn-sm btn-outline-primary" title="View"><i class="bi bi-eye"></i></a>';
                 $html .= '<a href="'.route('orders.edit', $order).'" class="btn btn-sm btn-outline-warning" title="Edit"><i class="bi bi-pencil"></i></a>';
+                $html .= '<button class="btn btn-sm btn-outline-danger" onclick="deleteOrder('.$order->id.')" title="Delete"><i class="bi bi-trash"></i></button>';
                 
                 if ($order->payment_status !== 'paid' && $order->final_payable > 0) {
                     $html .= '<button class="btn btn-sm btn-outline-info" onclick="openReminderModal('.$order->id.', \''.$order->order_code.'\', \''.$order->client_name.'\', '.$order->final_payable.')" title="Send Reminder"><i class="bi bi-bell-fill"></i></button>';
