@@ -146,9 +146,8 @@ class PaymentController extends Controller
 
             // Calculate total paid
             $totalPaid = PaymentTransaction::where('order_id', $order->id)->sum('amount');
-            
             // Update order
-            $remainingAmount = max(0, $order->balance_amount - $totalPaid);
+            $remainingAmount = max(0, $order->final_payable - $totalPaid);
 
             
             if ($remainingAmount == 0) {

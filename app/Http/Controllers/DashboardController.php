@@ -14,19 +14,21 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        // Dispatch Stats
-        $dispatchStats = [
-            'total' => Dispatch::count(),
-            'active' => Dispatch::where('status', Dispatch::STATUS_ACTIVE)->count(),
-            'partial' => Dispatch::where('status', Dispatch::STATUS_PARTIAL)->count(),
-            'returned' => Dispatch::where('status', Dispatch::STATUS_RETURNED)->count(),
-        ];
-
-        // Payment Stats (Dispatch related)
-        $dispatchPaymentStats = [
-            'unpaid' => Payment::where('payment_status', Payment::STATUS_UNPAID)->count(),
-            'advance' => Payment::where('payment_status', Payment::STATUS_ADVANCE)->count(),
-        ];
+        // Monthly Revenue by Item Type (Only Paid Orders)
+        $itemTypeRevenue = DB::table('order_items')
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->select(
+                'order_items.item_type',
+                DB::raw('SUM(order_items.total_price) as revenue'),
+                DB::raw('COUNT(DISTINCT orders.id) as order_count')
+            )
+            ->whereMonth('orders.created_at', now()->month)
+            ->whereYear('orders.created_at', now()->year)
+            ->where('orders.payment_status', 'paid')
+            ->whereNotNull('order_items.item_type')
+            ->groupBy('order_items.item_type')
+            ->orderByDesc('revenue')
+            ->get();
 
         // Order Stats
         $orderStats = [
@@ -83,11 +85,7 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        // Recent Dispatches (Last 5)
-        $recentDispatches = Dispatch::with('client')
-            ->orderByDesc('id')
-            ->limit(5)
-            ->get();
+
 
         // Upcoming Events (Next 7 days)
         $upcomingEvents = Order::whereBetween('event_from', [now(), now()->addDays(7)])
@@ -125,19 +123,17 @@ class DashboardController extends Controller
         ->get();
 
         return view('dashboard', compact(
-            'dispatchStats',
-            'dispatchPaymentStats',
             'orderStats',
             'orderFinancials',
             'todayStats',
             'thisMonthStats',
             'recentOrders',
-            'recentDispatches',
             'upcomingEvents',
             'pendingPayments',
             'paymentMethodStats',
             'clientStats',
-            'monthlyRevenue'
+            'monthlyRevenue',
+            'itemTypeRevenue'
         ));
     }
 }

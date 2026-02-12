@@ -12,9 +12,6 @@
     <a href="{{ route('orders.create') }}" class="btn btn-warning shadow-sm">
       <i class="bi bi-plus-circle me-2"></i>New Order
     </a>
-    <a href="{{ route('dispatches.create') }}" class="btn btn-outline-secondary">
-      <i class="bi bi-truck me-2"></i>New Dispatch
-    </a>
   </div>
 </div>
 
@@ -126,7 +123,7 @@
   </div>
 </div>
 
-{{-- ORDERS & DISPATCHES STATS --}}
+{{-- ORDERS & ITEM TYPE REVENUE --}}
 <div class="row g-3 mb-4">
   {{-- Orders Stats --}}
   <div class="col-lg-6">
@@ -215,82 +212,69 @@
     </div>
   </div>
 
-  {{-- Dispatches Stats --}}
+  {{-- Monthly Revenue by Item Type --}}
   <div class="col-lg-6">
     <div class="card border-0 shadow-sm h-100">
       <div class="card-header bg-white border-0 pb-0">
         <h6 class="fw-bold mb-0">
-          <i class="bi bi-truck text-secondary me-2"></i>Dispatches Overview
+          <i class="bi bi-bar-chart text-success me-2"></i>This Month Revenue by Item Type
         </h6>
       </div>
       <div class="card-body">
-        <div class="row g-3">
-          <div class="col-6">
-            <div class="stat-mini">
+        @if($itemTypeRevenue->count() > 0)
+          @php
+            $totalRevenue = $itemTypeRevenue->sum('revenue');
+          @endphp
+          <div class="row g-3">
+            @foreach($itemTypeRevenue as $item)
+            <div class="col-12">
               <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="text-muted small">Total Dispatches</span>
-                <span class="badge bg-secondary">{{ $dispatchStats['total'] }}</span>
+                <div class="d-flex align-items-center">
+                  <div class="me-3">
+                    @switch($item->item_type)
+                      @case('Walkie Talkie')
+                        <span class="fs-4">📻</span>
+                        @break
+                      @case('Talkback')
+                        <span class="fs-4">🎙️</span>
+                        @break
+                      @case('Accessories')
+                        <span class="fs-4">🔌</span>
+                        @break
+                      @default
+                        <span class="fs-4">📦</span>
+                    @endswitch
+                  </div>
+                  <div>
+                    <div class="fw-semibold">{{ $item->item_type }}</div>
+                    <small class="text-muted">{{ $item->order_count }} orders</small>
+                  </div>
+                </div>
+                <div class="text-end">
+                  <div class="fw-bold text-success">₹{{ number_format($item->revenue, 0) }}</div>
+                  <small class="text-muted">{{ number_format(($item->revenue / $totalRevenue) * 100, 1) }}%</small>
+                </div>
               </div>
-              <div class="progress" style="height: 4px;">
-                <div class="progress-bar bg-secondary" style="width: 100%"></div>
+              <div class="progress" style="height: 6px;">
+                <div class="progress-bar bg-success" style="width: {{ ($item->revenue / $totalRevenue) * 100 }}%"></div>
+              </div>
+            </div>
+            @endforeach
+            
+            <div class="col-12">
+              <hr class="my-2">
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-bold">Total Revenue</span>
+                <span class="h5 fw-bold text-success mb-0">₹{{ number_format($totalRevenue, 0) }}</span>
               </div>
             </div>
           </div>
-
-          <div class="col-6">
-            <div class="stat-mini">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="text-muted small">Active</span>
-                <span class="badge bg-info">{{ $dispatchStats['active'] }}</span>
-              </div>
-              <div class="progress" style="height: 4px;">
-                <div class="progress-bar bg-info" style="width: {{ $dispatchStats['total'] > 0 ? ($dispatchStats['active']/$dispatchStats['total'])*100 : 0 }}%"></div>
-              </div>
-            </div>
+        @else
+          <div class="text-center py-4 text-muted">
+            <i class="bi bi-inbox display-4 d-block mb-2"></i>
+            <p class="mb-0">No revenue data for this month</p>
           </div>
-
-          <div class="col-6">
-            <div class="stat-mini">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="text-muted small">Partial Return</span>
-                <span class="badge bg-warning">{{ $dispatchStats['partial'] }}</span>
-              </div>
-              <div class="progress" style="height: 4px;">
-                <div class="progress-bar bg-warning" style="width: {{ $dispatchStats['total'] > 0 ? ($dispatchStats['partial']/$dispatchStats['total'])*100 : 0 }}%"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-6">
-            <div class="stat-mini">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="text-muted small">Returned</span>
-                <span class="badge bg-success">{{ $dispatchStats['returned'] }}</span>
-              </div>
-              <div class="progress" style="height: 4px;">
-                <div class="progress-bar bg-success" style="width: {{ $dispatchStats['total'] > 0 ? ($dispatchStats['returned']/$dispatchStats['total'])*100 : 0 }}%"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-12">
-            <hr class="my-2">
-          </div>
-
-          <div class="col-6">
-            <div class="text-center">
-              <div class="h5 fw-bold mb-0 text-danger">{{ $dispatchPaymentStats['unpaid'] }}</div>
-              <small class="text-muted">Unpaid</small>
-            </div>
-          </div>
-
-          <div class="col-6">
-            <div class="text-center">
-              <div class="h5 fw-bold mb-0 text-success">{{ $dispatchPaymentStats['advance'] }}</div>
-              <small class="text-muted">Advance Received</small>
-            </div>
-          </div>
-        </div>
+        @endif
       </div>
     </div>
   </div>
@@ -450,7 +434,7 @@
 {{-- RECENT ACTIVITIES --}}
 <div class="row g-3">
   {{-- Recent Orders --}}
-  <div class="col-lg-6">
+  <div class="col-12">
     <div class="card border-0 shadow-sm">
       <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
         <h6 class="fw-bold mb-0">
@@ -506,68 +490,6 @@
               @empty
               <tr>
                 <td colspan="5" class="text-center py-4 text-muted">No recent orders</td>
-              </tr>
-              @endforelse
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  {{-- Recent Dispatches --}}
-  <div class="col-lg-6">
-    <div class="card border-0 shadow-sm">
-      <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-        <h6 class="fw-bold mb-0">
-          <i class="bi bi-truck text-secondary me-2"></i>Recent Dispatches
-        </h6>
-        <a href="{{ route('dispatches.index') }}" class="text-decoration-none small">View All</a>
-      </div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-              <tr>
-                <th class="border-0">Code</th>
-                <th class="border-0">Client</th>
-                <th class="border-0">Status</th>
-                <th class="border-0">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              @forelse($recentDispatches as $dispatch)
-              <tr>
-                <td>
-                  <a href="{{ route('dispatches.show', $dispatch) }}" class="text-decoration-none fw-semibold text-primary">
-                    {{ $dispatch->code }}
-                  </a>
-                </td>
-                <td>
-                  <div class="d-flex align-items-center">
-                    <div class="avatar-sm bg-secondary-subtle text-secondary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
-                      <i class="bi bi-person-fill"></i>
-                    </div>
-                    <span class="small">{{ Str::limit($dispatch->client->name, 15) }}</span>
-                  </div>
-                </td>
-                <td>
-                  @php
-                    $dispatchBadges = [
-                      'Active' => 'bg-info-subtle text-info',
-                      'Partially Returned' => 'bg-warning-subtle text-warning',
-                      'Returned' => 'bg-success-subtle text-success',
-                    ];
-                  @endphp
-                  <span class="badge {{ $dispatchBadges[$dispatch->status] ?? 'bg-secondary-subtle text-secondary' }}">
-                    {{ $dispatch->status }}
-                  </span>
-                </td>
-                <td class="text-muted small">{{ $dispatch->dispatch_date->format('d M Y') }}</td>
-              </tr>
-              @empty
-              <tr>
-                <td colspan="4" class="text-center py-4 text-muted">No recent dispatches</td>
               </tr>
               @endforelse
             </tbody>

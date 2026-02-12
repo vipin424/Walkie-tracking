@@ -339,7 +339,7 @@ class OrderController extends Controller
             'payment_status'  => $finalPayable > 0 ? 'partial' : 'paid',
         ]);
 
-        return back()->with('success','Settlement completed.');
+        return redirect()->route('orders.show', $order)->with('success','Settlement completed.');
     }
 
     // public function complete(Request $request, Order $order)
