@@ -602,6 +602,11 @@ class OrderController extends Controller
     public function destroy(Order $order)
     {
         $order->delete();
+        
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Order deleted successfully']);
+        }
+        
         return redirect()->route('orders.index')->with('success','Order deleted.');
     }
 

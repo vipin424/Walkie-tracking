@@ -488,6 +488,41 @@ function recordPayment() {
   });
 }
 
+function deleteOrder(orderId) {
+  if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
+    return;
+  }
+  
+  const csrfToken = getCSRFToken();
+  
+  if (!csrfToken) {
+    showAlert('danger', 'CSRF token not found. Please refresh the page.');
+    return;
+  }
+  
+  fetch(`/orders/${orderId}`, {
+    method: 'DELETE',
+    headers: {
+      'X-CSRF-TOKEN': csrfToken,
+      'Accept': 'application/json'
+    }
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    return response.json();
+  })
+  .then(data => {
+    showAlert('success', '✅ Order deleted successfully');
+    setTimeout(() => table.draw(), 1000);
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    showAlert('danger', 'Failed to delete order. Please try again.');
+  });
+}
+
 function showAlert(type, message) {
   const iconMap = {
     'success': '✅',
