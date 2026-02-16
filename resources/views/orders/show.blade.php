@@ -864,10 +864,10 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 @endpush
 @push('scripts')
-<script>
+<!-- <script>
 @if(session('whatsapp_link'))
   window.open('{{ session('whatsapp_link') }}', '_blank');
 @endif
-</script>
+</script> -->
 @endpush
 @endsection

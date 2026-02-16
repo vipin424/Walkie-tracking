@@ -8,6 +8,7 @@ use App\Models\Client;
 use App\Models\Quotation;
 use App\Models\OrderItem;
 use App\Models\OrderLog;
+use App\Models\PaymentTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -310,6 +311,7 @@ class OrderController extends Controller
         $balance = floatval($order->balance_amount);
 
         $depositRemaining = $deposit - ($damage + $late);
+        $depositUsedForBalance = 0;
 
         if ($depositRemaining >= 0) {
             // deposit covers damages
@@ -318,14 +320,17 @@ class OrderController extends Controller
             if ($finalPayable <= 0) {
                 $refund = abs($finalPayable);
                 $finalPayable = 0;
+                $depositUsedForBalance = $balance;
             } else {
                 $refund = 0;
+                $depositUsedForBalance = $depositRemaining;
             }
 
         } else {
             // deposit not enough
             $finalPayable = $balance + abs($depositRemaining);
             $refund = 0;
+            $depositUsedForBalance = 0;
         }
  
         $order->update([
@@ -338,6 +343,19 @@ class OrderController extends Controller
             'settlement_date' => now(),
             'payment_status'  => $finalPayable > 0 ? 'partial' : 'paid',
         ]);
+
+        // Record payment transaction if deposit was used for balance
+        if ($depositUsedForBalance > 0) {
+            PaymentTransaction::create([
+                'order_id' => $order->id,
+                'amount' => $depositUsedForBalance,
+                'payment_method' => 'other',
+                'transaction_id' => null,
+                'notes' => 'Security deposit adjusted against remaining balance during settlement',
+                'paid_at' => now(),
+                'recorded_by' => auth()->id(),
+            ]);
+        }
 
         return redirect()->route('orders.show', $order)->with('success','Settlement completed.');
     }
