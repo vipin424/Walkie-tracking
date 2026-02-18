@@ -48,6 +48,19 @@
           <input type="date" name="event_to" id="event_to" class="form-control"
           value="{{ old('event_to', $order && $order->event_to ? \Carbon\Carbon::parse($order->event_to)->format('Y-m-d') : '') }}">
       </div>
+
+      <div class="col-md-4">
+          <label class="form-label fw-semibold">Event Time</label>
+          <input type="time" name="event_time" class="form-control"
+          value="{{ old('event_time', $order->event_time ?? '') }}">
+      </div>
+
+      <div class="col-md-8">
+          <label class="form-label fw-semibold">Event Location</label>
+          <input type="text" name="event_location" class="form-control" placeholder="Enter event location"
+          value="{{ old('event_location', $order->event_location ?? '') }}">
+      </div>
+
       <div class="col-md-4">
           <label class="form-label fw-semibold">Handling Type <span class="text-danger">*</span></label>
             <select name="handle_type" class="form-select" required>

@@ -250,7 +250,7 @@ class PaymentController extends Controller
 
             Mail::send([], [], function ($mail) use ($order, $message) {
                 $mail->to($order->client_email)
-                    ->subject('Payment Reminder - Order ' . $order->order_code)
+                    ->subject('Crewrent Enterprises - Payment Reminder - Order ' . $order->order_code)
                     ->html($this->getEmailTemplate($order, $message));
             });
 
@@ -269,17 +269,30 @@ class PaymentController extends Controller
     {
         $eventFrom = \Carbon\Carbon::parse($order->event_from)->format('d M Y');
         $eventTo = \Carbon\Carbon::parse($order->event_to)->format('d M Y');
+        $eventTime = $order->event_time ? \Carbon\Carbon::parse($order->event_time)->format('h:i A') : null;
+        $eventLocation = $order->event_location;
         
-        return "*Payment Reminder*\n\n" .
+        $message = "*Payment Reminder*\n\n" .
                "Dear *{$order->client_name}*,\n\n" .
                "This is a friendly reminder regarding your pending payment for Order *{$order->order_code}*.\n\n" .
                "*Order Details:*\n" .
-               "• Event Period: {$eventFrom} to {$eventTo}\n" .
-               "• Total Amount: ₹" . number_format($order->total_amount, 2) . "\n" .
+               "• Event Period: {$eventFrom} to {$eventTo}\n";
+        
+        if ($eventTime) {
+            $message .= "• Event Time: {$eventTime}\n";
+        }
+        
+        if ($eventLocation) {
+            $message .= "• Location: {$eventLocation}\n";
+        }
+        
+        $message .= "• Total Amount: ₹" . number_format($order->total_amount, 2) . "\n" .
                "• *Pending Amount: ₹" . number_format($order->final_payable, 2) . "*\n\n" .
                "Please make the payment at your earliest convenience.\n\n" .
                "Payment can be made via GPay, PhonePe, Paytm, or Bank Transfer.\n\n" .
                "Thank you for your business! 🙏";
+        
+        return $message;
     }
 
     /**
@@ -287,166 +300,12 @@ class PaymentController extends Controller
      */
     private function getEmailTemplate(Order $order, string $message)
     {
-        $eventFrom = \Carbon\Carbon::parse($order->event_from)->format('d M Y');
-        $eventTo = \Carbon\Carbon::parse($order->event_to)->format('d M Y');
+        $eventFrom = \Carbon\Carbon::parse($order->event_from)->format('l, F j, Y');
+        $eventTo = \Carbon\Carbon::parse($order->event_to)->format('l, F j, Y');
+        $eventTime = $order->event_time ? \Carbon\Carbon::parse($order->event_time)->format('h:i A') : null;
+        $eventLocation = $order->event_location;
         
-        return "
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body { 
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-                    line-height: 1.6; 
-                    color: #333;
-                    background-color: #f4f4f4;
-                    margin: 0;
-                    padding: 0;
-                }
-                .container { 
-                    max-width: 600px; 
-                    margin: 30px auto; 
-                    background: white;
-                    border-radius: 10px;
-                    overflow: hidden;
-                    box-shadow: 0 0 20px rgba(0,0,0,0.1);
-                }
-                .header { 
-                    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
-                    color: #000; 
-                    padding: 30px 20px; 
-                    text-align: center; 
-                }
-                .header h1 {
-                    margin: 0;
-                    font-size: 28px;
-                    font-weight: 600;
-                }
-                .content { 
-                    padding: 30px; 
-                }
-                .message {
-                    background: #f9f9f9;
-                    padding: 20px;
-                    border-radius: 5px;
-                    margin: 20px 0;
-                    white-space: pre-line;
-                }
-                .details { 
-                    background: white; 
-                    padding: 20px; 
-                    margin: 20px 0; 
-                    border-left: 4px solid #ffc107;
-                    border-radius: 5px;
-                }
-                .details h3 {
-                    margin-top: 0;
-                    color: #ff9800;
-                }
-                .detail-row {
-                    display: flex;
-                    justify-content: space-between;
-                    padding: 8px 0;
-                    border-bottom: 1px solid #eee;
-                }
-                .detail-row:last-child {
-                    border-bottom: none;
-                }
-                .detail-label {
-                    font-weight: 600;
-                    color: #666;
-                }
-                .detail-value {
-                    color: #333;
-                }
-                .amount { 
-                    font-size: 32px; 
-                    font-weight: bold; 
-                    color: #ff5722;
-                    text-align: center;
-                    margin: 20px 0;
-                    padding: 20px;
-                    background: #fff3e0;
-                    border-radius: 10px;
-                }
-                .footer { 
-                    background: #f9f9f9;
-                    text-align: center; 
-                    padding: 20px; 
-                    font-size: 13px; 
-                    color: #666; 
-                    border-top: 1px solid #eee;
-                }
-                .payment-methods {
-                    display: flex;
-                    justify-content: center;
-                    gap: 15px;
-                    margin: 20px 0;
-                    flex-wrap: wrap;
-                }
-                .payment-method {
-                    padding: 8px 15px;
-                    background: #e3f2fd;
-                    border-radius: 20px;
-                    font-size: 13px;
-                    color: #1976d2;
-                }
-            </style>
-        </head>
-        <body>
-            <div class='container'>
-                <div class='header'>
-                    <h1>💰 Payment Reminder</h1>
-                </div>
-                <div class='content'>
-                    <p>Dear <strong>{$order->client_name}</strong>,</p>
-                    
-                    <div class='message'>" . nl2br(htmlspecialchars($message)) . "</div>
-                    
-                    <div class='details'>
-                        <h3>📋 Order Details</h3>
-                        <div class='detail-row'>
-                            <span class='detail-label'>Order Code:</span>
-                            <span class='detail-value'><strong>{$order->order_code}</strong></span>
-                        </div>
-                        <div class='detail-row'>
-                            <span class='detail-label'>Event Period:</span>
-                            <span class='detail-value'>{$eventFrom} to {$eventTo}</span>
-                        </div>
-                        <div class='detail-row'>
-                            <span class='detail-label'>Total Amount:</span>
-                            <span class='detail-value'>₹" . number_format($order->total_amount, 2) . "</span>
-                        </div>
-                    </div>
-                    
-                    <div class='amount'>
-                        Pending Amount<br>
-                        ₹" . number_format($order->final_payable, 2) . "
-                    </div>
-                    
-                    <div style='text-align: center; margin-top: 20px;'>
-                        <p style='margin-bottom: 10px; color: #666;'>Accept payments via:</p>
-                        <div class='payment-methods'>
-                            <span class='payment-method'>💳 GPay</span>
-                            <span class='payment-method'>📱 PhonePe</span>
-                            <span class='payment-method'>💰 Paytm</span>
-                            <span class='payment-method'>🏦 Bank Transfer</span>
-                        </div>
-                    </div>
-                    
-                    <p style='margin-top: 30px; font-size: 14px; color: #666;'>
-                        If you have already made the payment, please ignore this reminder or contact us with your transaction details.
-                    </p>
-                </div>
-                <div class='footer'>
-                    <p style='margin: 5px 0;'><strong>This is an automated reminder</strong></p>
-                    <p style='margin: 5px 0;'>Please do not reply to this email</p>
-                    <p style='margin: 5px 0; font-size: 12px; color: #999;'>© " . date('Y') . " " . config('app.name') . ". All rights reserved.</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        ";
+        return view('emails.payment_reminder', compact('order', 'message', 'eventFrom', 'eventTo', 'eventTime', 'eventLocation'))->render();
     }
 
     /**

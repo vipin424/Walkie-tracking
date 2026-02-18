@@ -96,7 +96,7 @@ class OrderController extends Controller
                 $html = '<div class="btn-group" role="group">';
                 $html .= '<a href="'.route('orders.show', $order).'" class="btn btn-sm btn-outline-primary" title="View"><i class="bi bi-eye"></i></a>';
                 $html .= '<a href="'.route('orders.edit', $order).'" class="btn btn-sm btn-outline-warning" title="Edit"><i class="bi bi-pencil"></i></a>';
-                $html .= '<button class="btn btn-sm btn-outline-danger" onclick="deleteOrder('.$order->id.')" title="Delete"><i class="bi bi-trash"></i></button>';
+                // $html .= '<button class="btn btn-sm btn-outline-danger" onclick="deleteOrder('.$order->id.')" title="Delete"><i class="bi bi-trash"></i></button>';
                 
                 if ($order->payment_status !== 'paid' && $order->final_payable > 0) {
                     $html .= '<button class="btn btn-sm btn-outline-info" onclick="openReminderModal('.$order->id.', \''.$order->order_code.'\', \''.$order->client_name.'\', '.$order->final_payable.')" title="Send Reminder"><i class="bi bi-bell-fill"></i></button>';
@@ -131,6 +131,8 @@ class OrderController extends Controller
 
             'event_from' => 'required|date',
             'event_to'   => 'required|date|after_or_equal:event_from',
+            'event_time' => 'nullable|date_format:H:i',
+            'event_location' => 'nullable|string|max:255',
             'handle_type' => 'required|string',
             'items' => 'required|array|min:1',
             'items.*.item_name' => 'required|string',
@@ -193,6 +195,8 @@ class OrderController extends Controller
 
                 'event_from' => $request->event_from,
                 'event_to'   => $request->event_to,
+                'event_time' => $request->event_time,
+                'event_location' => $request->event_location,
                 'handle_type' => $request->handle_type === 'self' ? 1 : 0,
                 'notes'      => $request->notes,
                 'bill_to'    => $request->bill_to,
@@ -509,6 +513,8 @@ class OrderController extends Controller
 
                 'event_from' => 'required|date',
                 'event_to'   => 'required|date|after_or_equal:event_from',
+                'event_time' => 'nullable|date_format:H:i',
+                'event_location' => 'nullable|string|max:255',
                 'handle_type' => 'required|string',
 
                 'items' => 'required|array|min:1',
@@ -567,6 +573,8 @@ class OrderController extends Controller
                 'client_phone' => $request->client_phone,
                 'event_from' => $request->event_from,
                 'event_to' => $request->event_to,
+                'event_time' => $request->event_time,
+                'event_location' => $request->event_location,
                 'handle_type' => $request->handle_type === 'self' ? 1 : 0,
                 'total_days' => $totalDays,
                 'notes' => $request->notes,

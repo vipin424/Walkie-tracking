@@ -4,56 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Upcoming Order Reminder</title>
-    <!--[if mso]>
-    <style type="text/css">
-        body, table, td {font-family: Arial, Helvetica, sans-serif !important;}
-    </style>
-    <![endif]-->
+    <title>Payment Reminder</title>
     <style>
         @media only screen and (max-width: 600px) {
-            .email-container {
-                width: 100% !important;
-                margin: 0 !important;
-            }
-            .mobile-padding {
-                padding: 20px !important;
-            }
-            .mobile-text {
-                font-size: 14px !important;
-            }
-            .mobile-heading {
-                font-size: 24px !important;
-            }
-            .button {
-                padding: 12px 24px !important;
-                font-size: 14px !important;
-            }
-            .detail-label {
-                width: 100px !important;
-                font-size: 13px !important;
-            }
-            .detail-value {
-                font-size: 13px !important;
-            }
+            .email-container { width: 100% !important; margin: 0 !important; }
+            .mobile-padding { padding: 20px !important; }
+            .mobile-text { font-size: 14px !important; }
+            .mobile-heading { font-size: 24px !important; }
+            .button { padding: 12px 24px !important; font-size: 14px !important; }
+            .detail-label { width: 100px !important; font-size: 13px !important; }
+            .detail-value { font-size: 13px !important; }
         }
     </style>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f4f7fa; line-height: 1.6; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f4f7fa; line-height: 1.6;">
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; background-color: #f4f7fa;">
         <tr>
             <td style="padding: 40px 20px;">
-                <!-- Main Container -->
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" class="email-container" style="max-width: 600px; width: 100%; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
                     
                     <!-- Header -->
                     <tr>
                         <td class="mobile-padding" style="background: linear-gradient(135deg, #004d40 0%, #00695c 100%); padding: 40px 30px; border-radius: 12px 12px 0 0; text-align: center;">
                             <h1 class="mobile-heading" style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                                📋 Order Reminder
+                                💰 Payment Reminder
                             </h1>
                             <p style="margin: 10px 0 0; color: #e0f2f1; font-size: 14px;">
-                                Upcoming Event Notification
+                                Pending Payment Notification
                             </p>
                         </td>
                     </tr>
@@ -62,11 +39,11 @@
                     <tr>
                         <td class="mobile-padding" style="padding: 40px 30px;">
                             <p class="mobile-text" style="margin: 0 0 20px; color: #374151; font-size: 16px;">
-                                Hello <strong>Crewrent Admin</strong>,
+                                Dear <strong>{{ $order->client_name }}</strong>,
                             </p>
                             
                             <p class="mobile-text" style="margin: 0 0 30px; color: #6b7280; font-size: 15px; line-height: 1.7;">
-                                This is a friendly reminder that the following order is scheduled in <strong style="color: #ff9800;">{{ $reminderText }}</strong>. Please ensure all items are prepared and ready.
+                                This is a friendly reminder regarding your pending payment for the following order. Please make the payment at your earliest convenience.
                             </p>
 
                             <!-- Order Details Card -->
@@ -89,31 +66,19 @@
                                             </tr>
                                         </table>
 
-                                        <!-- Client -->
+                                        <!-- Event Period -->
                                         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; margin-bottom: 12px;">
                                             <tr>
                                                 <td class="detail-label" style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 140px; vertical-align: top;">
-                                                    <strong>Client:</strong>
+                                                    <strong>Event Period:</strong>
                                                 </td>
                                                 <td class="detail-value" style="padding: 8px 0; color: #111827; font-size: 14px;">
-                                                    {{ $order->client_name }}
+                                                    {{ $eventFrom }} to {{ $eventTo }}
                                                 </td>
                                             </tr>
                                         </table>
 
-                                        <!-- Start Date -->
-                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; margin-bottom: 12px;">
-                                            <tr>
-                                                <td class="detail-label" style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 140px; vertical-align: top;">
-                                                    <strong>Start Date:</strong>
-                                                </td>
-                                                <td class="detail-value" style="padding: 8px 0; color: #111827; font-size: 14px;">
-                                                    {{ \Carbon\Carbon::parse($order->event_from)->format('l, F j, Y') }}
-                                                </td>
-                                            </tr>
-                                        </table>
-
-                                        @if($order->event_time)
+                                        @if($eventTime)
                                         <!-- Event Time -->
                                         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; margin-bottom: 12px;">
                                             <tr>
@@ -121,13 +86,13 @@
                                                     <strong>Event Time:</strong>
                                                 </td>
                                                 <td class="detail-value" style="padding: 8px 0; color: #111827; font-size: 14px;">
-                                                    {{ \Carbon\Carbon::parse($order->event_time)->format('h:i A') }}
+                                                    {{ $eventTime }}
                                                 </td>
                                             </tr>
                                         </table>
                                         @endif
 
-                                        @if($order->event_location)
+                                        @if($eventLocation)
                                         <!-- Location -->
                                         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; margin-bottom: 12px;">
                                             <tr>
@@ -135,29 +100,57 @@
                                                     <strong>Location:</strong>
                                                 </td>
                                                 <td class="detail-value" style="padding: 8px 0; color: #111827; font-size: 14px;">
-                                                    {{ $order->event_location }}
+                                                    {{ $eventLocation }}
                                                 </td>
                                             </tr>
                                         </table>
                                         @endif
+
+                                        <!-- Total Amount -->
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; margin-bottom: 12px;">
+                                            <tr>
+                                                <td class="detail-label" style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 140px; vertical-align: top;">
+                                                    <strong>Total Amount:</strong>
+                                                </td>
+                                                <td class="detail-value" style="padding: 8px 0; color: #111827; font-size: 14px;">
+                                                    ₹{{ number_format($order->total_amount, 2) }}
+                                                </td>
+                                            </tr>
+                                        </table>
                                     </td>
                                 </tr>
                             </table>
 
-                            <!-- Call to Action -->
+                            <!-- Pending Amount -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; margin-top: 20px; background-color: #fff3e0; border-radius: 8px; border-left: 4px solid #ff5722;">
+                                <tr>
+                                    <td style="padding: 20px; text-align: center;">
+                                        <p style="margin: 0 0 5px; color: #6b7280; font-size: 14px;">Pending Amount</p>
+                                        <p style="margin: 0; color: #ff5722; font-size: 32px; font-weight: 700;">
+                                            ₹{{ number_format($order->final_payable, 2) }}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Payment Methods -->
                             <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; margin-top: 30px;">
                                 <tr>
                                     <td style="text-align: center;">
-                                        <a href="{{ route('orders.show', $order->id) }}" class="button" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #004d40 0%, #ff9800 100%); color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 6px rgba(0, 77, 64, 0.3); transition: transform 0.2s;">
-                                            View Order Details
-                                        </a>
+                                        <p style="margin: 0 0 15px; color: #6b7280; font-size: 14px;">Accept payments via:</p>
+                                        <div style="display: inline-block;">
+                                            <span style="display: inline-block; padding: 8px 15px; margin: 5px; background: #e3f2fd; border-radius: 20px; font-size: 13px; color: #1976d2;">💳 GPay</span>
+                                            <span style="display: inline-block; padding: 8px 15px; margin: 5px; background: #e3f2fd; border-radius: 20px; font-size: 13px; color: #1976d2;">📱 PhonePe</span>
+                                            <span style="display: inline-block; padding: 8px 15px; margin: 5px; background: #e3f2fd; border-radius: 20px; font-size: 13px; color: #1976d2;">💰 Paytm</span>
+                                            <span style="display: inline-block; padding: 8px 15px; margin: 5px; background: #e3f2fd; border-radius: 20px; font-size: 13px; color: #1976d2;">🏦 Bank Transfer</span>
+                                        </div>
                                     </td>
                                 </tr>
                             </table>
 
                             <!-- Footer Message -->
                             <p class="mobile-text" style="margin: 30px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-                                Please prepare all items and coordinate with your team to ensure smooth execution.
+                                If you have already made the payment, please ignore this reminder or contact us with your transaction details.
                             </p>
                         </td>
                     </tr>

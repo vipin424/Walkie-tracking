@@ -131,7 +131,7 @@
 
   <div class="row">
     <!-- Client Information -->
-    <div class="col-lg-4 mb-4">
+    <div class="col-lg-3 mb-4">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-header bg-white border-0 p-4">
           <h5 class="mb-0 fw-semibold">
@@ -159,8 +159,44 @@
       </div>
     </div>
 
+    <!-- Event Details -->
+    <div class="col-lg-3 mb-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-0 p-4">
+          <h5 class="mb-0 fw-semibold">
+            <i class="bi bi-calendar-event me-2 text-warning"></i>Event Details
+          </h5>
+        </div>
+        <div class="card-body p-4">
+          <div class="mb-3">
+            <label class="text-muted small fw-semibold mb-1">Event Period</label>
+            <p class="mb-0 fw-medium">
+              {{ \Carbon\Carbon::parse($order->event_from)->format('d M Y') }} → 
+              {{ \Carbon\Carbon::parse($order->event_to)->format('d M Y') }}
+            </p>
+          </div>
+          @if($order->event_time)
+          <div class="mb-3">
+            <label class="text-muted small fw-semibold mb-1">Event Time</label>
+            <p class="mb-0">
+              <i class="bi bi-clock-fill text-info me-2"></i>{{ \Carbon\Carbon::parse($order->event_time)->format('h:i A') }}
+            </p>
+          </div>
+          @endif
+          @if($order->event_location)
+          <div class="mb-0">
+            <label class="text-muted small fw-semibold mb-1">Location</label>
+            <p class="mb-0">
+              <i class="bi bi-geo-alt-fill text-danger me-2"></i>{{ $order->event_location }}
+            </p>
+          </div>
+          @endif
+        </div>
+      </div>
+    </div>
+
     <!-- Summary Information -->
-    <div class="col-lg-8 mb-4">
+    <div class="col-lg-6 mb-4">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-header bg-white border-0 p-4">
           <h5 class="mb-0 fw-semibold">
@@ -169,25 +205,27 @@
         </div>
         <div class="card-body p-4">
           <div class="row">
-            <div class="col-md-3 mb-3">
+            <div class="col-md-4 mb-3">
               <div class="p-3 bg-light rounded">
                 <label class="text-muted small fw-semibold mb-1 d-block">Subtotal</label>
                 <h5 class="mb-0 fw-bold">₹{{ number_format($order->subtotal, 2) }}</h5>
               </div>
             </div>
+            @if($order->tax_amount > 0)
             <div class="col-md-3 mb-3">
               <div class="p-3 bg-light rounded">
                 <label class="text-muted small fw-semibold mb-1 d-block">Tax Amount</label>
                 <h5 class="mb-0 fw-bold text-info">₹{{ number_format($order->tax_amount, 2) }}</h5>
               </div>
             </div>
-            <div class="col-md-3 mb-3">
+            @endif
+            <div class="col-md-4 mb-3">
               <div class="p-3 bg-light rounded">
                 <label class="text-muted small fw-semibold mb-1 d-block">Discount</label>
                 <h5 class="mb-0 fw-bold text-danger">₹{{ number_format($order->discount_amount, 2) }}</h5>
               </div>
             </div>
-            <div class="col-md-3 mb-3">
+            <div class="col-md-4 mb-3">
               <div class="p-3 bg-warning bg-opacity-10 rounded border border-warning">
                 <label class="text-muted small fw-semibold mb-1 d-block">Total Amount</label>
                 <h5 class="mb-0 fw-bold text-warning">₹{{ number_format($order->total_amount, 2) }}</h5>
