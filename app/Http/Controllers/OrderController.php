@@ -313,7 +313,9 @@ class OrderController extends Controller
 
         $deposit = floatval($order->security_deposit);
         $balance = floatval($order->balance_amount);
-
+        $advance = floatval($order->advance_paid);
+        $total   = floatval($order->total_amount);
+        
         $depositRemaining = $deposit - ($damage + $late);
         $depositUsedForBalance = 0;
 
@@ -337,7 +339,7 @@ class OrderController extends Controller
             $depositUsedForBalance = 0;
         }
  
-        $order->update([
+        $order->update([    
             'damage_charge'   => $damage,
             'late_fee'        => $late,
             'deposit_adjusted'=> max($depositRemaining, 0),
@@ -348,7 +350,7 @@ class OrderController extends Controller
             'payment_status'  => $finalPayable > 0 ? 'partial' : 'paid',
         ]);
 
-        // Record payment transaction if deposit was used for balance
+        // Record payment transaction if deposit was used for balance OR if balance was already paid
         if ($depositUsedForBalance > 0) {
             PaymentTransaction::create([
                 'order_id' => $order->id,
@@ -357,7 +359,18 @@ class OrderController extends Controller
                 'transaction_id' => null,
                 'notes' => 'Security deposit adjusted against remaining balance during settlement',
                 'paid_at' => now(),
-                'recorded_by' => auth()->id(),
+                'recorded_by' => 'Admin',
+            ]);
+        } elseif ($advance >= $total) {
+            // Full payment already received in advance
+            PaymentTransaction::create([
+                'order_id' => $order->id,
+                'amount' => $advance,
+                'payment_method' => 'bank_transfer',
+                'transaction_id' => null,
+                'notes' => 'Full advance payment recorded during settlement',
+                'paid_at' => now(),
+                'recorded_by' => 'Admin',
             ]);
         }
 
