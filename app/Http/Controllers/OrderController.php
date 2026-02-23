@@ -124,6 +124,11 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         // dd($request->all());
+        // Convert time format if present
+        if ($request->filled('event_time') && strlen($request->event_time) === 8) {
+            $request->merge(['event_time' => substr($request->event_time, 0, 5)]);
+        }
+
         $request->validate([
             'client_name'   => 'required|string',
             'client_email'  => 'nullable|email',
@@ -519,6 +524,11 @@ class OrderController extends Controller
      */
     public function update(Request $request, Order $order)
     {
+            // Convert time format if present
+            if ($request->filled('event_time') && strlen($request->event_time) === 8) {
+                $request->merge(['event_time' => substr($request->event_time, 0, 5)]);
+            }
+
             $request->validate([
                 'client_name' => 'required|string',
                 'client_email' => 'nullable|email',
@@ -589,6 +599,7 @@ class OrderController extends Controller
                 'event_time' => $request->event_time,
                 'event_location' => $request->event_location,
                 'handle_type' => $request->handle_type === 'self' ? 1 : 0,
+                'agreement_required' => $request->handle_type === 'self' ? 1 : 0,
                 'total_days' => $totalDays,
                 'notes' => $request->notes,
                 'bill_to'    => $request->bill_to,

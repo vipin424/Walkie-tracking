@@ -13,15 +13,18 @@
     <div class="row g-3">
       <div class="col-md-6">
         <label class="form-label fw-semibold">Client Name <span class="text-danger">*</span></label>
-        <input name="client_name" class="form-control" value="{{ old('client_name', $order->client_name ?? '') }}" required>
+        <input name="client_name" class="form-control @error('client_name') is-invalid @enderror" value="{{ old('client_name', $order->client_name ?? '') }}" required>
+        @error('client_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
       </div>
       <div class="col-md-3">
         <label class="form-label fw-semibold">Client Email</label>
-        <input type="email" name="client_email" class="form-control" value="{{ old('client_email', $order->client_email ?? '') }}">
+        <input type="email" name="client_email" class="form-control @error('client_email') is-invalid @enderror" value="{{ old('client_email', $order->client_email ?? '') }}">
+        @error('client_email')<div class="invalid-feedback">{{ $message }}</div>@enderror
       </div>
       <div class="col-md-3">
         <label class="form-label fw-semibold">Client Phone <span class="text-danger">*</span></label>
-        <input type="tel" name="client_phone" class="form-control" value="{{ old('client_phone', $order->client_phone ?? '') }}" pattern="[0-9]{10}" maxlength="10" required>
+        <input type="tel" name="client_phone" class="form-control @error('client_phone') is-invalid @enderror" value="{{ old('client_phone', $order->client_phone ?? '') }}" pattern="[0-9]{10}" maxlength="10" required>
+        @error('client_phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
       </div>
     </div>
 
@@ -38,15 +41,17 @@
     <div class="row g-3 mt-2">
 
       <div class="col-md-4">
-          <label class="form-label fw-semibold">Event From</label>
-          <input type="date" name="event_from" id="event_from" class="form-control"
-          value="{{ old('event_from', $order && $order->event_from ? \Carbon\Carbon::parse($order->event_from)->format('Y-m-d') : '') }}">
+          <label class="form-label fw-semibold">Event From <span class="text-danger">*</span></label>
+          <input type="date" name="event_from" id="event_from" class="form-control @error('event_from') is-invalid @enderror"
+          value="{{ old('event_from', $order && $order->event_from ? \Carbon\Carbon::parse($order->event_from)->format('Y-m-d') : '') }}" required>
+          @error('event_from')<div class="invalid-feedback">{{ $message }}</div>@enderror
       </div>
 
       <div class="col-md-4">
-          <label class="form-label fw-semibold">Event To</label>
-          <input type="date" name="event_to" id="event_to" class="form-control"
-          value="{{ old('event_to', $order && $order->event_to ? \Carbon\Carbon::parse($order->event_to)->format('Y-m-d') : '') }}">
+          <label class="form-label fw-semibold">Event To <span class="text-danger">*</span></label>
+          <input type="date" name="event_to" id="event_to" class="form-control @error('event_to') is-invalid @enderror"
+          value="{{ old('event_to', $order && $order->event_to ? \Carbon\Carbon::parse($order->event_to)->format('Y-m-d') : '') }}" required>
+          @error('event_to')<div class="invalid-feedback">{{ $message }}</div>@enderror
       </div>
 
       <div class="col-md-4">
@@ -63,7 +68,7 @@
 
       <div class="col-md-4">
           <label class="form-label fw-semibold">Handling Type <span class="text-danger">*</span></label>
-            <select name="handle_type" class="form-select" required>
+            <select name="handle_type" class="form-select @error('handle_type') is-invalid @enderror" required>
                 <option value="">Select</option>
                 <option value="staff" {{ old('handle_type', optional($order)->handle_type) == 0 ? 'selected' : '' }}>
                     Our Staff Onsite
@@ -72,6 +77,7 @@
                     Client Pickup (Self)
                 </option>
             </select>
+            @error('handle_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
       </div>
     <div class="col-md-12">
         <label class="form-label fw-semibold">Notes</label>
@@ -283,12 +289,15 @@
             <label class="fw-semibold mb-0">
               Advance Paid <span class="text-danger">*</span>
             </label>
-            <input type="number"
-                   step="0.01"
-                   name="advance_paid"
-                   class="form-control form-control-sm"
-                   style="width:150px;" value="{{ old('advance_paid', $order->advance_paid ?? 0) }}"
-                   required>
+            <div>
+              <input type="number"
+                     step="0.01"
+                     name="advance_paid"
+                     class="form-control form-control-sm @error('advance_paid') is-invalid @enderror"
+                     style="width:150px;" value="{{ old('advance_paid', $order->advance_paid ?? 0) }}"
+                     required>
+              @error('advance_paid')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
           </div>
           
           <div class="d-flex justify-content-between mb-3">
