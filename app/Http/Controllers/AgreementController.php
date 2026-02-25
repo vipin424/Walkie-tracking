@@ -66,7 +66,7 @@ class AgreementController extends Controller
 
         if ($agreement->order->client_email) {
             Mail::to($agreement->order->client_email)
-                ->cc(env('ADMIN_EMAIL'))
+                ->cc(config('mail.admin_email'))
                 ->send(new SignedAgreementMail($agreement));
         }
 
