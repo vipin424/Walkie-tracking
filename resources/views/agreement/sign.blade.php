@@ -394,6 +394,74 @@
             font-weight: 700;
         }
         
+        .items-section {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            border: 2px solid #e1e8ed;
+            margin-bottom: 32px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .items-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .items-title::before {
+            content: '📦';
+            font-size: 24px;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .items-table th {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .items-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e1e8ed;
+            font-size: 13px;
+            color: #444;
+        }
+        
+        .items-table tr:hover {
+            background-color: #f8f9fc;
+        }
+        
+        .items-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .item-name {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
         @media print {
             body { background: white; }
             body::before { display: none; }
@@ -482,6 +550,43 @@
                     <div class="info-value amount-highlight">₹{{ number_format($agreement->order->security_deposit ?? 0, 2) }}</div>
                 </div>
             @endif
+            </div>
+            
+            <div class="divider"></div>
+            
+            <!-- Rental Items Section -->
+            <div class="items-section">
+                <div class="items-title">Rental Equipment Details</div>
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">#</th>
+                            <th>Item Name</th>
+                            <th>Description</th>
+                            <th style="width: 80px;">Qty</th>
+                            <th style="width: 120px;">Unit Price</th>
+                            <th style="width: 120px;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($agreement->order->items as $index => $item)
+                        <tr>
+                            <td>{{ $index + 1 }}</td>
+                            <td><span class="item-name">{{ $item->item_name }}</span></td>
+                            <td>{{ $item->description ?? '-' }}</td>
+                            <td>{{ $item->quantity }}</td>
+                            <td>₹{{ number_format($item->unit_price, 2) }}</td>
+                            <td><strong>₹{{ number_format($item->total_price, 2) }}</strong></td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="6" class="text-center" style="padding: 24px; color: #999;">
+                                No items found
+                            </td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
             
             <div class="divider"></div>

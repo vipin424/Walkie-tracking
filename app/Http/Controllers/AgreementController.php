@@ -17,7 +17,7 @@ class AgreementController extends Controller
 {
     public function show($code)
     {
-        $agreement = OrderAgreement::where('agreement_code', $code)->firstOrFail();
+        $agreement = OrderAgreement::with('order.items')->where('agreement_code', $code)->firstOrFail();
 
         abort_if(now()->greaterThan($agreement->expires_at), 403);
 
@@ -51,7 +51,7 @@ class AgreementController extends Controller
 
         /** 🔹 GENERATE SIGNED AGREEMENT PDF */
         $pdf = Pdf::loadView('agreement.pdf', [
-            'agreement' => $agreement->fresh('order'),
+            'agreement' => $agreement->fresh(['order.items']),
         ])->setPaper('a4');
 
         $pdfPath = 'agreements/signed_' . $agreement->agreement_code . '.pdf';
