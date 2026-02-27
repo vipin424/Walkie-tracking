@@ -15,7 +15,7 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         // Monthly Revenue by Item Type (Only Paid Orders)
-        // Calculate proportional revenue based on final order amount after discount
+        // Calculate proportional revenue based on final order amount after discount and extra charges
         $itemTypeRevenue = DB::table('order_items')
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
             ->join(
@@ -24,7 +24,7 @@ class DashboardController extends Controller
             )
             ->select(
                 'order_items.item_type',
-                DB::raw('SUM((order_items.total_price / order_totals.order_total_price) * orders.total_amount) as revenue'),
+                DB::raw('SUM((order_items.total_price / order_totals.order_total_price) * (orders.total_amount - COALESCE(orders.extra_charge_total, 0))) as revenue'),
                 DB::raw('COUNT(DISTINCT orders.id) as order_count')
             )
             ->whereMonth('orders.created_at', now()->month)
