@@ -449,6 +449,66 @@
             border-bottom: none;
         }
         
+        @media (max-width: 768px) {
+            .items-table {
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .items-table thead {
+                display: none;
+            }
+            
+            .items-table tbody {
+                display: block;
+            }
+            
+            .items-table tr {
+                display: block;
+                margin-bottom: 16px;
+                border: 1px solid #e1e8ed;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            
+            .items-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 12px;
+                border-bottom: 1px solid #f0f0f0;
+                text-align: right;
+            }
+            
+            .items-table td:last-child {
+                border-bottom: none;
+            }
+            
+            .items-table td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: var(--primary-color);
+                text-transform: uppercase;
+                font-size: 11px;
+                letter-spacing: 0.5px;
+                text-align: left;
+            }
+            
+            .items-table td:first-child {
+                background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+                color: white;
+                font-weight: 700;
+                justify-content: center;
+            }
+            
+            .items-table td:first-child::before {
+                content: 'Item #';
+                color: white;
+                margin-right: 8px;
+            }
+        }
+        
         .text-right {
             text-align: right;
         }
@@ -462,6 +522,30 @@
             color: var(--primary-color);
         }
         
+        /* Top Banner */
+        .sign-banner {
+            position: sticky;
+            top: 0;
+            background: linear-gradient(135deg, var(--secondary-color) 0%, #ff6f00 100%);
+            color: white;
+            padding: 12px 20px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+            z-index: 999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .sign-banner:hover {
+            background: linear-gradient(135deg, #ff6f00 0%, var(--secondary-color) 100%);
+        }
+        
+        .sign-banner.hidden {
+            display: none;
+        }
+        
         @media print {
             body { background: white; }
             body::before { display: none; }
@@ -470,14 +554,28 @@
         }
         
         @media (max-width: 768px) {
-            .content-section { padding: 24px; }
+            body { padding: 10px 0; }
+            .content-section { padding: 20px; }
             .info-grid { grid-template-columns: 1fr; gap: 16px; }
             .agreement-title { font-size: 24px; }
             .company-logo { width: 100px; height: 100px; }
+            .header-section { padding: 30px 20px; }
+            .items-section { padding: 16px; }
+            .items-title { font-size: 18px; }
+            .agreement-terms { padding: 20px; }
+            .terms-title { font-size: 18px; }
+            .agreement-terms p { font-size: 13px; }
+
+            .sign-banner { font-size: 13px; padding: 10px 15px; }
         }
     </style>
 </head>
 <body>
+
+<!-- Sticky Banner -->
+<div class="sign-banner" id="signBanner" onclick="scrollToSignature()">
+    ✍️ Scroll down to sign the agreement | नीचे स्क्रॉल करें और साइन करें
+</div>
 
 <div class="agreement-container">
     <div class="agreement-card">
@@ -571,12 +669,12 @@
                     <tbody>
                         @forelse($agreement->order->items as $index => $item)
                         <tr>
-                            <td>{{ $index + 1 }}</td>
-                            <td><span class="item-name">{{ $item->item_name }}</span></td>
-                            <td>{{ $item->description ?? '-' }}</td>
-                            <td>{{ $item->quantity }}</td>
-                            <td>₹{{ number_format($item->unit_price, 2) }}</td>
-                            <td><strong>₹{{ number_format($item->total_price, 2) }}</strong></td>
+                            <td data-label="#">{{ $index + 1 }}</td>
+                            <td data-label="Item Name"><span class="item-name">{{ $item->item_name }}</span></td>
+                            <td data-label="Description">{{ $item->description ?? '-' }}</td>
+                            <td data-label="Quantity">{{ $item->quantity }}</td>
+                            <td data-label="Unit Price">₹{{ number_format($item->unit_price, 2) }}</td>
+                            <td data-label="Total"><strong>₹{{ number_format($item->total_price, 2) }}</strong></td>
                         </tr>
                         @empty
                         <tr>
