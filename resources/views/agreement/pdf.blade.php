@@ -9,12 +9,16 @@
            PAGE SETUP (MOST IMPORTANT)
         ================================ */
         @page {
-            margin: 120px 35px 90px 35px;
+            margin: 120px 35px 120px 35px;
         }
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100%;
         }
         
         body {
@@ -172,11 +176,15 @@
         }
         
         .pdf-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
             background-color: #004d40;
             color: #ffffff;
             padding: 15px;
             text-align: center;
-            margin-top: 30px;
+            height: 100px;
         }
         
         .footer-content {
@@ -196,6 +204,39 @@
             margin-top: 10px;
             font-size: 9px;
             color: #ffffff;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+        }
+        
+        .items-table th {
+            background-color: #004d40;
+            color: #ffffff;
+            padding: 10px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .items-table td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            font-size: 10px;
+        }
+        
+        .items-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .text-center {
+            text-align: center;
         }
     </style>
 </head>
@@ -259,6 +300,37 @@
                 <span class="info-value">{{ $agreement->signed_at->format('d M Y') }}</span>
             </div>
         </div>
+
+        <!-- Rental Items -->
+        <div class="section-title">Rental Equipment Details</div>
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Item Name</th>
+                    <th>Description</th>
+                    <th>Qty</th>
+                    <th>Unit Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($agreement->order->items as $index => $item)
+                <tr>
+                    <td>{{ $index + 1 }}</td>
+                    <td><strong>{{ $item->item_name }}</strong></td>
+                    <td>{{ $item->description ?? '-' }}</td>
+                    <td>{{ $item->quantity }}</td>
+                    <td>₹{{ number_format($item->unit_price, 2) }}</td>
+                    <td>₹{{ number_format($item->total_price, 2) }}</td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="6" class="text-center">No items found</td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
 
         <!-- Terms & Conditions -->
         <div class="section-title">Terms & Conditions</div>

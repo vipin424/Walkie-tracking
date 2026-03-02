@@ -76,12 +76,14 @@ class PaymentController extends Controller
         $channel = $request->channel;
         $success = true;
         $whatsappLink = null;
+        $qrCodePath = null;
 
         // Generate message
         $message = $request->message ?? $this->getDefaultReminderMessage($order);
 
-        // Send WhatsApp reminder (via Web link)
+        // Generate QR code for WhatsApp
         if (in_array($channel, ['whatsapp', 'both'])) {
+            $qrCodePath = $this->generatePaymentQRCode($order);
             $whatsappLink = $this->getWhatsAppLink($order, $message);
         }
 
@@ -105,8 +107,45 @@ class PaymentController extends Controller
         return response()->json([
             'success' => $success,
             'message' => 'Reminder prepared successfully!',
-            'whatsapp_link' => $whatsappLink
+            'whatsapp_link' => $whatsappLink,
+            'qr_code_path' => $qrCodePath
         ]);
+    }
+
+    /**
+     * Generate UPI QR Code for payment
+     */
+    private function generatePaymentQRCode(Order $order)
+    {
+        try {
+            $upiId = config('payment.upi.id');
+            $upiName = config('payment.upi.name');
+            $amount = $order->final_payable;
+            
+            $upiUrl = "upi://pay?pa={$upiId}&pn=" . urlencode($upiName) . 
+                      "&am={$amount}&cu=INR&tn=" . urlencode("Payment for {$order->order_code}");
+            
+            // Create QR code directory if not exists
+            $qrDir = storage_path('app/public/qrcodes');
+            if (!file_exists($qrDir)) {
+                mkdir($qrDir, 0755, true);
+            }
+            
+            // Generate QR code filename
+            $filename = 'payment_' . $order->order_code . '_' . time() . '.png';
+            $filepath = $qrDir . '/' . $filename;
+            
+            // Generate and save QR code
+            \SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')
+                ->size(300)
+                ->generate($upiUrl, $filepath);
+            
+            return 'storage/qrcodes/' . $filename;
+            
+        } catch (\Exception $e) {
+            Log::error('QR Code generation failed: ' . $e->getMessage());
+            return null;
+        }
     }
 
     /**
@@ -289,10 +328,27 @@ class PaymentController extends Controller
         $message .= "• Total Amount: ₹" . number_format($order->total_amount, 2) . "\n" .
                "• *Pending Amount: ₹" . number_format($order->final_payable, 2) . "*\n\n" .
                "Please make the payment at your earliest convenience.\n\n" .
-               "Payment can be made via GPay, PhonePe, Paytm, or Bank Transfer.\n\n" .
+               $this->getPaymentDetailsMessage() . "\n" .
                "Thank you for your business! 🙏";
         
         return $message;
+    }
+
+    /**
+     * Get payment details message for WhatsApp
+     */
+    private function getPaymentDetailsMessage()
+    {
+        return "*Payment Options:*\n" .
+               "\n💳 *UPI Payment:*\n" .
+               "UPI ID: " . config('payment.upi.id') . "\n" .
+               "Name: " . config('payment.upi.name') . "\n" .
+               "\n🏦 *Bank Transfer:*\n" .
+               "Bank: " . config('payment.bank.name') . "\n" .
+               "A/C Name: " . config('payment.bank.account_name') . "\n" .
+               "A/C No: " . config('payment.bank.account_number') . "\n" .
+               "IFSC: " . config('payment.bank.ifsc_code') . "\n" .
+               "Branch: " . config('payment.bank.branch');
     }
 
     /**
