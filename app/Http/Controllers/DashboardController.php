@@ -27,8 +27,8 @@ class DashboardController extends Controller
                 DB::raw('SUM((order_items.total_price / order_totals.order_total_price) * (orders.total_amount - COALESCE(orders.extra_charge_total, 0))) as revenue'),
                 DB::raw('COUNT(DISTINCT orders.id) as order_count')
             )
-            ->whereMonth('orders.created_at', now()->month)
-            ->whereYear('orders.created_at', now()->year)
+            ->whereMonth('orders.event_from', now()->month)
+            ->whereYear('orders.event_from', now()->year)
             ->where('orders.payment_status', 'paid')
             ->whereNotNull('order_items.item_type')
             ->groupBy('order_items.item_type')
