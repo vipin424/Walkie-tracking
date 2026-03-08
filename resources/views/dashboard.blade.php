@@ -216,9 +216,27 @@
   <div class="col-lg-6">
     <div class="card border-0 shadow-sm h-100">
       <div class="card-header bg-white border-0 pb-0">
-        <h6 class="fw-bold mb-0">
-          <i class="bi bi-bar-chart text-success me-2"></i>This Month Revenue by Item Type
-        </h6>
+        <div class="d-flex justify-content-between align-items-center">
+          <h6 class="fw-bold mb-0">
+            <i class="bi bi-bar-chart text-success me-2"></i>Revenue by Item Type
+          </h6>
+          <form method="GET" action="{{ route('dashboard') }}" class="d-flex gap-2">
+            <select name="month" class="form-select form-select-sm" style="width: 120px;" onchange="this.form.submit()">
+              @for($m = 1; $m <= 12; $m++)
+                <option value="{{ $m }}" {{ $selectedMonth == $m ? 'selected' : '' }}>
+                  {{ date('F', mktime(0, 0, 0, $m, 1)) }}
+                </option>
+              @endfor
+            </select>
+            <select name="year" class="form-select form-select-sm" style="width: 100px;" onchange="this.form.submit()">
+              @for($y = date('Y'); $y >= date('Y') - 1; $y--)
+                <option value="{{ $y }}" {{ $selectedYear == $y ? 'selected' : '' }}>
+                  {{ $y }}
+                </option>
+              @endfor
+            </select>
+          </form>
+        </div>
       </div>
       <div class="card-body">
         @if($itemTypeRevenue->count() > 0)

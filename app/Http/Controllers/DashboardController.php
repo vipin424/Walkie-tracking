@@ -14,6 +14,10 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
+        // Get month and year from request, default to current month
+        $selectedMonth = $request->input('month', now()->month);
+        $selectedYear = $request->input('year', now()->year);
+
         // Monthly Revenue by Item Type (Only Paid Orders)
         // Calculate proportional revenue based on final order amount after discount and extra charges
         $itemTypeRevenue = DB::table('order_items')
@@ -27,8 +31,8 @@ class DashboardController extends Controller
                 DB::raw('SUM((order_items.total_price / order_totals.order_total_price) * (orders.total_amount - COALESCE(orders.extra_charge_total, 0))) as revenue'),
                 DB::raw('COUNT(DISTINCT orders.id) as order_count')
             )
-            ->whereMonth('orders.event_from', now()->month)
-            ->whereYear('orders.event_from', now()->year)
+            ->whereMonth('orders.event_from', $selectedMonth)
+            ->whereYear('orders.event_from', $selectedYear)
             ->where('orders.payment_status', 'paid')
             ->whereNotNull('order_items.item_type')
             ->groupBy('order_items.item_type')
@@ -138,7 +142,9 @@ class DashboardController extends Controller
             'paymentMethodStats',
             'clientStats',
             'monthlyRevenue',
-            'itemTypeRevenue'
+            'itemTypeRevenue',
+            'selectedMonth',
+            'selectedYear'
         ));
     }
 }
