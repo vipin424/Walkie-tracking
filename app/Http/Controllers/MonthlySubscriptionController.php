@@ -331,6 +331,7 @@ class MonthlySubscriptionController extends Controller
             Storage::disk('public')->delete(str_replace('storage/', '', $invoice->pdf_path));
         }
         
+        PaymentTransaction::where('payable_type', MonthlyInvoice::class)->where('payable_id', $invoice->id)->delete();
         $invoice->delete();
         return back()->with('success', 'Invoice deleted successfully.');
     }
