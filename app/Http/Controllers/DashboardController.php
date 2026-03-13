@@ -42,15 +42,23 @@ class DashboardController extends Controller
         // Monthly Subscriptions Revenue
         $subscriptionRevenue = DB::table('monthly_invoices')
             ->join('monthly_subscriptions', 'monthly_invoices.subscription_id', '=', 'monthly_subscriptions.id')
+            ->join(DB::raw("
+                JSON_TABLE(
+                    monthly_subscriptions.items_json,
+                    '$[*]' COLUMNS(
+                        type VARCHAR(50) PATH '$.type'
+                    )
+                ) as items
+            "), DB::raw('1'), '=', DB::raw('1'))
             ->select(
-                DB::raw('JSON_UNQUOTE(JSON_EXTRACT(items_json, "$[*].type")) as item_types'),
+                'items.type as item_type',
                 DB::raw('SUM(monthly_invoices.amount) as revenue'),
                 DB::raw('COUNT(DISTINCT monthly_invoices.id) as invoice_count')
             )
             ->whereMonth('monthly_invoices.created_at', $selectedMonth)
             ->whereYear('monthly_invoices.created_at', $selectedYear)
             ->where('monthly_invoices.status', 'paid')
-            ->groupBy('monthly_subscriptions.id')
+            ->groupBy('items.type')
             ->get();
 
         // Combine and aggregate by item type
