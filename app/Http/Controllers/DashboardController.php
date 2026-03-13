@@ -76,7 +76,7 @@ class DashboardController extends Controller
         
         // Add subscription revenue
         foreach ($subscriptionRevenue as $sub) {
-            $types = json_decode($sub->item_types, true);
+            $types = json_decode($sub->item_type, true);
             if (is_array($types)) {
                 foreach (array_unique($types) as $type) {
                     if ($type) {
