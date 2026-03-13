@@ -13,6 +13,7 @@ use App\Http\Controllers\{
     QuotationController,
     AgreementController,
     ItemController,
+    MonthlySubscriptionController,
 };
 
 Route::get('/', function () {
@@ -76,6 +77,15 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/orders/{order}/payment-history', [PaymentController::class, 'getPaymentHistory'])
         ->name('orders.payment-history');
 
+    // Monthly Subscriptions
+    Route::resource('subscriptions', MonthlySubscriptionController::class);
+    Route::get('subscriptions/{subscription}/generate-invoice', [MonthlySubscriptionController::class, 'generateInvoice'])->name('subscriptions.generate-invoice');
+    Route::post('monthly-invoice/{invoice}/send', [MonthlySubscriptionController::class, 'sendInvoice'])->name('monthly-invoice.send');
+    Route::post('monthly-invoice/{invoice}/send-reminder', [MonthlySubscriptionController::class, 'sendReminder'])->name('monthly-invoice.send-reminder');
+    Route::post('monthly-invoice/{invoice}/mark-paid', [MonthlySubscriptionController::class, 'markPaid'])->name('monthly-invoice.mark-paid');
+    Route::delete('monthly-invoice/{invoice}/delete', [MonthlySubscriptionController::class, 'deleteInvoice'])->name('monthly-invoice.delete');
+    Route::get('subscriptions/client/{id}', [MonthlySubscriptionController::class, 'getClientData'])->name('subscriptions.client-data');
+
 
     // View
     Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
@@ -96,3 +106,4 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/orders/{hash}/download',[OrderController::class, 'download'])->name('orders.download')->middleware('signed');
     Route::get('/agreement/sign/{code}',[AgreementController::class, 'show'])->name('agreement.sign');
     Route::post('/agreement/{code}', [AgreementController::class, 'submit'])->name('agreement.submit');
+    Route::get('/monthly-invoice/{hash}/download',[MonthlySubscriptionController::class, 'downloadInvoice'])->name('monthly-invoice.download')->middleware('signed');

@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\Client;
 use App\Models\Order;
 use App\Models\PaymentTransaction;
+use App\Models\MonthlyInvoice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -18,9 +19,9 @@ class DashboardController extends Controller
         $selectedMonth = $request->input('month', now()->month);
         $selectedYear = $request->input('year', now()->year);
 
-        // Monthly Revenue by Item Type (Only Paid Orders)
-        // Calculate proportional revenue based on final order amount after discount and extra charges
-        $itemTypeRevenue = DB::table('order_items')
+        // Monthly Revenue by Item Type (Orders + Monthly Subscriptions)
+        // Orders Revenue
+        $orderItemRevenue = DB::table('order_items')
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
             ->join(
                 DB::raw('(SELECT order_id, SUM(total_price) as order_total_price FROM order_items GROUP BY order_id) as order_totals'),
@@ -36,8 +37,66 @@ class DashboardController extends Controller
             ->where('orders.payment_status', 'paid')
             ->whereNotNull('order_items.item_type')
             ->groupBy('order_items.item_type')
-            ->orderByDesc('revenue')
             ->get();
+
+        // Monthly Subscriptions Revenue
+        $subscriptionRevenue = DB::table('monthly_invoices')
+            ->join('monthly_subscriptions', 'monthly_invoices.subscription_id', '=', 'monthly_subscriptions.id')
+            ->select(
+                DB::raw('JSON_UNQUOTE(JSON_EXTRACT(items_json, "$[*].type")) as item_types'),
+                DB::raw('SUM(monthly_invoices.amount) as revenue'),
+                DB::raw('COUNT(DISTINCT monthly_invoices.id) as invoice_count')
+            )
+            ->whereMonth('monthly_invoices.created_at', $selectedMonth)
+            ->whereYear('monthly_invoices.created_at', $selectedYear)
+            ->where('monthly_invoices.status', 'paid')
+            ->groupBy('monthly_subscriptions.id')
+            ->get();
+
+        // Combine and aggregate by item type
+        $itemTypeRevenue = collect();
+        
+        // Add order revenue
+        foreach ($orderItemRevenue as $item) {
+            $itemTypeRevenue->push([
+                'item_type' => $item->item_type,
+                'revenue' => $item->revenue,
+                'count' => $item->order_count,
+                'source' => 'orders'
+            ]);
+        }
+        
+        // Add subscription revenue
+        foreach ($subscriptionRevenue as $sub) {
+            $types = json_decode($sub->item_types, true);
+            if (is_array($types)) {
+                foreach (array_unique($types) as $type) {
+                    if ($type) {
+                        $existing = $itemTypeRevenue->firstWhere('item_type', $type);
+                        if ($existing) {
+                            $existing['revenue'] += $sub->revenue / count(array_unique($types));
+                            $existing['count'] += $sub->invoice_count;
+                        } else {
+                            $itemTypeRevenue->push([
+                                'item_type' => $type,
+                                'revenue' => $sub->revenue / count(array_unique($types)),
+                                'count' => $sub->invoice_count,
+                                'source' => 'subscriptions'
+                            ]);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Group by item_type and sum revenue
+        $itemTypeRevenue = $itemTypeRevenue->groupBy('item_type')->map(function ($items, $type) {
+            return (object) [
+                'item_type' => $type,
+                'revenue' => $items->sum('revenue'),
+                'order_count' => $items->sum('count')
+            ];
+        })->sortByDesc('revenue')->values();
 
         // Order Stats
         $orderStats = [

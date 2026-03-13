@@ -13,6 +13,7 @@ class ClientRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'contact_number' => 'required|string|max:20',
+            'email' => 'required|email|unique:clients|max:255',
             'company_name' => 'nullable|string|max:255',
         ];
     }

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Client extends Model
 {
     use HasFactory;
-    protected $fillable = ['name', 'contact_number', 'company_name'];
+    protected $fillable = ['name', 'contact_number', 'company_name', 'email'];
 
     public function dispatches()
     {

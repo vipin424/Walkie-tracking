@@ -11,6 +11,8 @@ class PaymentTransaction extends Model
 
     protected $fillable = [
         'order_id',
+        'payable_type',
+        'payable_id',
         'amount',
         'payment_method',
         'transaction_id',
@@ -27,6 +29,14 @@ class PaymentTransaction extends Model
     public function order()
     {
         return $this->belongsTo(Order::class);
+    }
+
+    /**
+     * Get the parent payable model (Order or MonthlyInvoice)
+     */
+    public function payable()
+    {
+        return $this->morphTo();
     }
 
     /**

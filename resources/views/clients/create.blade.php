@@ -13,6 +13,10 @@
     <input name="contact_number" class="form-control" required>
   </div>
   <div class="col-md-4">
+    <label class="form-label">Email</label>
+    <input name="email" class="form-control" type="email">
+  </div>
+  <div class="col-md-4">
     <label class="form-label">Company</label>
     <input name="company_name" class="form-control">
   </div>
