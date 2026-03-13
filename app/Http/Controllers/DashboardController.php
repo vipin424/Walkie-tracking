@@ -43,14 +43,14 @@ class DashboardController extends Controller
         $subscriptionRevenue = DB::table('monthly_invoices')
             ->join('monthly_subscriptions', 'monthly_invoices.subscription_id', '=', 'monthly_subscriptions.id')
             ->select(
-                DB::raw('JSON_UNQUOTE(JSON_EXTRACT(items_json, "$[*].type")) as item_types'),
+                'monthly_subscriptions.items_json',
                 DB::raw('SUM(monthly_invoices.amount) as revenue'),
                 DB::raw('COUNT(DISTINCT monthly_invoices.id) as invoice_count')
             )
             ->whereMonth('monthly_invoices.created_at', $selectedMonth)
             ->whereYear('monthly_invoices.created_at', $selectedYear)
             ->where('monthly_invoices.status', 'paid')
-            ->groupBy('monthly_subscriptions.id')
+            ->groupBy('monthly_subscriptions.id','monthly_subscriptions.items_json')
             ->get();
 
         // Combine and aggregate by item type
@@ -68,27 +68,40 @@ class DashboardController extends Controller
         
         // Add subscription revenue
         foreach ($subscriptionRevenue as $sub) {
-            $types = json_decode($sub->item_types, true);
-            if (is_array($types)) {
-                foreach (array_unique($types) as $type) {
-                    if ($type) {
-                        $existing = $itemTypeRevenue->firstWhere('item_type', $type);
-                        if ($existing) {
-                            $existing['revenue'] += $sub->revenue / count(array_unique($types));
-                            $existing['count'] += $sub->invoice_count;
-                        } else {
-                            $itemTypeRevenue->push([
-                                'item_type' => $type,
-                                'revenue' => $sub->revenue / count(array_unique($types)),
-                                'count' => $sub->invoice_count,
-                                'source' => 'subscriptions'
-                            ]);
-                        }
+
+            $items = json_decode($sub->items_json, true);
+
+            if (is_array($items)) {
+
+                $types = array_unique(array_column($items, 'type'));
+                $splitRevenue = $sub->revenue / count($types);
+
+                foreach ($types as $type) {
+
+                    if (!$type) continue;
+
+                    $index = $itemTypeRevenue->search(function ($item) use ($type) {
+                        return $item['item_type'] === $type;
+                    });
+
+                    if ($index !== false) {
+
+                        $itemTypeRevenue[$index]['revenue'] += $splitRevenue;
+                        $itemTypeRevenue[$index]['count'] += $sub->invoice_count;
+
+                    } else {
+
+                        $itemTypeRevenue->push([
+                            'item_type' => $type,
+                            'revenue' => $splitRevenue,
+                            'count' => $sub->invoice_count,
+                            'source' => 'subscriptions'
+                        ]);
+
                     }
                 }
             }
         }
-        
         // Group by item_type and sum revenue
         $itemTypeRevenue = $itemTypeRevenue->groupBy('item_type')->map(function ($items, $type) {
             return (object) [
