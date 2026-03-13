@@ -54,62 +54,71 @@ class DashboardController extends Controller
             ->get();
 
         // Combine and aggregate by item type
-        $itemTypeRevenue = collect();
-        
-        // Add order revenue
-        foreach ($orderItemRevenue as $item) {
-            $itemTypeRevenue->push([
-                'item_type' => $item->item_type,
-                'revenue' => $item->revenue,
-                'count' => $item->order_count,
-                'source' => 'orders'
-            ]);
-        }
-        
-        // Add subscription revenue
-        foreach ($subscriptionRevenue as $sub) {
+            $itemTypeRevenue = [];
 
-            $items = json_decode($sub->items_json, true);
+            /* ---------------- ORDERS REVENUE ---------------- */
 
-            if (is_array($items)) {
+            foreach ($orderItemRevenue as $item) {
+
+                $type = $item->item_type;
+
+                if (!isset($itemTypeRevenue[$type])) {
+                    $itemTypeRevenue[$type] = [
+                        'item_type' => $type,
+                        'revenue' => 0,
+                        'order_count' => 0
+                    ];
+                }
+
+                $itemTypeRevenue[$type]['revenue'] += $item->revenue;
+                $itemTypeRevenue[$type]['order_count'] += $item->order_count;
+            }
+
+
+            /* ---------------- SUBSCRIPTION REVENUE ---------------- */
+
+            foreach ($subscriptionRevenue as $sub) {
+
+                $items = json_decode($sub->items_json, true);
+
+                if (!is_array($items)) {
+                    continue;
+                }
 
                 $types = array_unique(array_column($items, 'type'));
+
+                if (count($types) == 0) {
+                    continue;
+                }
+
                 $splitRevenue = $sub->revenue / count($types);
 
                 foreach ($types as $type) {
 
                     if (!$type) continue;
 
-                    $index = $itemTypeRevenue->search(function ($item) use ($type) {
-                        return $item['item_type'] === $type;
-                    });
-
-                    if ($index !== false) {
-
-                        $itemTypeRevenue[$index]['revenue'] += $splitRevenue;
-                        $itemTypeRevenue[$index]['count'] += $sub->invoice_count;
-
-                    } else {
-
-                        $itemTypeRevenue->push([
+                    if (!isset($itemTypeRevenue[$type])) {
+                        $itemTypeRevenue[$type] = [
                             'item_type' => $type,
-                            'revenue' => $splitRevenue,
-                            'count' => $sub->invoice_count,
-                            'source' => 'subscriptions'
-                        ]);
-
+                            'revenue' => 0,
+                            'order_count' => 0
+                        ];
                     }
+
+                    $itemTypeRevenue[$type]['revenue'] += $splitRevenue;
+                    $itemTypeRevenue[$type]['order_count'] += $sub->invoice_count;
                 }
             }
-        }
-        // Group by item_type and sum revenue
-        $itemTypeRevenue = $itemTypeRevenue->groupBy('item_type')->map(function ($items, $type) {
-            return (object) [
-                'item_type' => $type,
-                'revenue' => $items->sum('revenue'),
-                'order_count' => $items->sum('count')
-            ];
-        })->sortByDesc('revenue')->values();
+
+
+            /* ---------------- FINAL COLLECTION ---------------- */
+
+            $itemTypeRevenue = collect($itemTypeRevenue)
+                ->map(function ($item) {
+                    return (object) $item;
+                })
+                ->sortByDesc('revenue')
+                ->values();
 
         // Order Stats
         $orderStats = [
