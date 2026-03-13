@@ -32,8 +32,8 @@ class DashboardController extends Controller
                 DB::raw('SUM((order_items.total_price / order_totals.order_total_price) * (orders.total_amount - COALESCE(orders.extra_charge_total, 0))) as revenue'),
                 DB::raw('COUNT(DISTINCT orders.id) as order_count')
             )
-            ->whereMonth('orders.event_from', $selectedMonth)
-            ->whereYear('orders.event_from', $selectedYear)
+            ->whereMonth('orders.created_at', $selectedMonth)
+            ->whereYear('orders.created_at', $selectedYear)
             ->where('orders.payment_status', 'paid')
             ->whereNotNull('order_items.item_type')
             ->groupBy('order_items.item_type')
@@ -42,23 +42,15 @@ class DashboardController extends Controller
         // Monthly Subscriptions Revenue
         $subscriptionRevenue = DB::table('monthly_invoices')
             ->join('monthly_subscriptions', 'monthly_invoices.subscription_id', '=', 'monthly_subscriptions.id')
-            ->join(DB::raw("
-                JSON_TABLE(
-                    monthly_subscriptions.items_json,
-                    '$[*]' COLUMNS(
-                        type VARCHAR(50) PATH '$.type'
-                    )
-                ) as items
-            "), DB::raw('1'), '=', DB::raw('1'))
             ->select(
-                'items.type as item_type',
+                DB::raw('JSON_UNQUOTE(JSON_EXTRACT(items_json, "$[*].type")) as item_types'),
                 DB::raw('SUM(monthly_invoices.amount) as revenue'),
                 DB::raw('COUNT(DISTINCT monthly_invoices.id) as invoice_count')
             )
             ->whereMonth('monthly_invoices.created_at', $selectedMonth)
             ->whereYear('monthly_invoices.created_at', $selectedYear)
             ->where('monthly_invoices.status', 'paid')
-            ->groupBy('items.type')
+            ->groupBy('monthly_subscriptions.id')
             ->get();
 
         // Combine and aggregate by item type
@@ -76,7 +68,7 @@ class DashboardController extends Controller
         
         // Add subscription revenue
         foreach ($subscriptionRevenue as $sub) {
-            $types = json_decode($sub->item_type, true);
+            $types = json_decode($sub->item_types, true);
             if (is_array($types)) {
                 foreach (array_unique($types) as $type) {
                     if ($type) {
