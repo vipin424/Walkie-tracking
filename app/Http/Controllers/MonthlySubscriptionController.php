@@ -129,11 +129,14 @@ class MonthlySubscriptionController extends Controller
         $billingDay = $subscription->billing_day_of_month;
         $today = Carbon::today();
         
-        $periodFrom = Carbon::create($today->year, $today->month, $billingDay);
-        if ($periodFrom->gt($today)) {
-            $periodFrom->subMonth();
+        $currentBillingDay = Carbon::create($today->year, $today->month, $billingDay);
+        
+        if ($currentBillingDay->gt($today)) {
+            return redirect()->back()->with('error', 'Invoice can only be generated after the billing day of the month.');
         }
-        $periodTo = $periodFrom->copy()->addMonth()->subDay();
+        
+        $periodFrom = $currentBillingDay->copy()->subMonth();
+        $periodTo = $periodFrom->copy()->addMonth();
 
         // Check if invoice already exists for this billing period
         $existingInvoice = MonthlyInvoice::where('subscription_id', $subscription->id)
