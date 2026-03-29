@@ -227,7 +227,7 @@
 
         @if($order->extra_charge_type === 'delivery')
         <tr class="total-row">
-            <td colspan="7" class="right">Delivery & Setup Charges</td>
+            <td colspan="7" class="right">Delivery & Up/Down Charges</td>
             <td class="right">₹{{ number_format($order->extra_charge_total,2) }}</td>
         </tr>
         @endif
