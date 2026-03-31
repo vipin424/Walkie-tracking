@@ -13,7 +13,10 @@
     <div class="row g-3">
       <div class="col-md-6">
         <label class="form-label fw-semibold">Client Name <span class="text-danger">*</span></label>
-        <input name="client_name" class="form-control @error('client_name') is-invalid @enderror" value="{{ old('client_name', $order->client_name ?? '') }}" required>
+        <div style="position: relative;">
+          <input id="client_name" name="client_name" class="form-control @error('client_name') is-invalid @enderror" value="{{ old('client_name', $order->client_name ?? '') }}" required autocomplete="off">
+          <div id="client_suggestions" class="list-group" style="display: none; position: absolute; width: 100%; top: 100%; left: 0; z-index: 1000; margin-top: 2px;"></div>
+        </div>
         @error('client_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
       </div>
       <div class="col-md-3">
@@ -567,6 +570,86 @@ document.addEventListener('DOMContentLoaded', function(){
             console.error(error);
         });
 </script>
+<!-- Client Name Autocomplete from Orders Table -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const clientNameInput = document.getElementById('client_name');
+    const suggestionsDiv = document.getElementById('client_suggestions');
+    const searchUrl = '{{ route("orders.searchClients") }}';
+    
+    if (!clientNameInput) {
+        console.log('Client name input not found');
+        return;
+    }
+    
+    clientNameInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        
+        console.log('Searching for:', query);
+        console.log('URL:', searchUrl + '?q=' + encodeURIComponent(query));
+        
+        fetch(searchUrl + '?q=' + encodeURIComponent(query))
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Data received:', data);
+                suggestionsDiv.innerHTML = '';
+                
+                if (!data || data.length === 0) {
+                    console.log('No data found');
+                    suggestionsDiv.style.display = 'none';
+                    return;
+                }
+                
+                data.forEach(client => {
+                    const suggestionItem = document.createElement('a');
+                    suggestionItem.href = '#';
+                    suggestionItem.className = 'list-group-item list-group-item-action';
+                    suggestionItem.style.cursor = 'pointer';
+                    suggestionItem.innerHTML = `
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">${client.name}</h6>
+                            <small>${client.phone}</small>
+                        </div>
+                        <small class="text-muted">${client.email || 'No email'}</small>
+                    `;
+                    
+                    suggestionItem.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        console.log('Selected client:', client);
+                        document.getElementById('client_name').value = client.name;
+                        document.querySelector('input[name="client_email"]').value = client.email || '';
+                        document.querySelector('input[name="client_phone"]').value = client.phone;
+                        suggestionsDiv.style.display = 'none';
+                    });
+                    
+                    suggestionsDiv.appendChild(suggestionItem);
+                });
+                
+                suggestionsDiv.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                suggestionsDiv.style.display = 'none';
+            });
+    });
+    
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (e.target !== clientNameInput) {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
+});
+</script>
+
 <!-- <script>
 document.addEventListener('DOMContentLoaded', function(){
     function recalcRow(row){

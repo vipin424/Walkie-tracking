@@ -970,7 +970,33 @@ class OrderController extends Controller
     }
 
 
+    public function searchClients(Request $request)
+    {
+        $search = $request->get('q', '');
+        
+        if (strlen($search) < 2) {
+            return response()->json([]);
+        }
 
+        // Search from orders table - get distinct clients by name and phone
+        $clients = Order::where('client_name', 'like', "%{$search}%")
+            ->distinct()
+            ->orderBy('client_name')
+            ->limit(10)
+            ->get(['client_name', 'client_email', 'client_phone']);
+
+        $results = $clients->map(function($client) {
+            return [
+                'id' => $client->client_phone,
+                'text' => $client->client_name . ' (' . $client->client_phone . ')',
+                'name' => $client->client_name,
+                'email' => $client->client_email,
+                'phone' => $client->client_phone,
+            ];
+        })->unique('phone')->values();
+
+        return response()->json($results);
+    }
 
 
 

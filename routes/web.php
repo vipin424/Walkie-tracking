@@ -47,6 +47,7 @@ Route::middleware(['auth'])->group(function () {
     //Route::get('quotations/{quotation}/download',[QuotationController::class, 'download'])->name('quotations.download');
 
     Route::resource('orders', OrderController::class);
+    Route::get('orders-search-clients', [OrderController::class, 'searchClients'])->name('orders.searchClients');
         // Direct order create
     Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');
     Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
