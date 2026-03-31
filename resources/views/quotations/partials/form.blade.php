@@ -66,7 +66,7 @@
             id="notes_editor"
             class="form-control"
             rows="4"
-        >{{ old('notes', $quotation->notes ?? '') }}</textarea>
+        >{{ old('notes', $quotation->notes ?? 'To proceed with the order confirmation, kindly make a 50% advance payment to the bank details mentioned below.') }}</textarea>
     </div>
 
 
