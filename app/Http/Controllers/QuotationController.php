@@ -473,18 +473,23 @@ class QuotationController extends Controller
             $quotation->refresh();
         }
 
-        /** ✅ Generate signed quotation download URL (7 days valid) */
+        /** ✅ Generate signed quotation download URL (7 days valid) with short hash/obfuscation */
+        $hash = substr(md5($quotation->id . config('app.key')), 0, 8);
         $url = URL::temporarySignedRoute(
             'quotations.download',
             now()->addDays(7),
-            ['quotation' => $quotation->id]
+            ['hash' => $hash, 'ref' => $quotation->id]
         );
 
         /** ✅ WhatsApp message */
+        $eventFrom = optional($quotation->event_from)->format('d M Y');
+        $eventTo = optional($quotation->event_to)->format('d M Y');
+
         $messageText =
             "Hello *{$quotation->client_name}*,\n\n" .
-            "Here is your quotation *{$quotation->code}*.\n\n" .
-            "Total Amount: ₹" . number_format($quotation->total_amount, 2) . "\n\n" .
+            "Your quotation *{$quotation->code}* is ready.\n\n" .
+            "📅 *Event Date:* {$eventFrom} to {$eventTo}\n" .
+            "💰 *Total Amount:* ₹" . number_format($quotation->total_amount, 2) . "\n\n" .
             "Download Quotation PDF:\n{$url}\n\n" .
             "This link is valid for 7 days.\n\n" .
             "Please reply to confirm.\n\n" .
@@ -516,15 +521,27 @@ class QuotationController extends Controller
 
 
 
-    public function download(Quotation $quotation)
+    public function download($hash, Request $request)
     {
+        if (!request()->hasValidSignature()) {
+            abort(403, 'This download link has expired or is invalid.');
+        }
+
+        $quotationId = $request->get('ref');
+        $expectedHash = substr(md5($quotationId . config('app.key')), 0, 8);
+
+        if ($hash !== $expectedHash) {
+            abort(403, 'Invalid link.');
+        }
+
+        $quotation = Quotation::findOrFail($quotationId);
+
         if (!$quotation->pdf_path) {
             abort(404, 'PDF not found');
         }
 
         // convert storage path → disk path
         $diskPath = str_replace('storage/', '', $quotation->pdf_path);
-        // now: quotations/QTN-20260122-249.pdf
 
         if (!Storage::disk('public')->exists($diskPath)) {
             abort(404, 'File not found');

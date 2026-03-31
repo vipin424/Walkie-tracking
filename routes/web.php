@@ -102,7 +102,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
     Route::post('payments/{dispatch}', [PaymentController::class, 'storeOrUpdate'])->name('payments.store');
 });
-    Route::get('quotations/{quotation}/download',[QuotationController::class, 'download'])->name('quotations.download');
+    // signed download with obfuscated ID for security (similar to order flow)
+    Route::get('quotations/{hash}/download',[QuotationController::class, 'download'])->name('quotations.download')->middleware('signed');
     Route::get('/orders/{hash}/download',[OrderController::class, 'download'])->name('orders.download')->middleware('signed');
     Route::get('/agreement/sign/{code}',[AgreementController::class, 'show'])->name('agreement.sign');
     Route::post('/agreement/{code}', [AgreementController::class, 'submit'])->name('agreement.submit');
