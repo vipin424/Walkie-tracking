@@ -488,7 +488,10 @@ class QuotationController extends Controller
         $messageText =
             "Hello *{$quotation->client_name}*,\n\n" .
             "Your quotation *{$quotation->code}* is ready.\n\n" .
-            "📅 *Event Date:* {$eventFrom} to {$eventTo}\n" .
+            "📅 *Event Date:* " .
+            Carbon::parse($quotation->event_from)->format('d M Y') .
+            " to " .
+            Carbon::parse($quotation->event_to)->format('d M Y') . "\n\n" .
             "💰 *Total Amount:* ₹" . number_format($quotation->total_amount, 2) . "\n\n" .
             "Download Quotation PDF:\n{$url}\n\n" .
             "This link is valid for 7 days.\n\n" .
