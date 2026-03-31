@@ -108,4 +108,4 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/agreement/sign/{code}',[AgreementController::class, 'show'])->name('agreement.sign');
     Route::post('/agreement/{code}', [AgreementController::class, 'submit'])->name('agreement.submit');
     // Monthly invoice download - must be outside auth routes as it's accessed from email links
-    Route::get('/monthly-invoice/download',[MonthlySubscriptionController::class, 'downloadInvoice'])->name('monthly-invoice.download')->middleware('signed');
+    Route::get('/monthly-invoice/{hash}/download',[MonthlySubscriptionController::class, 'downloadInvoice'])->name('monthly-invoice.download')->middleware('signed');

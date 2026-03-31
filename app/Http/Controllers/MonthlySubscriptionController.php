@@ -195,7 +195,7 @@ class MonthlySubscriptionController extends Controller
         }
 
         $hash = substr(md5($invoice->id . config('app.key')), 0, 8);
-        $url = URL::temporarySignedRoute('monthly-invoice.download', now()->addDays(30), ['id' => $invoice->id, 'hash' => $hash]);
+        $url = URL::temporarySignedRoute('monthly-invoice.download', now()->addDays(30), ['hash' => $hash, 'ref' => $invoice->id]);
 
         if ($request->method === 'email') {
             $mail = new \App\Mail\MonthlyInvoiceMail($invoice, $url, $request->message);
@@ -251,7 +251,7 @@ class MonthlySubscriptionController extends Controller
         }
 
         $hash = substr(md5($invoice->id . config('app.key')), 0, 8);
-        $url = URL::temporarySignedRoute('monthly-invoice.download', now()->addDays(30), ['id' => $invoice->id, 'hash' => $hash]);
+        $url = URL::temporarySignedRoute('monthly-invoice.download', now()->addDays(30), ['hash' => $hash, 'ref' => $invoice->id]);
 
         $reminderMessage = $request->message ?: 'This is a friendly reminder that your invoice is still pending payment. Please process the payment at your earliest convenience.';
 
@@ -291,24 +291,26 @@ class MonthlySubscriptionController extends Controller
         return back()->with('success', 'Payment reminder sent successfully.');
     }
 
-    public function downloadInvoice(Request $request)
+    public function downloadInvoice($hash, Request $request)
     {
-        if (!$request->hasValidSignature()) abort(403, 'Link expired or invalid.');
+        if (!$request->hasValidSignature()) {
+            abort(403, 'This download link has expired or is invalid.');
+        }
 
-        $invoiceId = $request->get('id');
-        $hash = $request->get('hash');
+        $invoiceId = $request->get('ref');
         $expectedHash = substr(md5($invoiceId . config('app.key')), 0, 8);
         
-        if ($hash !== $expectedHash) abort(403, 'Invalid hash.');
+        if ($hash !== $expectedHash) {
+            abort(403, 'Invalid link.');
+        }
 
         $invoice = MonthlyInvoice::findOrFail($invoiceId);
         
-        // Check if PDF exists
-        if (!$invoice->pdf_path || !Storage::disk('public')->exists($invoice->pdf_path)) {
-            abort(404, 'Invoice PDF not found. Please contact support.');
+        if (!$invoice->pdf_path) {
+            abort(404, 'Invoice PDF not found.');
         }
 
-        $filePath = storage_path('app/public/' . $invoice->pdf_path);
+        $filePath = storage_path('app/public/' . str_replace('storage/', '', $invoice->pdf_path));
         
         if (!file_exists($filePath)) {
             abort(404, 'Invoice PDF file not found on server.');
