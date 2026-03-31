@@ -195,7 +195,7 @@ class MonthlySubscriptionController extends Controller
         }
 
         $hash = substr(md5($invoice->id . config('app.key')), 0, 8);
-        $url = URL::temporarySignedRoute('monthly-invoice.download', now()->addDays(30), ['id' => $invoice->id]) . '&hash=' . $hash;
+        $url = URL::temporarySignedRoute('monthly-invoice.download', now()->addDays(30), ['id' => $invoice->id, 'hash' => $hash]);
 
         if ($request->method === 'email') {
             $mail = new \App\Mail\MonthlyInvoiceMail($invoice, $url, $request->message);
@@ -251,7 +251,7 @@ class MonthlySubscriptionController extends Controller
         }
 
         $hash = substr(md5($invoice->id . config('app.key')), 0, 8);
-        $url = URL::temporarySignedRoute('monthly-invoice.download', now()->addDays(30), ['id' => $invoice->id]) . '&hash=' . $hash;
+        $url = URL::temporarySignedRoute('monthly-invoice.download', now()->addDays(30), ['id' => $invoice->id, 'hash' => $hash]);
 
         $reminderMessage = $request->message ?: 'This is a friendly reminder that your invoice is still pending payment. Please process the payment at your earliest convenience.';
 
