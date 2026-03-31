@@ -931,7 +931,6 @@ class OrderController extends Controller
                 'event_from' => $quotation->event_from,
                 'event_to'   => $quotation->event_to,
                 'handle_type' => $quotation->handle_type,
-                'notes'      => $quotation->notes,
                 'bill_to'    => $quotation->bill_to,
                 'total_days' => $quotation->total_days,
 

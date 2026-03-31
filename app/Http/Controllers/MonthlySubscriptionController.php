@@ -173,9 +173,11 @@ class MonthlySubscriptionController extends Controller
         $pdf = PDF::loadHTML($html)->setPaper('a4', 'portrait');
 
         $fileName = $invoice->invoice_code . '.pdf';
-        Storage::disk('public')->put('monthly-invoices/'.$fileName, $pdf->output());
+        $path = 'monthly-invoices/'.$fileName;
+        Storage::disk('public')->put($path, $pdf->output());
 
-        $invoice->update(['pdf_path' => 'storage/monthly-invoices/' . $fileName]);
+        // Store relative path for easier retrieval
+        $invoice->update(['pdf_path' => $path]);
     }
 
     public function sendInvoice(Request $request, MonthlyInvoice $invoice)
@@ -187,13 +189,13 @@ class MonthlySubscriptionController extends Controller
             'message' => 'nullable|string',
         ]);
 
-        if (!$invoice->pdf_path || !Storage::disk('public')->exists(str_replace('storage/', '', $invoice->pdf_path))) {
+        if (!$invoice->pdf_path || !Storage::disk('public')->exists($invoice->pdf_path)) {
             $this->generatePdf($invoice);
             $invoice->refresh();
         }
 
         $hash = substr(md5($invoice->id . config('app.key')), 0, 8);
-        $url = URL::temporarySignedRoute('monthly-invoice.download', now()->addDays(30), ['hash' => $hash, 'ref' => $invoice->id]);
+        $url = URL::temporarySignedRoute('monthly-invoice.download', now()->addDays(30), ['id' => $invoice->id]) . '&hash=' . $hash;
 
         if ($request->method === 'email') {
             $mail = new \App\Mail\MonthlyInvoiceMail($invoice, $url, $request->message);
@@ -243,13 +245,13 @@ class MonthlySubscriptionController extends Controller
             'message' => 'nullable|string',
         ]);
 
-        if (!$invoice->pdf_path || !Storage::disk('public')->exists(str_replace('storage/', '', $invoice->pdf_path))) {
+        if (!$invoice->pdf_path || !Storage::disk('public')->exists($invoice->pdf_path)) {
             $this->generatePdf($invoice);
             $invoice->refresh();
         }
 
         $hash = substr(md5($invoice->id . config('app.key')), 0, 8);
-        $url = URL::temporarySignedRoute('monthly-invoice.download', now()->addDays(30), ['hash' => $hash, 'ref' => $invoice->id]);
+        $url = URL::temporarySignedRoute('monthly-invoice.download', now()->addDays(30), ['id' => $invoice->id]) . '&hash=' . $hash;
 
         $reminderMessage = $request->message ?: 'This is a friendly reminder that your invoice is still pending payment. Please process the payment at your earliest convenience.';
 
@@ -289,23 +291,32 @@ class MonthlySubscriptionController extends Controller
         return back()->with('success', 'Payment reminder sent successfully.');
     }
 
-    public function downloadInvoice($hash, Request $request)
+    public function downloadInvoice(Request $request)
     {
         if (!$request->hasValidSignature()) abort(403, 'Link expired or invalid.');
 
-        $invoiceId = $request->get('ref');
+        $invoiceId = $request->get('id');
+        $hash = $request->get('hash');
         $expectedHash = substr(md5($invoiceId . config('app.key')), 0, 8);
         
-        if ($hash !== $expectedHash) abort(403, 'Invalid link.');
+        if ($hash !== $expectedHash) abort(403, 'Invalid hash.');
 
         $invoice = MonthlyInvoice::findOrFail($invoiceId);
-        $filePath = storage_path('app/public/' . str_replace('storage/', '', $invoice->pdf_path));
+        
+        // Check if PDF exists
+        if (!$invoice->pdf_path || !Storage::disk('public')->exists($invoice->pdf_path)) {
+            abort(404, 'Invoice PDF not found. Please contact support.');
+        }
 
-        if (!file_exists($filePath)) abort(404, 'Invoice not found.');
+        $filePath = storage_path('app/public/' . $invoice->pdf_path);
+        
+        if (!file_exists($filePath)) {
+            abort(404, 'Invoice PDF file not found on server.');
+        }
 
         return response()->file($filePath, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="'.$invoice->invoice_code.'.pdf"',
+            'Content-Disposition' => 'attachment; filename="'.$invoice->invoice_code.'.pdf"',
         ]);
     }
 
