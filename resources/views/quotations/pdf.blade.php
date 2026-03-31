@@ -46,6 +46,36 @@
       .total-row td {font-weight:bold;}
       .notes {margin-top:20px; font-size:11px;}
       .footer {position:fixed; bottom:0px; font-size:10px; width:100%; text-align:center; color:#888;}
+      .payment-details {
+            margin-top: 30px;
+            border: 2px solid #ff9800;
+            padding: 15px;
+            background: #fff8e1;
+        }
+        .payment-details h3 {
+            margin: 0 0 10px 0;
+            color: #ff9800;
+        }
+        .payment-grid {
+            display: table;
+            width: 100%;
+        }
+        .bank-details {
+            display: table-cell;
+            width: 60%;
+            padding-right: 20px;
+            vertical-align: top;
+        }
+        .qr-section {
+            display: table-cell;
+            width: 40%;
+            text-align: center;
+            vertical-align: top;
+        }
+        .qr-section img {
+            width: 150px;
+            height: 150px;
+        }
     </style>
 </head>
 <body>
@@ -185,6 +215,58 @@
   </tfoot>
 
   </table>
+
+  {{-- ================= PAYMENT DETAILS (Quotation Payment Intent) ================= --}}
+  @if($quotation->total_amount > 0)
+  @php
+      $paymentAmount = $quotation->total_amount;
+      $upiId = config('payment.upi.id');
+      $upiName = config('payment.upi.name');
+      $upiUrl = "upi://pay?pa={$upiId}&pn=" . urlencode($upiName) . "&am={$paymentAmount}&cu=INR&tn=" . urlencode("Payment for {$quotation->code}");
+      $qrCode = base64_encode(QrCode::format('png')->size(200)->generate($upiUrl));
+  @endphp
+
+  <div class="payment-details">
+      <h3>Payment Details</h3>
+      <div class="payment-grid">
+          <div class="bank-details">
+              <strong>Bank Transfer Details:</strong><br>
+              <table style="margin-top: 10px; border: none;">
+                  <tr style="border: none;">
+                      <td style="border: none; padding: 3px 10px 3px 0;"><strong>Bank Name:</strong></td>
+                      <td style="border: none; padding: 3px 0;">{{ config('payment.bank.name') }}</td>
+                  </tr>
+                  <tr style="border: none;">
+                      <td style="border: none; padding: 3px 10px 3px 0;"><strong>Account Name:</strong></td>
+                      <td style="border: none; padding: 3px 0;">{{ config('payment.bank.account_name') }}</td>
+                  </tr>
+                  <tr style="border: none;">
+                      <td style="border: none; padding: 3px 10px 3px 0;"><strong>Account Number:</strong></td>
+                      <td style="border: none; padding: 3px 0;">{{ config('payment.bank.account_number') }}</td>
+                  </tr>
+                  <tr style="border: none;">
+                      <td style="border: none; padding: 3px 10px 3px 0;"><strong>IFSC Code:</strong></td>
+                      <td style="border: none; padding: 3px 0;">{{ config('payment.bank.ifsc_code') }}</td>
+                  </tr>
+                  <tr style="border: none;">
+                      <td style="border: none; padding: 3px 10px 3px 0;"><strong>Branch:</strong></td>
+                      <td style="border: none; padding: 3px 0;">{{ config('payment.bank.branch') }}</td>
+                  </tr>
+                  <tr style="border: none;">
+                      <td style="border: none; padding: 3px 10px 3px 0;"><strong>PAN Number:</strong></td>
+                      <td style="border: none; padding: 3px 0;">{{ config('payment.bank.pan_number') }}</td>
+                  </tr>
+              </table>
+          </div>
+          <div class="qr-section">
+              <strong>Scan to Pay via UPI</strong><br>
+              <img src="data:image/png;base64,{{ $qrCode }}" alt="UPI QR Code"><br>
+              <strong style="font-size: 14px; color: #f44336;">₹{{ number_format($paymentAmount, 2) }}</strong><br>
+              <span style="font-size: 10px;">UPI ID: {{ $upiId }}</span>
+          </div>
+      </div>
+  </div>
+  @endif
 
   <div class="notes">
     <strong>Notes & Terms:</strong>
