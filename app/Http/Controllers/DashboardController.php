@@ -35,6 +35,7 @@ class DashboardController extends Controller
             ->whereMonth('orders.created_at', $selectedMonth)
             ->whereYear('orders.created_at', $selectedYear)
             ->where('orders.payment_status', 'paid')
+            ->where('orders.company_id', auth()->user()->company_id)
             ->whereNotNull('order_items.item_type')
             ->groupBy('order_items.item_type')
             ->get();

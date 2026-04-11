@@ -397,7 +397,8 @@ class QuotationController extends Controller
     public function generatePdf(Quotation $quotation)
     {
         $quotation->load('items');
-        $html = view('quotations.pdf', compact('quotation'))->render();
+        $company = auth()->user()?->company;
+        $html = view('quotations.pdf', compact('quotation', 'company'))->render();
         $pdf = PDF::loadHTML($html)->setPaper('a4', 'portrait');
 
         $fileName = $quotation->code . '.pdf';

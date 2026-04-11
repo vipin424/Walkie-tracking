@@ -18,7 +18,7 @@
 {{-- TODAY'S HIGHLIGHTS --}}
 <div class="row g-3 mb-4">
   <div class="col-12">
-    <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #004d40 0%, #4ba26b 100%);">
+    <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, {{ $currentCompany->primary_color ?? '#004d40' }} 0%, {{ $currentCompany->secondary_color ?? '#4ba26b' }} 100%);">
       <div class="card-body text-white">
         <div class="row align-items-center">
           <div class="col-md-3 text-center border-end border-white border-opacity-25">

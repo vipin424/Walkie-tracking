@@ -3,13 +3,16 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
+use App\Traits\BelongsToCompany;
 
 class Quotation extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
         'code','client_name','client_email','client_phone','event_from','event_to','handle_type','total_days',
-        'notes','bill_to','subtotal','tax_amount','discount_amount','extra_charge_type','extra_charge_rate','extra_charge_total','total_amount','status','created_by','pdf_path'
+        'notes','bill_to','subtotal','tax_amount','discount_amount','extra_charge_type','extra_charge_rate','extra_charge_total','total_amount','status','created_by','pdf_path',
+        'company_id',
     ];
 
     protected static function booted()

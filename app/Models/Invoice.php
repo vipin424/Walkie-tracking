@@ -3,12 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToCompany;
 
 class Invoice extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
         'client_id', 'invoice_code', 'start_date', 'end_date',
-        'total_amount', 'total_days', 'total_items', 'invoice_path',
+        'total_amount', 'total_days', 'total_items', 'invoice_path', 'company_id',
     ];
 
     public function client()

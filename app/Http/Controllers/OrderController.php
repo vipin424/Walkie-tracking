@@ -246,6 +246,19 @@ class OrderController extends Controller
                     'total_price' => $baseTotal + $lineTax,
                 ]);
             }
+
+            /** 🔹 RECORD ADVANCE PAYMENT TRANSACTION */
+            if ($request->advance_paid > 0) {
+                PaymentTransaction::create([
+                    'company_id'     => auth()->user()->company_id,
+                    'order_id'       => $order->id,
+                    'amount'         => $request->advance_paid,
+                    'payment_method' => $request->advance_payment_method ?? 'upi',
+                    'notes'          => 'Advance payment received at order creation',
+                    'paid_at'        => now(),
+                    'recorded_by'    => auth()->user()->name ?? 'Admin',
+                ]);
+            }
         });
 
         // Generate WhatsApp link and store in session
@@ -664,7 +677,8 @@ class OrderController extends Controller
     public function generatePdf(Order $order)
     {
         $order->load('items');
-        $html = view('orders.pdf', compact('order'))->render();
+        $company = auth()->user()?->company;
+        $html = view('orders.pdf', compact('order', 'company'))->render();
         $pdf = PDF::loadHTML($html)->setPaper('a4', 'portrait');
 
         $fileName = $order->order_code . '.pdf';
@@ -956,6 +970,19 @@ class OrderController extends Controller
             /** ✅ COPY ITEMS */
             foreach ($quotation->items as $item) {
                 $order->items()->create($item->toArray());
+            }
+
+            /** ✅ RECORD ADVANCE PAYMENT TRANSACTION */
+            if ($request->advance_paid > 0) {
+                PaymentTransaction::create([
+                    'company_id'     => auth()->user()->company_id,
+                    'order_id'       => $order->id,
+                    'amount'         => $request->advance_paid,
+                    'payment_method' => $request->advance_payment_method ?? 'cash',
+                    'notes'          => 'Advance payment received at order creation (from quotation)',
+                    'paid_at'        => now(),
+                    'recorded_by'    => auth()->user()->name ?? 'Admin',
+                ]);
             }
 
             /** ✅ UPDATE QUOTATION STATUS */

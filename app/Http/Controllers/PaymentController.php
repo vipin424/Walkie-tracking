@@ -16,12 +16,19 @@ class PaymentController extends Controller
 {
     public function index(Request $request)
     {
-        $status = $request->get('status');
-        $payments = Payment::with('dispatch.client')
-            ->when($status, fn($q)=>$q->where('payment_status',$status))
-            ->orderByDesc('id')->paginate(20);
+        $query = PaymentTransaction::with('order')
+            ->when($request->filled('method'), fn($q) => $q->where('payment_method', $request->method))
+            ->when($request->filled('search'), fn($q) => $q->whereHas('order', fn($o) => $o->where('client_name', 'like', '%'.$request->search.'%')
+                ->orWhere('order_code', 'like', '%'.$request->search.'%')))
+            ->when($request->filled('from'), fn($q) => $q->whereDate('paid_at', '>=', $request->from))
+            ->when($request->filled('to'),   fn($q) => $q->whereDate('paid_at', '<=', $request->to))
+            ->orderByDesc('paid_at');
 
-        return view('payments.index', compact('payments','status'));
+        $transactions = $query->paginate(20)->withQueryString();
+
+        $totalAmount = $query->sum('amount');
+
+        return view('payments.index', compact('transactions', 'totalAmount'));
     }
 
     public function storeOrUpdate(Request $request, Dispatch $dispatch)
@@ -174,13 +181,14 @@ class PaymentController extends Controller
         try {
             // Create payment transaction
             $transaction = PaymentTransaction::create([
-                'order_id' => $order->id,
-                'amount' => $request->amount,
+                'company_id'     => auth()->user()->company_id,
+                'order_id'       => $order->id,
+                'amount'         => $request->amount,
                 'payment_method' => $request->payment_method,
                 'transaction_id' => $request->transaction_id,
-                'notes' => $request->notes,
-                'paid_at' => $request->paid_at ?? now(),
-                'recorded_by' => auth()->user()->name ?? 'Admin'
+                'notes'          => $request->notes,
+                'paid_at'        => $request->paid_at ?? now(),
+                'recorded_by'    => auth()->user()->name ?? 'Admin'
             ]);
 
             // Calculate total paid
