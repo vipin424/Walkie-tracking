@@ -149,12 +149,14 @@
               <i class="bi bi-telephone-fill text-success me-2"></i>{{ $order->client_phone }}
             </p>
           </div>
+        @if($order->client_email)
           <div class="mb-0">
             <label class="text-muted small fw-semibold mb-1">Email</label>
             <p class="mb-0">
               <i class="bi bi-envelope-fill text-primary me-2"></i>{{ $order->client_email }}
             </p>
           </div>
+        @endif
         </div>
       </div>
     </div>
