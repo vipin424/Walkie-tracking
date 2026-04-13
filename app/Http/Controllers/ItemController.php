@@ -58,7 +58,7 @@ class ItemController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'nullable|string|max:255',
+            'type' => 'nullable|in:Walkie Talkie,Talkback,PA System',
             'description' => 'nullable|string',
             'unit_price' => 'required|numeric|min:0',
             'tax_percent' => 'nullable|numeric|min:0|max:100',
@@ -78,7 +78,7 @@ class ItemController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'nullable|string|max:255',
+            'type' => 'nullable|in:Walkie Talkie,Talkback,PA System',
             'description' => 'nullable|string',
             'unit_price' => 'required|numeric|min:0',
             'tax_percent' => 'nullable|numeric|min:0|max:100',
