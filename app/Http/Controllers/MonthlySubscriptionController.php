@@ -174,10 +174,9 @@ class MonthlySubscriptionController extends Controller
 
         $fileName = $invoice->invoice_code . '.pdf';
         $path = 'monthly-invoices/'.$fileName;
+        Storage::disk('public')->makeDirectory('monthly-invoices');
         Storage::disk('public')->put($path, $pdf->output());
-
-        // Store relative path for easier retrieval
-        $invoice->update(['pdf_path' => $path]);
+        $invoice->update(['pdf_path' => 'storage/' . $path]);
     }
 
     public function sendInvoice(Request $request, MonthlyInvoice $invoice)
@@ -189,7 +188,7 @@ class MonthlySubscriptionController extends Controller
             'message' => 'nullable|string',
         ]);
 
-        if (!$invoice->pdf_path || !Storage::disk('public')->exists($invoice->pdf_path)) {
+        if (!$invoice->pdf_path || !Storage::disk('public')->exists(str_replace('storage/', '', $invoice->pdf_path))) {
             $this->generatePdf($invoice);
             $invoice->refresh();
         }
@@ -245,7 +244,7 @@ class MonthlySubscriptionController extends Controller
             'message' => 'nullable|string',
         ]);
 
-        if (!$invoice->pdf_path || !Storage::disk('public')->exists($invoice->pdf_path)) {
+        if (!$invoice->pdf_path || !Storage::disk('public')->exists(str_replace('storage/', '', $invoice->pdf_path))) {
             $this->generatePdf($invoice);
             $invoice->refresh();
         }
