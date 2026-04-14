@@ -133,7 +133,8 @@ class QuotationController extends Controller
         }
 
         if ($extraChargeType === 'staff') {
-            $extraTotal = $extraRate * $totalDays; // per day
+            $staffCount = intval($request->staff_count ?? 1);
+            $extraTotal = $extraRate * $staffCount * $totalDays; // per staff per day
         }
 
 
@@ -154,6 +155,7 @@ class QuotationController extends Controller
             'discount_amount' => $discount,
             'extra_charge_type'  => $extraChargeType,
             'extra_charge_rate'  => $extraRate,
+            'staff_count'        => $extraChargeType === 'staff' ? ($staffCount ?? 1) : 1,
             'extra_charge_total' => $extraTotal,
             'total_amount' => $total,
             'created_by' => Auth::id(),
@@ -328,7 +330,8 @@ class QuotationController extends Controller
             }
 
             if ($extraChargeType == 'staff') {
-                $extraTotal = $extraRate * $totalDays; // per day
+                $staffCount = intval($request->staff_count ?? 1);
+                $extraTotal = $extraRate * $staffCount * $totalDays; // per staff per day
             }
 
 
@@ -350,6 +353,7 @@ class QuotationController extends Controller
                 'discount_amount' => $discount,
                 'extra_charge_type'  => $extraChargeType,
                 'extra_charge_rate'  => $extraRate,
+                'staff_count'        => $extraChargeType === 'staff' ? ($staffCount ?? 1) : 1,
                 'extra_charge_total' => $extraTotal,
                 'total_amount' => $total,
             ]);

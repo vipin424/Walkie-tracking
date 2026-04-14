@@ -183,7 +183,7 @@
       <i class="bi bi-calculator me-2 text-warning"></i>Summary
     </h5>
   </div>
-  <div class="card-body p-4">
+  <div class="card-body p-8">
     <div class="row">
       <div class="col-md-6 offset-md-6">
         <div class="bg-light rounded p-4">
@@ -242,24 +242,35 @@
                 </label>
 
               <div id="staff_charge_input"
-                  class="ms-4 mb-2"
-                  style="{{ old('extra_charge_type', $order->extra_charge_type ?? '') === 'staff' ? '' : 'display:none;' }}">
-                  <div class="input-group mb-1" style="max-width:200px;">
-                      <span class="input-group-text">₹</span>
-                      <input type="number"
-                            step="0.01"
-                            class="form-control"
-                            name="extra_charge_rate"
-                            id="staff_charge_amount"
-                            value="{{ old('extra_charge_rate', $order->extra_charge_rate ?? '') }}"
-                            placeholder="Per day amount">
-                  </div>
-
-                    <small class="text-muted">
-                        Total for <span id="staff_days">1</span> day(s):
-                        <strong>₹ <span id="staff_total">0.00</span></strong>
-                    </small>
-                </div>
+                        class="ms-4 mb-2"
+                        style="{{ old('extra_charge_type', $order->extra_charge_type ?? '') === 'staff' ? '' : 'display:none;' }}">
+                        <div class="d-flex flex-column w-100 gap-2" style="max-width:350px;">
+                          <div>
+                            <label for="staff_count" class="form-label mb-1">Number of Staff</label>
+                            <input type="number"
+                               min="1"
+                               name="staff_count"
+                               id="staff_count"
+                               class="form-control"
+                               value="{{ old('staff_count', $order->staff_count ?? 1) }}"
+                               placeholder="Count">
+                          </div>
+                          <div>
+                            <label for="staff_charge_amount" class="form-label mb-1">Per Day Amount (₹)</label>
+                            <input type="number"
+                               step="0.01"
+                               class="form-control"
+                               name="extra_charge_rate"
+                               id="staff_charge_amount"
+                               value="{{ old('extra_charge_rate', $order->extra_charge_rate ?? '') }}"
+                               placeholder="Per day amount">
+                          </div>
+                        </div>
+                        <small class="text-muted mt-1 d-block">
+                          Total for <span id="staff_count_label">1</span> staff × <span id="staff_days">1</span> day(s):
+                          <strong>₹ <span id="staff_total">0.00</span></strong>
+                        </small>
+                      </div>
 
             </div>
 
@@ -389,28 +400,30 @@ document.addEventListener('DOMContentLoaded', function(){
        EXTRA CHARGE CALC
     ====================== */
     function getExtraCharge() {
-        const selected = document.querySelector('input[name="extra_charge_type"]:checked');
-        if (!selected) return 0;
+      const selected = document.querySelector('input[name="extra_charge_type"]:checked');
+      if (!selected) return 0;
 
-        const days = getTotalDays();
+      const days = getTotalDays();
 
-        // Delivery → one time
-        if (selected.value === 'delivery') {
-            return parseFloat(document.getElementById('delivery_charge_amount').value) || 0;
-        }
+      // Delivery → one time
+      if (selected.value === 'delivery') {
+        return parseFloat(document.getElementById('delivery_charge_amount').value) || 0;
+      }
 
-        // Staff → per day
-        if (selected.value === 'staff') {
-            const perDay = parseFloat(document.getElementById('staff_charge_amount').value) || 0;
-            const total = perDay * days;
+      // Staff → per day × staff_count
+      if (selected.value === 'staff') {
+        const perDay = parseFloat(document.getElementById('staff_charge_amount').value) || 0;
+        const staffCount = parseInt(document.getElementById('staff_count').value) || 1;
+        const total = perDay * days * staffCount;
 
-            document.getElementById('staff_days').innerText = days;
-            document.getElementById('staff_total').innerText = total.toFixed(2);
+        document.getElementById('staff_days').innerText = days;
+        document.getElementById('staff_count_label').innerText = staffCount;
+        document.getElementById('staff_total').innerText = total.toFixed(2);
 
-            return total;
-        }
+        return total;
+      }
 
-        return 0;
+      return 0;
     }
 
     /* ======================
@@ -479,16 +492,17 @@ document.addEventListener('DOMContentLoaded', function(){
        EVENT LISTENERS
     ====================== */
     document.addEventListener('input', function(e){
-        if (
-            e.target.matches('.qty') ||
-            e.target.matches('.unit') ||
-            e.target.matches('.tax') ||
-            e.target.matches('#discount') ||
-            e.target.matches('#delivery_charge_amount') ||
-            e.target.matches('#staff_charge_amount')
-        ) {
-            recalcAll();
-        }
+      if (
+        e.target.matches('.qty') ||
+        e.target.matches('.unit') ||
+        e.target.matches('.tax') ||
+        e.target.matches('#discount') ||
+        e.target.matches('#delivery_charge_amount') ||
+        e.target.matches('#staff_charge_amount') ||
+        e.target.matches('#staff_count')
+      ) {
+        recalcAll();
+      }
     });
 
     document.getElementById('event_from').addEventListener('change', recalcAll);

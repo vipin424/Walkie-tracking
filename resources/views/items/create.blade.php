@@ -18,10 +18,15 @@
             <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}" required>
             @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
-
+          
           <div class="col-md-6">
             <label class="form-label fw-semibold">Type</label>
-            <input type="text" name="type" class="form-control @error('type') is-invalid @enderror" value="{{ old('type') }}">
+            <select name="type" class="form-select @error('type') is-invalid @enderror">
+              <option value="">-- Select Type --</option>
+              @foreach(['Walkie Talkie', 'Talkback', 'PA System'] as $type)
+                <option value="{{ $type }}" {{ old('type') == $type ? 'selected' : '' }}>{{ $type }}</option>
+              @endforeach
+            </select>
             @error('type')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
 

@@ -324,19 +324,17 @@
               </tr>
               @endif
 
-              @if($order->extra_charge_type === 'staff')
-              <tr>
+                @if($order->extra_charge_type === 'staff')
+                <tr>
                   <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
-                      Support Staff
-                      (₹{{ number_format($order->extra_charge_rate, 2) }} ×
-                      {{ $order->total_days }}
-                      Day{{ $order->total_days > 1 ? 's' : '' }}):
+                    Support Staff
+                    ({{ $order->staff_count }} Staff × ₹{{ number_format($order->extra_charge_rate, 2) }}/day × {{ $order->total_days }} Day{{ $order->total_days > 1 ? 's' : '' }})
                   </td>
                   <td class="px-4 py-3 text-end fw-semibold">
-                      ₹{{ number_format($order->extra_charge_total, 2) }}
+                    ₹{{ number_format($order->extra_charge_total, 2) }}
                   </td>
-              </tr>
-              @endif
+                </tr>
+                @endif
 
               {{-- Discount --}}
               @if($order->discount_amount > 0)

@@ -176,6 +176,7 @@ class OrderController extends Controller
             /** 🔹 EXTRA CHARGES */
             $extraChargeType = $request->extra_charge_type;
             $extraRate  = floatval($request->extra_charge_rate ?? 0);
+            $staffCount = intval($request->staff_count ?? 1);
             $extraTotal = 0;
 
             if ($extraChargeType === 'delivery') {
@@ -183,7 +184,7 @@ class OrderController extends Controller
             }
 
             if ($extraChargeType === 'staff') {
-                $extraTotal = $extraRate * $totalDays; // per day
+                $extraTotal = $extraRate * $totalDays * $staffCount; // per day × staff
             }
 
             /** 🔹 FINAL TOTAL */
@@ -207,11 +208,13 @@ class OrderController extends Controller
                 'bill_to'    => $request->bill_to,
                 'total_days' => $totalDays,
 
+
                 'subtotal' => $subtotal,
                 'tax_amount' => $tax_amount,
 
                 'extra_charge_type'  => $extraChargeType,
                 'extra_charge_rate'  => $extraRate,
+                'staff_count'        => $staffCount,
                 'extra_charge_total' => $extraTotal,
 
                 'discount_amount' => $discount,
@@ -582,7 +585,8 @@ class OrderController extends Controller
             }
 
             if ($extraChargeType == 'staff') {
-                $extraTotal = $extraRate * $totalDays; // per day
+                $staffCount = intval($request->staff_count ?? 1);
+                $extraTotal = $extraRate * $totalDays * $staffCount; // per day × staff
             }
 
 
@@ -608,6 +612,7 @@ class OrderController extends Controller
                 'discount_amount' => $discount,
                 'extra_charge_type'  => $extraChargeType,
                 'extra_charge_rate'  => $extraRate,
+                'staff_count'        => $staffCount,
                 'extra_charge_total' => $extraTotal,
                 'total_amount' => $total,
                 'security_deposit' => floatval($request->security_deposit ?? 0),

@@ -225,19 +225,17 @@
               </tr>
               @endif
 
-              @if($quotation->extra_charge_type === 'staff')
-              <tr>
+                @if($quotation->extra_charge_type === 'staff')
+                <tr>
                   <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
-                      Support Staff
-                      (₹{{ number_format($quotation->extra_charge_rate, 2) }} ×
-                      {{ $quotation->total_days }}
-                      Day{{ $quotation->total_days > 1 ? 's' : '' }}):
+                    Support Staff
+                    ({{ $quotation->staff_count }} Staff × ₹{{ number_format($quotation->extra_charge_rate, 2) }}/day × {{ $quotation->total_days }} Day{{ $quotation->total_days > 1 ? 's' : '' }})
                   </td>
                   <td class="px-4 py-3 text-end fw-semibold">
-                      ₹{{ number_format($quotation->extra_charge_total, 2) }}
+                    ₹{{ number_format($quotation->extra_charge_total, 2) }}
                   </td>
-              </tr>
-              @endif
+                </tr>
+                @endif
 
               {{-- Discount --}}
               @if($quotation->discount_amount > 0)

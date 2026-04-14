@@ -234,7 +234,7 @@
 
         @if($order->extra_charge_type === 'staff')
         <tr class="calculation-row">
-            <td colspan="7" class="right">Support Staff: ₹{{ number_format($order->extra_charge_rate,2) }}/day × {{ $order->total_days }} days</td>
+            <td colspan="7" class="right">Support Staff: {{ $order->staff_count }} Staff × ₹{{ number_format($order->extra_charge_rate,2) }}/day × {{ $order->total_days }} day{{ $order->total_days > 1 ? 's' : '' }}</td>
             <td class="right">₹{{ number_format($order->extra_charge_total,2) }}</td>
         </tr>
         @endif

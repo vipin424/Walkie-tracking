@@ -8,7 +8,7 @@
         @csrf @method('PUT')
         @include('quotations.partials.form', ['quotation' => $quotation])
 
-        <button class="btn btn-primary">Update Quotation</button>
+        <button class="btn btn-primary mt-2">Update Quotation</button>
     </form>
 </div>
 @endsection

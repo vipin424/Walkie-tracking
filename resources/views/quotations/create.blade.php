@@ -17,7 +17,7 @@
         @csrf
         @include('quotations.partials.form', ['quotation' => null])
 
-        <button class="btn btn-primary">Save Quotation</button>
+        <button class="btn btn-primary mt-2">Save Quotation</button>
     </form>
 </div>
 @endsection

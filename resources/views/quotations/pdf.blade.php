@@ -187,7 +187,8 @@
       <tr class="total-row">
           <td colspan="6" class="right">
               Support Staff
-              (₹{{ number_format($quotation->extra_charge_rate, 2) }}
+              ({{ $quotation->staff_count }} Staff
+              × ₹{{ number_format($quotation->extra_charge_rate, 2) }}/day
               × {{ $quotation->total_days }} Day{{ $quotation->total_days > 1 ? 's' : '' }})
           </td>
           <td class="right">

@@ -217,40 +217,39 @@
                 <label class="form-check-label fw-semibold" for="staff_charge_option">
                     Attendance / Support Staff <span class="text-muted">(Per Day)</span>
                 </label>
-
-              <div id="staff_charge_input"
-                  class="ms-4 mb-2"
-                  style="{{ old('extra_charge_type', $quotation->extra_charge_type ?? '') === 'staff' ? '' : 'display:none;' }}">
-                  <div class="input-group mb-1" style="max-width:200px;">
-                      <span class="input-group-text">₹</span>
-                      <input type="number"
-                            step="0.01"
-                            class="form-control"
-                            name="extra_charge_rate"
-                            id="staff_charge_amount"
-                            value="{{ old('extra_charge_rate', $quotation->extra_charge_rate ?? '') }}"
-                            placeholder="Per day amount">
-                  </div>
-
-                    <small class="text-muted">
-                        Total for <span id="staff_days">1</span> day(s):
-                        <strong>₹ <span id="staff_total">0.00</span></strong>
-                    </small>
-                </div>
-
             </div>
 
-            <div id="staff_charge_input" class="ms-4 mb-2" style="display:none;">
-                <div class="input-group" style="max-width:200px;">
-                    <span class="input-group-text">₹</span>
-                    <input type="number"
-                          step="0.01"
-                          class="form-control extra-charge-amount"
-                          id="staff_charge_amount"
-                          placeholder="Per day amount">
+            <div id="staff_charge_input"
+                class="ms-4 mb-2"
+                style="{{ old('extra_charge_type', $quotation->extra_charge_type ?? '') === 'staff' ? '' : 'display:none;' }}">
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                    <div class="input-group" style="max-width:160px;">
+                        <span class="input-group-text"><i class="bi bi-people"></i></span>
+                        <input type="number"
+                              min="1"
+                              step="1"
+                              class="form-control"
+                              name="staff_count"
+                              id="staff_count"
+                              value="{{ old('staff_count', $quotation->staff_count ?? 1) }}"
+                              placeholder="No. of Staff">
+                    </div>
+                    <div class="input-group" style="max-width:160px;">
+                        <span class="input-group-text">₹</span>
+                        <input type="number"
+                              step="0.01"
+                              class="form-control"
+                              name="extra_charge_rate"
+                              id="staff_charge_amount"
+                              value="{{ old('extra_charge_rate', $quotation->extra_charge_rate ?? '') }}"
+                              placeholder="Rate/Staff/Day">
+                    </div>
                 </div>
-                <small class="text-muted d-block mt-1">
-                    This amount will be multiplied by total days
+                <small class="text-muted mt-1 d-block">
+                    <span id="staff_count_display">1</span> Staff ×
+                    ₹<span id="staff_rate_display">0</span> ×
+                    <span id="staff_days">1</span> Day(s) =
+                    <strong>₹<span id="staff_total">0.00</span></strong>
                 </small>
             </div>
         </div>
@@ -270,32 +269,6 @@
           </div>
         </div>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- Action Buttons Card (Optional - for after save actions) -->
-<div class="card border-0 shadow-sm mt-4">
-  <div class="card-header bg-white border-0 p-4">
-    <h5 class="mb-0 fw-semibold">
-      <i class="bi bi-send me-2 text-warning"></i>Additional Actions
-    </h5>
-  </div>
-  <div class="card-body p-4">
-    <div class="alert alert-info border-0 mb-3">
-      <i class="bi bi-info-circle me-2"></i>
-      These actions will be available after saving the quotation.
-    </div>
-    <div class="d-flex flex-wrap gap-2">
-      <button type="button" id="generate-pdf" class="btn btn-outline-primary" disabled>
-        <i class="bi bi-file-earmark-pdf me-2"></i>Generate PDF
-      </button>
-      <button type="button" id="send-email" class="btn btn-outline-success" disabled>
-        <i class="bi bi-envelope me-2"></i>Send Email
-      </button>
-      <button type="button" id="send-whatsapp" class="btn btn-outline-info" disabled>
-        <i class="bi bi-whatsapp me-2"></i>Send WhatsApp
-      </button>
     </div>
   </div>
 </div>
@@ -373,13 +346,16 @@ document.addEventListener('DOMContentLoaded', function(){
             return parseFloat(document.getElementById('delivery_charge_amount').value) || 0;
         }
 
-        // Staff → per day
+        // Staff → staff_count × rate × days
         if (selected.value === 'staff') {
+            const count  = parseInt(document.getElementById('staff_count').value) || 1;
             const perDay = parseFloat(document.getElementById('staff_charge_amount').value) || 0;
-            const total = perDay * days;
+            const total  = count * perDay * days;
 
-            document.getElementById('staff_days').innerText = days;
-            document.getElementById('staff_total').innerText = total.toFixed(2);
+            document.getElementById('staff_count_display').innerText = count;
+            document.getElementById('staff_rate_display').innerText  = perDay.toFixed(2);
+            document.getElementById('staff_days').innerText          = days;
+            document.getElementById('staff_total').innerText         = total.toFixed(2);
 
             return total;
         }
@@ -441,6 +417,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
             document.getElementById('delivery_charge_amount').value = '';
             document.getElementById('staff_charge_amount').value = '';
+            document.getElementById('staff_count').value = '1';
 
             if (this.value === 'delivery') deliveryInput.style.display = 'block';
             if (this.value === 'staff') staffInput.style.display = 'block';
@@ -459,7 +436,8 @@ document.addEventListener('DOMContentLoaded', function(){
             e.target.matches('.tax') ||
             e.target.matches('#discount') ||
             e.target.matches('#delivery_charge_amount') ||
-            e.target.matches('#staff_charge_amount')
+            e.target.matches('#staff_charge_amount') ||
+            e.target.matches('#staff_count')
         ) {
             recalcAll();
         }
