@@ -32,9 +32,10 @@ class SendMonthlyInvoices extends Command
 
         foreach ($subscriptions as $subscription) {
             try {
-                // Calculate billing period
-                $periodFrom = Carbon::create($today->year, $today->month, $subscription->billing_day_of_month);
-                $periodTo = $periodFrom->copy()->addMonth()->subDay();
+                // Calculate billing period (previous billing day to current billing day)
+                $currentBillingDay = Carbon::create($today->year, $today->month, $subscription->billing_day_of_month);
+                $periodFrom = $currentBillingDay->copy()->subMonth();
+                $periodTo = $currentBillingDay->copy();
 
                 // Check if invoice already exists for this period
                 $invoice = MonthlyInvoice::where('subscription_id', $subscription->id)
@@ -106,8 +107,9 @@ class SendMonthlyInvoices extends Command
         $pdf = PDF::loadHTML($html)->setPaper('a4', 'portrait');
 
         $fileName = $invoice->invoice_code . '.pdf';
-        Storage::disk('public')->put('monthly-invoices/'.$fileName, $pdf->output());
-
-        $invoice->update(['pdf_path' => 'storage/monthly-invoices/' . $fileName]);
+        $path = 'monthly-invoices/'.$fileName;
+        Storage::disk('public')->makeDirectory('monthly-invoices');
+        Storage::disk('public')->put($path, $pdf->output());
+        $invoice->update(['pdf_path' => 'storage/' . $path]);
     }
 }
