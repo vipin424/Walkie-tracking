@@ -129,7 +129,7 @@ class QuotationController extends Controller
         $extraTotal = 0;
 
         if ($extraChargeType === 'delivery') {
-            $extraTotal = $extraRate; // one time
+            $extraTotal = floatval($request->delivery_charge_amount ?? 0); // one time
         }
 
         if ($extraChargeType === 'staff') {
