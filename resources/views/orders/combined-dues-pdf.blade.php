@@ -138,6 +138,44 @@
             @endforeach
         </tbody>
         <tfoot>
+            {{-- Item Subtotal (before extra charges) --}}
+            <!-- <tr>
+                <td colspan="6" class="right">Item Subtotal (Before Tax)</td>
+                <td class="right">₹{{ number_format($order->subtotal - $order->tax_amount, 2) }}</td>
+            </tr>
+            @if($order->tax_amount > 0)
+            <tr>
+                <td colspan="6" class="right">Tax Amount</td>
+                <td class="right">₹{{ number_format($order->tax_amount, 2) }}</td>
+            </tr>
+            @endif -->
+
+            {{-- Delivery Charges --}}
+            @if($order->extra_charge_type === 'delivery' && $order->extra_charge_total > 0)
+            <tr>
+                <td colspan="6" class="right">Delivery &amp; Up/Down Charges</td>
+                <td class="right">₹{{ number_format($order->extra_charge_total, 2) }}</td>
+            </tr>
+            @endif
+
+            {{-- Support Staff Charges --}}
+            @if($order->extra_charge_type === 'staff' && $order->extra_charge_total > 0)
+            <tr>
+                <td colspan="6" class="right">
+                    Support Staff: ₹{{ number_format($order->extra_charge_rate, 2) }}/day × {{ $order->total_days }} day{{ $order->total_days > 1 ? 's' : '' }}
+                </td>
+                <td class="right">₹{{ number_format($order->extra_charge_total, 2) }}</td>
+            </tr>
+            @endif
+
+            {{-- Discount --}}
+            @if($order->discount_amount > 0)
+            <tr>
+                <td colspan="6" class="right">Discount</td>
+                <td class="right" style="color:#388e3c;">- ₹{{ number_format($order->discount_amount, 2) }}</td>
+            </tr>
+            @endif
+
             <tr class="total-row">
                 <td colspan="6" class="right">Grand Total</td>
                 <td class="right">₹{{ number_format($order->total_amount, 2) }}</td>
