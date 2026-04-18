@@ -665,6 +665,35 @@ class OrderController extends Controller
         return redirect()->route('orders.index')->with('success','Order deleted.');
     }
 
+    public function generateCombinedDuesPdf(Order $order)
+    {
+        // Fetch all settled + pending/partial orders for same client (name + phone)
+        $orders = Order::with('items')
+            ->where('client_phone', $order->client_phone)
+            ->where('client_name', $order->client_name)
+            ->where('settlement_status', 'settled')
+            ->whereIn('payment_status', ['pending', 'partial'])
+            ->where('final_payable', '>', 0)
+            ->orderBy('event_from')
+            ->get();
+
+        if ($orders->isEmpty()) {
+            return back()->with('error', 'No pending dues found for this client.');
+        }
+
+        $company = auth()->user()?->company;
+
+        $html = view('orders.combined-dues-pdf', compact('orders', 'company'))->render();
+        $pdf  = PDF::loadHTML($html)->setPaper('a4', 'portrait');
+
+        $fileName = 'dues-' . str_replace(' ', '-', strtolower($order->client_name)) . '-' . now()->format('Ymd') . '.pdf';
+
+        return response($pdf->output(), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+        ]);
+    }
+
     // Generate PDF and store it
     public function generatePdf(Order $order)
     {

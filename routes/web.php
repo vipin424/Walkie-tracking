@@ -52,7 +52,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');
     Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
     Route::post('/orders/{order}/complete',[OrderController::class,'complete'])->name('orders.complete');
-    Route::post('orders/{order}/generate-pdf', [OrderController::class, 'generatePdf'])->name('orders.generatePdf');
+    Route::post('orders/{order}/generate-pdf',        [OrderController::class, 'generatePdf'])->name('orders.generatePdf');
+    Route::get('orders/{order}/combined-dues-pdf',     [OrderController::class, 'generateCombinedDuesPdf'])->name('orders.combinedDuesPdf');
     Route::post('orders/{order}/send-email', [OrderController::class, 'sendEmail'])->name('orders.sendEmail');
     Route::post('orders/{order}/send-whatsapp', [OrderController::class, 'sendWhatsapp'])->name('orders.sendWhatsapp');
     Route::post('/orders/{order}/settle',[OrderController::class,'settle'])->name('orders.settle');
