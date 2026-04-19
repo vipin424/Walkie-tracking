@@ -183,6 +183,13 @@
       </tr>
       @endif
 
+      @if(($quotation->travelling_charge ?? 0) > 0)
+      <tr class="total-row">
+          <td colspan="6" class="right">Travelling Charges</td>
+          <td class="right">₹{{ number_format($quotation->travelling_charge, 2) }}</td>
+      </tr>
+      @endif
+
       @if($quotation->extra_charge_type === 'staff')
       <tr class="total-row">
           <td colspan="6" class="right">

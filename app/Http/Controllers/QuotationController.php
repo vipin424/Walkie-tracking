@@ -129,16 +129,17 @@ class QuotationController extends Controller
         $extraTotal = 0;
 
         if ($extraChargeType === 'delivery') {
-            $extraTotal = floatval($request->delivery_charge_amount ?? 0); // one time
+            $extraTotal = floatval($request->delivery_charge_amount ?? 0);
         }
 
         if ($extraChargeType === 'staff') {
             $staffCount = intval($request->staff_count ?? 1);
-            $extraTotal = $extraRate * $staffCount * $totalDays; // per staff per day
+            $extraTotal = $extraRate * $staffCount * $totalDays;
         }
 
+        $travellingCharge = floatval($request->travelling_charge_amount ?? 0);
 
-        $total = $subtotal + $tax_amount + $extraTotal - $discount;
+        $total = $subtotal + $tax_amount + $extraTotal + $travellingCharge - $discount;
 
         /** 🔹 SAVE QUOTATION */
         $quotation = Quotation::create([
@@ -157,6 +158,7 @@ class QuotationController extends Controller
             'extra_charge_rate'  => $extraRate,
             'staff_count'        => $extraChargeType === 'staff' ? ($staffCount ?? 1) : 1,
             'extra_charge_total' => $extraTotal,
+            'travelling_charge'  => $travellingCharge,
             'total_amount' => $total,
             'created_by' => Auth::id(),
             'status' => 'draft',
@@ -326,17 +328,17 @@ class QuotationController extends Controller
             $extraTotal = 0;
 
             if ($extraChargeType == 'delivery') {
-                $extraTotal = floatval($request->delivery_charge_amount ?? 0); // one time
+                $extraTotal = floatval($request->delivery_charge_amount ?? 0);
             }
 
             if ($extraChargeType == 'staff') {
                 $staffCount = intval($request->staff_count ?? 1);
-                $extraTotal = $extraRate * $staffCount * $totalDays; // per staff per day
+                $extraTotal = $extraRate * $staffCount * $totalDays;
             }
 
+            $travellingCharge = floatval($request->travelling_charge_amount ?? 0);
 
-            $total = $subtotal + $tax_amount + $extraTotal - $discount;
-            //$total = $subtotal + $tax_amount - $discount;
+            $total = $subtotal + $tax_amount + $extraTotal + $travellingCharge - $discount;
 
             /** 🔹 UPDATE QUOTATION */
             $quotation->update([
@@ -355,6 +357,7 @@ class QuotationController extends Controller
                 'extra_charge_rate'  => $extraRate,
                 'staff_count'        => $extraChargeType === 'staff' ? ($staffCount ?? 1) : 1,
                 'extra_charge_total' => $extraTotal,
+                'travelling_charge'  => $travellingCharge,
                 'total_amount' => $total,
             ]);
 

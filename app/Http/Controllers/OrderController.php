@@ -180,15 +180,17 @@ class OrderController extends Controller
             $extraTotal = 0;
 
             if ($extraChargeType === 'delivery') {
-                $extraTotal = $extraRate; // one time
+                $extraTotal = floatval($request->delivery_charge_amount ?? 0);
             }
 
             if ($extraChargeType === 'staff') {
-                $extraTotal = $extraRate * $totalDays * $staffCount; // per day × staff
+                $extraTotal = $extraRate * $totalDays * $staffCount;
             }
 
+            $travellingCharge = floatval($request->travelling_charge_amount ?? 0);
+
             /** 🔹 FINAL TOTAL */
-            $total = $subtotal + $tax_amount + $extraTotal - $discount;
+            $total = $subtotal + $tax_amount + $extraTotal + $travellingCharge - $discount;
 
             /** 🔹 CREATE ORDER */
             $order = Order::create([
@@ -216,6 +218,7 @@ class OrderController extends Controller
                 'extra_charge_rate'  => $extraRate,
                 'staff_count'        => $staffCount,
                 'extra_charge_total' => $extraTotal,
+                'travelling_charge'  => $travellingCharge,
 
                 'discount_amount' => $discount,
                 'total_amount' => $total,
@@ -581,17 +584,17 @@ class OrderController extends Controller
             $extraTotal = 0;
 
             if ($extraChargeType == 'delivery') {
-                $extraTotal = floatval($request->delivery_charge_amount ?? 0); // one time
+                $extraTotal = floatval($request->delivery_charge_amount ?? 0);
             }
 
             if ($extraChargeType == 'staff') {
                 $staffCount = intval($request->staff_count ?? 1);
-                $extraTotal = $extraRate * $totalDays * $staffCount; // per day × staff
+                $extraTotal = $extraRate * $totalDays * $staffCount;
             }
 
+            $travellingCharge = floatval($request->travelling_charge_amount ?? 0);
 
-            $total = $subtotal + $tax_amount + $extraTotal - $discount;
-            //$total = $subtotal + $tax_amount - $discount;
+            $total = $subtotal + $tax_amount + $extraTotal + $travellingCharge - $discount;
 
             /** 🔹 UPDATE QUOTATION */
             $order->update([
@@ -614,6 +617,7 @@ class OrderController extends Controller
                 'extra_charge_rate'  => $extraRate,
                 'staff_count'        => $staffCount,
                 'extra_charge_total' => $extraTotal,
+                'travelling_charge'  => $travellingCharge,
                 'total_amount' => $total,
                 'security_deposit' => floatval($request->security_deposit ?? 0),
                 'advance_paid'  => $request->advance_paid,
@@ -974,6 +978,7 @@ class OrderController extends Controller
                 'extra_charge_type'  => $quotation->extra_charge_type,
                 'extra_charge_rate'  => $quotation->extra_charge_rate,
                 'extra_charge_total' => $quotation->extra_charge_total,
+                'travelling_charge'  => $quotation->travelling_charge ?? 0,
 
                 'discount_amount' => $quotation->discount_amount,
                 'total_amount'    => $quotation->total_amount,

@@ -219,7 +219,7 @@
         @endif
 
         {{-- Additional Charges Section --}}
-        @if($order->extra_charge_type === 'delivery' || $order->extra_charge_type === 'staff')
+        @if($order->extra_charge_type === 'delivery' || $order->extra_charge_type === 'travelling' || $order->extra_charge_type === 'staff')
         <tr class="subsection-title">
             <td colspan="8">Additional Charges</td>
         </tr>
@@ -229,6 +229,13 @@
         <tr class="total-row">
             <td colspan="7" class="right">Delivery & Up/Down Charges</td>
             <td class="right">₹{{ number_format($order->extra_charge_total,2) }}</td>
+        </tr>
+        @endif
+
+        @if(($order->travelling_charge ?? 0) > 0)
+        <tr class="total-row">
+            <td colspan="7" class="right">Travelling Charges</td>
+            <td class="right">₹{{ number_format($order->travelling_charge,2) }}</td>
         </tr>
         @endif
 
