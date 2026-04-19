@@ -292,13 +292,13 @@
 
 
           <div class="d-flex justify-content-between align-items-center mb-3">
-          <div class="d-flex justify-content-between align-items-center mb-3">
             <label class="text-muted mb-0">Travelling Charges:</label>
             <div class="input-group" style="width: 150px;">
               <span class="input-group-text">₹</span>
               <input type="number" step="0.01" name="travelling_charge_amount" id="travelling_charge_amount" class="form-control" value="{{ old('travelling_charge_amount', $order->travelling_charge ?? 0) }}">
             </div>
           </div>
+
           <div class="d-flex justify-content-between align-items-center mb-3">
             <label class="text-muted mb-0">Discount:</label>
             <div class="input-group" style="width: 150px;">
@@ -308,30 +308,25 @@
           </div>
 
           <!-- ✅ ADVANCE PAID (ORDER ONLY) -->
-          <div class="d-flex justify-content-between mb-3">
-            <label class="fw-semibold mb-0">
-              Advance Paid <span class="text-danger">*</span>
-            </label>
-            <div>
-              <input type="number"
-                     step="0.01"
-                     name="advance_paid"
-                     class="form-control form-control-sm @error('advance_paid') is-invalid @enderror"
-                     style="width:150px;" value="{{ old('advance_paid', $order->advance_paid ?? 0) }}"
-                     required>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <label class="fw-semibold mb-0">Advance Paid <span class="text-danger">*</span></label>
+            <div class="input-group" style="width: 150px;">
+              <span class="input-group-text">₹</span>
+              <input type="number" step="0.01" name="advance_paid"
+                     class="form-control @error('advance_paid') is-invalid @enderror"
+                     value="{{ old('advance_paid', $order->advance_paid ?? 0) }}" required>
               @error('advance_paid')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
           </div>
-          
-          <div class="d-flex justify-content-between mb-3">
-            <label class="fw-semibold mb-0">
-              Security Deposit
-            </label>
-            <input type="number"
-                   step="0.01"
-                   name="security_deposit"
-                   class="form-control form-control-sm"
-                   style="width:150px;" value="{{ old('security_deposit', $order->security_deposit ?? '') }}">
+
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <label class="fw-semibold mb-0">Security Deposit</label>
+            <div class="input-group" style="width: 150px;">
+              <span class="input-group-text">₹</span>
+              <input type="number" step="0.01" name="security_deposit"
+                     class="form-control"
+                     value="{{ old('security_deposit', $order->security_deposit ?? '') }}">
+            </div>
           </div>
          
 
