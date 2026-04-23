@@ -615,7 +615,7 @@ class OrderController extends Controller
                 'discount_amount' => $discount,
                 'extra_charge_type'  => $extraChargeType,
                 'extra_charge_rate'  => $extraRate,
-                'staff_count'        => $staffCount,
+                'staff_count'        => $staffCount ?? 1,
                 'extra_charge_total' => $extraTotal,
                 'travelling_charge'  => $travellingCharge,
                 'total_amount' => $total,
@@ -989,6 +989,7 @@ class OrderController extends Controller
 
                 'status'     => 'confirmed',
                 'created_by' => auth()->id(),
+                'payment_status' => $request->advance_paid >= $quotation->total_amount ? 'paid' : 'partial',
                 'agreement_required' => $quotation->handle_type,
             ]);
 
