@@ -86,6 +86,26 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/orders/{order}/return-item/{returnItem}', [OrderReturnController::class, 'destroy'])
         ->name('orders.return-item.destroy');
 
+    // Temporary diagnostic — remove after fixing production issue
+    Route::get('/debug/return-tables', function () {
+        try {
+            $tables = [
+                'orders'             => \Illuminate\Support\Facades\Schema::hasTable('orders'),
+                'order_items'        => \Illuminate\Support\Facades\Schema::hasTable('order_items'),
+                'order_return_items' => \Illuminate\Support\Facades\Schema::hasTable('order_return_items'),
+            ];
+            $cols = \Illuminate\Support\Facades\Schema::hasColumn('orders', 'return_status');
+            return response()->json([
+                'tables'                       => $tables,
+                'orders.return_status_column'  => $cols,
+                'php_version'                  => PHP_VERSION,
+                'laravel_version'              => app()->version(),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    })->name('debug.return-tables');
+
     // Monthly Subscriptions
     Route::resource('subscriptions', MonthlySubscriptionController::class);
     Route::get('subscriptions/{subscription}/generate-invoice', [MonthlySubscriptionController::class, 'generateInvoice'])->name('subscriptions.generate-invoice');

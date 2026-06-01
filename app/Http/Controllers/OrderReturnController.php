@@ -8,6 +8,8 @@ use App\Models\OrderReturnItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class OrderReturnController extends Controller
 {
@@ -24,42 +26,51 @@ class OrderReturnController extends Controller
             'notes'          => 'nullable|string|max:500',
         ]);
 
-        $orderItem = OrderItem::findOrFail($request->order_item_id);
+        try {
+            $orderItem = OrderItem::findOrFail($request->order_item_id);
 
-        // Ensure this item belongs to this order
-        if ($orderItem->order_id !== $order->id) {
-            return back()->with('error', 'Invalid item selected.');
-        }
+            // Ensure this item belongs to this order
+            if ($orderItem->order_id !== $order->id) {
+                return back()->with('error', 'Invalid item selected.');
+            }
 
-        // Calculate how many have already been returned for this item
-        $alreadyReturned = OrderReturnItem::where('order_id', $order->id)
-            ->where('order_item_id', $orderItem->id)
-            ->sum('returned_qty');
+            // Calculate how many have already been returned for this item
+            $alreadyReturned = OrderReturnItem::where('order_id', $order->id)
+                ->where('order_item_id', $orderItem->id)
+                ->sum('returned_qty');
 
-        $stillPending = $orderItem->quantity - $alreadyReturned;
+            $stillPending = $orderItem->quantity - $alreadyReturned;
 
-        if ($request->returned_qty > $stillPending) {
-            return back()->with('error', "Only {$stillPending} unit(s) are pending for this item. You cannot return more than {$stillPending}.");
-        }
+            if ($request->returned_qty > $stillPending) {
+                return back()->with('error', "Only {$stillPending} unit(s) are pending for this item. You cannot return more than {$stillPending}.");
+            }
 
-        DB::transaction(function () use ($request, $order, $orderItem, $alreadyReturned) {
+            DB::transaction(function () use ($request, $order, $orderItem) {
 
-            // Save return entry
-            OrderReturnItem::create([
-                'order_id'      => $order->id,
-                'order_item_id' => $orderItem->id,
-                'returned_qty'  => $request->returned_qty,
-                'return_date'   => $request->return_date,
-                'condition'     => $request->condition,
-                'notes'         => $request->notes,
-                'recorded_by'   => Auth::id(),
+                OrderReturnItem::create([
+                    'order_id'      => $order->id,
+                    'order_item_id' => $orderItem->id,
+                    'returned_qty'  => (int) $request->returned_qty,
+                    'return_date'   => $request->return_date,
+                    'condition'     => $request->condition,
+                    'notes'         => $request->notes,
+                    'recorded_by'   => Auth::id(),
+                ]);
+
+                $this->updateOrderReturnStatus($order);
+            });
+
+            return back()->with('success', 'Return recorded successfully!');
+
+        } catch (Throwable $e) {
+            Log::error('OrderReturn store failed', [
+                'order_id' => $order->id,
+                'error'    => $e->getMessage(),
+                'trace'    => $e->getTraceAsString(),
             ]);
 
-            // Recalculate overall order return_status
-            $this->updateOrderReturnStatus($order);
-        });
-
-        return back()->with('success', 'Return recorded successfully!');
+            return back()->with('error', 'Failed to record return: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -97,15 +108,24 @@ class OrderReturnController extends Controller
      */
     public function destroy(Order $order, OrderReturnItem $returnItem)
     {
-        if ($returnItem->order_id !== $order->id) {
-            return back()->with('error', 'Invalid request.');
+        try {
+            if ($returnItem->order_id !== $order->id) {
+                return back()->with('error', 'Invalid request.');
+            }
+
+            $returnItem->delete();
+            $this->updateOrderReturnStatus($order);
+
+            return back()->with('success', 'Return entry deleted successfully.');
+
+        } catch (Throwable $e) {
+            Log::error('OrderReturn destroy failed', [
+                'order_id'      => $order->id,
+                'return_item_id'=> $returnItem->id,
+                'error'         => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Failed to delete return entry: ' . $e->getMessage());
         }
-
-        $returnItem->delete();
-
-        // Recalculate status after deletion
-        $this->updateOrderReturnStatus($order);
-
-        return back()->with('success', 'Return entry deleted successfully.');
     }
 }

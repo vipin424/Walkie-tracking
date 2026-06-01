@@ -4,6 +4,7 @@ deployment:
     - /usr/local/cpanel/3rdparty/bin/git pull origin master
     - /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader
     - php artisan migrate --force
+    - php artisan orders:sync-return-status
     - php artisan optimize:clear
     - php artisan optimize
     - php artisan storage:link

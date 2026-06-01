@@ -561,6 +561,39 @@
 
     <div class="card-body p-0">
 
+      {{-- Session Alerts (visible after page reload) --}}
+      @if(session('success'))
+        <div class="mx-4 mt-4">
+          <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 py-2 px-3 mb-0" role="alert">
+            <i class="bi bi-check-circle-fill"></i>
+            <span>{{ session('success') }}</span>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+          </div>
+        </div>
+      @endif
+      @if(session('error'))
+        <div class="mx-4 mt-4">
+          <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 py-2 px-3 mb-0" role="alert">
+            <i class="bi bi-exclamation-circle-fill"></i>
+            <span>{{ session('error') }}</span>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+          </div>
+        </div>
+      @endif
+      @if($errors->any())
+        <div class="mx-4 mt-4">
+          <div class="alert alert-danger alert-dismissible fade show py-2 px-3 mb-0" role="alert">
+            <strong><i class="bi bi-exclamation-circle-fill me-1"></i>Please fix the following errors:</strong>
+            <ul class="mb-0 mt-1 ps-3">
+              @foreach($errors->all() as $e)
+                <li>{{ $e }}</li>
+              @endforeach
+            </ul>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+          </div>
+        </div>
+      @endif
+
       {{-- Overdue Alert --}}
       @if($isOverdue)
         <div class="mx-4 mt-4">
@@ -715,14 +748,6 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body p-4">
-
-            @if($errors->any())
-              <div class="alert alert-danger py-2">
-                @foreach($errors->all() as $error)
-                  <div><i class="bi bi-exclamation-circle me-1"></i>{{ $error }}</div>
-                @endforeach
-              </div>
-            @endif
 
             {{-- Item Select --}}
             <div class="mb-3">
@@ -1240,6 +1265,34 @@ document.addEventListener('DOMContentLoaded', function () {
         qtyHint.textContent = `Max: ${pending} unit(s) can be returned (${itemName})`;
     });
 });
+</script>
+@endpush
+@push('scripts')
+<script>
+// Auto-open return modal if there are validation errors (so user sees them)
+@if($errors->any())
+document.addEventListener('DOMContentLoaded', function () {
+    const modalEl = document.getElementById('recordReturnModal');
+    if (modalEl) {
+        new bootstrap.Modal(modalEl).show();
+    }
+    // Also scroll to return section
+    const section = document.getElementById('return-tracking-section');
+    if (section) {
+        setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    }
+});
+@endif
+
+// Scroll to return section if URL has #return-tracking-section
+if (window.location.hash === '#return-tracking-section') {
+    document.addEventListener('DOMContentLoaded', function () {
+        const section = document.getElementById('return-tracking-section');
+        if (section) {
+            setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+        }
+    });
+}
 </script>
 @endpush
 @endsection
