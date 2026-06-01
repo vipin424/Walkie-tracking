@@ -30,7 +30,7 @@ class OrderReturnController extends Controller
             $orderItem = OrderItem::findOrFail($request->order_item_id);
 
             // Ensure this item belongs to this order
-            if ($orderItem->order_id !== $order->id) {
+            if ((int) $orderItem->order_id !== (int) $order->id) {
                 return back()->with('error', 'Invalid item selected.');
             }
 
