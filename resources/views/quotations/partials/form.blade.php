@@ -207,6 +207,7 @@
                 </div>
             </div>
 
+            <!-- Travelling Charges -->
             <!-- Attendance / Support Staff -->
             <div class="form-check d-flex align-items-center gap-2 mb-2">
                 <input class="form-check-input extra-charge-option mt-0"
@@ -255,6 +256,13 @@
         </div>
 
 
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <label class="text-muted mb-0">Travelling Charges:</label>
+            <div class="input-group" style="width: 150px;">
+              <span class="input-group-text">₹</span>
+              <input type="number" step="0.01" name="travelling_charge_amount" id="travelling_charge_amount" class="form-control" value="{{ old('travelling_charge_amount', $quotation->travelling_charge ?? 0) }}">
+            </div>
+          </div>
           <div class="d-flex justify-content-between align-items-center mb-3">
             <label class="text-muted mb-0">Discount:</label>
             <div class="input-group" style="width: 150px;">
@@ -346,6 +354,11 @@ document.addEventListener('DOMContentLoaded', function(){
             return parseFloat(document.getElementById('delivery_charge_amount').value) || 0;
         }
 
+        // Travelling → one time (always separate)
+        if (selected.value === 'travelling') {
+            return parseFloat(document.getElementById('travelling_charge_amount').value) || 0;
+        }
+
         // Staff → staff_count × rate × days
         if (selected.value === 'staff') {
             const count  = parseInt(document.getElementById('staff_count').value) || 1;
@@ -395,8 +408,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
         const discount    = parseFloat(document.getElementById('discount').value) || 0;
         const extraCharge = getExtraCharge();
+        const travellingCharge = parseFloat(document.getElementById('travelling_charge_amount').value) || 0;
 
-        const total = subtotal + totalTax + extraCharge - discount;
+        const total = subtotal + totalTax + extraCharge + travellingCharge - discount;
 
         document.getElementById('subtotal').innerText = subtotal.toFixed(2);
         document.getElementById('tax_amount').innerText = totalTax.toFixed(2);
@@ -407,20 +421,20 @@ document.addEventListener('DOMContentLoaded', function(){
     /* ======================
        EXTRA CHARGE UI
     ====================== */
-    const deliveryInput = document.getElementById('delivery_charge_input');
-    const staffInput    = document.getElementById('staff_charge_input');
+    const deliveryInput    = document.getElementById('delivery_charge_input');
+    const staffInput = document.getElementById('staff_charge_input');
 
     document.querySelectorAll('.extra-charge-option').forEach(opt => {
         opt.addEventListener('change', function () {
             deliveryInput.style.display = 'none';
-            staffInput.style.display = 'none';
+            staffInput.style.display    = 'none';
 
             document.getElementById('delivery_charge_amount').value = '';
-            document.getElementById('staff_charge_amount').value = '';
-            document.getElementById('staff_count').value = '1';
+            document.getElementById('staff_charge_amount').value    = '';
+            document.getElementById('staff_count').value            = '1';
 
             if (this.value === 'delivery') deliveryInput.style.display = 'block';
-            if (this.value === 'staff') staffInput.style.display = 'block';
+            if (this.value === 'staff')    staffInput.style.display    = 'block';
 
             recalcAll();
         });
@@ -436,6 +450,7 @@ document.addEventListener('DOMContentLoaded', function(){
             e.target.matches('.tax') ||
             e.target.matches('#discount') ||
             e.target.matches('#delivery_charge_amount') ||
+            e.target.matches('#travelling_charge_amount') ||
             e.target.matches('#staff_charge_amount') ||
             e.target.matches('#staff_count')
         ) {

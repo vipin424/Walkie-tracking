@@ -202,15 +202,17 @@ class OrderController extends Controller
             $extraTotal = 0;
 
             if ($extraChargeType === 'delivery') {
-                $extraTotal = $extraRate; // one time
+                $extraTotal = floatval($request->delivery_charge_amount ?? 0);
             }
 
             if ($extraChargeType === 'staff') {
-                $extraTotal = $extraRate * $totalDays * $staffCount; // per day × staff
+                $extraTotal = $extraRate * $totalDays * $staffCount;
             }
 
+            $travellingCharge = floatval($request->travelling_charge_amount ?? 0);
+
             /** 🔹 FINAL TOTAL */
-            $total = $subtotal + $tax_amount + $extraTotal - $discount;
+            $total = $subtotal + $tax_amount + $extraTotal + $travellingCharge - $discount;
 
             /** 🔹 CREATE ORDER */
             $order = Order::create([
@@ -238,6 +240,7 @@ class OrderController extends Controller
                 'extra_charge_rate'  => $extraRate,
                 'staff_count'        => $staffCount,
                 'extra_charge_total' => $extraTotal,
+                'travelling_charge'  => $travellingCharge,
 
                 'discount_amount' => $discount,
                 'total_amount' => $total,
@@ -603,17 +606,17 @@ class OrderController extends Controller
             $extraTotal = 0;
 
             if ($extraChargeType == 'delivery') {
-                $extraTotal = floatval($request->delivery_charge_amount ?? 0); // one time
+                $extraTotal = floatval($request->delivery_charge_amount ?? 0);
             }
 
             if ($extraChargeType == 'staff') {
                 $staffCount = intval($request->staff_count ?? 1);
-                $extraTotal = $extraRate * $totalDays * $staffCount; // per day × staff
+                $extraTotal = $extraRate * $totalDays * $staffCount;
             }
 
+            $travellingCharge = floatval($request->travelling_charge_amount ?? 0);
 
-            $total = $subtotal + $tax_amount + $extraTotal - $discount;
-            //$total = $subtotal + $tax_amount - $discount;
+            $total = $subtotal + $tax_amount + $extraTotal + $travellingCharge - $discount;
 
             /** 🔹 UPDATE QUOTATION */
             $order->update([
@@ -634,8 +637,9 @@ class OrderController extends Controller
                 'discount_amount' => $discount,
                 'extra_charge_type'  => $extraChargeType,
                 'extra_charge_rate'  => $extraRate,
-                'staff_count'        => $staffCount,
+                'staff_count'        => $staffCount ?? 1,
                 'extra_charge_total' => $extraTotal,
+                'travelling_charge'  => $travellingCharge,
                 'total_amount' => $total,
                 'security_deposit' => floatval($request->security_deposit ?? 0),
                 'advance_paid'  => $request->advance_paid,
@@ -685,6 +689,35 @@ class OrderController extends Controller
         }
         
         return redirect()->route('orders.index')->with('success','Order deleted.');
+    }
+
+    public function generateCombinedDuesPdf(Order $order)
+    {
+        // Fetch all settled + pending/partial orders for same client (name + phone)
+        $orders = Order::with('items')
+            ->where('client_phone', $order->client_phone)
+            ->where('client_name', $order->client_name)
+            ->where('settlement_status', 'settled')
+            ->whereIn('payment_status', ['pending', 'partial'])
+            ->where('final_payable', '>', 0)
+            ->orderBy('event_from')
+            ->get();
+
+        if ($orders->isEmpty()) {
+            return back()->with('error', 'No pending dues found for this client.');
+        }
+
+        $company = auth()->user()?->company;
+
+        $html = view('orders.combined-dues-pdf', compact('orders', 'company'))->render();
+        $pdf  = PDF::loadHTML($html)->setPaper('a4', 'portrait');
+
+        $fileName = 'dues-' . str_replace(' ', '-', strtolower($order->client_name)) . '-' . now()->format('Ymd') . '.pdf';
+
+        return response($pdf->output(), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+        ]);
     }
 
     // Generate PDF and store it
@@ -967,6 +1000,7 @@ class OrderController extends Controller
                 'extra_charge_type'  => $quotation->extra_charge_type,
                 'extra_charge_rate'  => $quotation->extra_charge_rate,
                 'extra_charge_total' => $quotation->extra_charge_total,
+                'travelling_charge'  => $quotation->travelling_charge ?? 0,
 
                 'discount_amount' => $quotation->discount_amount,
                 'total_amount'    => $quotation->total_amount,
@@ -977,6 +1011,7 @@ class OrderController extends Controller
 
                 'status'     => 'confirmed',
                 'created_by' => auth()->id(),
+                'payment_status' => $request->advance_paid >= $quotation->total_amount ? 'paid' : 'partial',
                 'agreement_required' => $quotation->handle_type,
             ]);
 

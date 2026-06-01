@@ -61,6 +61,13 @@
           </a>
           @endif
 
+          {{-- Combined Dues PDF: only when settled + payment still pending/partial --}}
+          @if($order->settlement_status === 'settled' && in_array($order->payment_status, ['pending','partial']) && $order->final_payable > 0)
+          <a href="{{ route('orders.combinedDuesPdf', $order) }}" target="_blank" class="btn btn-danger">
+            <i class="bi bi-file-earmark-pdf me-2"></i>Combined Dues Statement
+          </a>
+          @endif
+
         </div>
       </div>
 
