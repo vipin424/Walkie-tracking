@@ -10,6 +10,7 @@ use App\Http\Controllers\{
     PaymentController,
     InvoiceController,
     OrderController,
+    OrderReturnController,
     QuotationController,
     AgreementController,
     ItemController,
@@ -77,6 +78,12 @@ Route::middleware(['auth'])->group(function () {
     // Get payment history
     Route::get('/orders/{order}/payment-history', [PaymentController::class, 'getPaymentHistory'])
         ->name('orders.payment-history');
+
+    // Item Return Tracking
+    Route::post('/orders/{order}/record-return', [OrderReturnController::class, 'store'])
+        ->name('orders.record-return');
+    Route::delete('/orders/{order}/return-item/{returnItem}', [OrderReturnController::class, 'destroy'])
+        ->name('orders.return-item.destroy');
 
     // Monthly Subscriptions
     Route::resource('subscriptions', MonthlySubscriptionController::class);

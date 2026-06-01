@@ -92,6 +92,28 @@ class OrderController extends Controller
                 $color = $colors[$order->payment_status] ?? 'secondary';
                 return '<span class="badge bg-'.$color.' px-3 py-2">'.ucfirst($order->payment_status).'</span>';
             })
+            ->addColumn('return_status', function ($order) {
+                $isOverdue = $order->return_status !== 'fully_returned'
+                    && \Carbon\Carbon::now()->startOfDay()->greaterThan($order->event_to);
+
+                if ($order->return_status === 'fully_returned') {
+                    return '<span class="badge px-3 py-2" style="background:#d1fae5;color:#065f46;"><i class="bi bi-check-circle-fill me-1"></i>Returned</span>';
+                } elseif ($order->return_status === 'partial') {
+                    $badge = '<span class="badge px-3 py-2" style="background:#fef3c7;color:#92400e;"><i class="bi bi-arrow-left-right me-1"></i>Partial</span>';
+                    if ($isOverdue) {
+                        $days = (int) \Carbon\Carbon::now()->startOfDay()->diffInDays($order->event_to);
+                        $badge .= ' <span class="badge bg-danger ms-1" style="font-size:0.7rem;">+'.$days.'d overdue</span>';
+                    }
+                    return $badge;
+                } else {
+                    $badge = '<span class="badge px-3 py-2" style="background:#fee2e2;color:#991b1b;"><i class="bi bi-clock-history me-1"></i>Pending</span>';
+                    if ($isOverdue) {
+                        $days = (int) \Carbon\Carbon::now()->startOfDay()->diffInDays($order->event_to);
+                        $badge .= ' <span class="badge bg-danger ms-1" style="font-size:0.7rem;">+'.$days.'d overdue</span>';
+                    }
+                    return $badge;
+                }
+            })
             ->addColumn('actions', function ($order) {
                 $html = '<div class="btn-group" role="group">';
                 $html .= '<a href="'.route('orders.show', $order).'" class="btn btn-sm btn-outline-primary" title="View"><i class="bi bi-eye"></i></a>';
@@ -106,7 +128,7 @@ class OrderController extends Controller
                 $html .= '</div>';
                 return $html;
             })
-            ->rawColumns(['order_code', 'event_period', 'duration', 'client', 'status', 'settlement', 'pending', 'payment', 'actions'])
+            ->rawColumns(['order_code', 'event_period', 'duration', 'client', 'status', 'settlement', 'pending', 'payment', 'return_status', 'actions'])
             ->make(true);
     }
 

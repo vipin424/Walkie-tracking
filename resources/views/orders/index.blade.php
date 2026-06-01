@@ -67,6 +67,7 @@
               <th class="px-4 py-3 text-muted fw-semibold">Total</th>
               <th class="px-4 py-3 text-muted fw-semibold">Pending</th>
               <th class="px-4 py-3 text-muted fw-semibold">Payment</th>
+              <th class="px-4 py-3 text-muted fw-semibold">Return</th>
               <th class="px-4 py-3 text-muted fw-semibold text-center">Actions</th>
             </tr>
           </thead>
@@ -298,6 +299,7 @@ $(document).ready(function() {
       { data: 'total', name: 'total_amount' },
       { data: 'pending', name: 'final_payable' },
       { data: 'payment', name: 'payment_status' },
+      { data: 'return_status', name: 'return_status', orderable: false },
       { data: 'actions', orderable: false, searchable: false }
     ],
     order: [[0, 'desc']],

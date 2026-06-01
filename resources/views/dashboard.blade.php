@@ -410,7 +410,72 @@
   </div>
 </div>
 
+{{-- ⚠️ OVERDUE RETURNS ALERT --}}
+@if($overdueReturns->count() > 0)
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm" style="border-left:4px solid #dc3545 !important;">
+      <div class="card-header border-0 d-flex justify-content-between align-items-center py-3"
+           style="background:linear-gradient(135deg,#fff1f2,#fef2f2);">
+        <div class="d-flex align-items-center gap-2">
+          <h6 class="fw-bold mb-0 text-danger">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>⚠️ Overdue Returns
+          </h6>
+          <span class="badge bg-danger rounded-pill">{{ $overdueReturns->count() }}</span>
+        </div>
+        <a href="{{ route('orders.index') }}" class="text-decoration-none small text-danger">View All Orders</a>
+      </div>
+      <div class="card-body p-0">
+        @foreach($overdueReturns as $ord)
+          @php
+            $overdueDays = (int) \Carbon\Carbon::now()->startOfDay()->diffInDays($ord->event_to);
+          @endphp
+          <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+              <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                   style="width:40px;height:40px;background:#fee2e2;">
+                <i class="bi bi-box-arrow-in-left text-danger fs-5"></i>
+              </div>
+              <div>
+                <a href="{{ route('orders.show', $ord) }}"
+                   class="text-decoration-none fw-semibold text-danger me-2">
+                  {{ $ord->order_code }}
+                </a>
+                <span class="badge px-2 py-1 ms-1"
+                      style="{{ $ord->return_status === 'partial' ? 'background:#fef3c7;color:#92400e;' : 'background:#fee2e2;color:#991b1b;' }}font-size:0.72rem;">
+                  {{ $ord->return_status === 'partial' ? 'Partial' : 'Pending' }}
+                </span>
+                <div class="text-muted small mt-1">
+                  <i class="bi bi-person me-1"></i>{{ $ord->client_name }}
+                  &bull; <i class="bi bi-phone me-1"></i>{{ $ord->client_phone }}
+                </div>
+                <div class="text-muted small">
+                  <i class="bi bi-calendar-x me-1"></i>
+                  Event ended: {{ \Carbon\Carbon::parse($ord->event_to)->format('d M Y') }}
+                </div>
+              </div>
+            </div>
+            <div class="text-end">
+              <span class="badge bg-danger px-3 py-2 fw-semibold" style="font-size:0.8rem;">
+                <i class="bi bi-clock-history me-1"></i>+{{ $overdueDays }}d overdue
+              </span>
+              <div class="mt-2">
+                <a href="{{ route('orders.show', $ord) }}#return-tracking-section"
+                   class="btn btn-sm btn-outline-danger">
+                  <i class="bi bi-box-arrow-in-left me-1"></i>Record Return
+                </a>
+              </div>
+            </div>
+          </div>
+        @endforeach
+      </div>
+    </div>
+  </div>
+</div>
+@endif
+
 {{-- PAYMENT METHOD BREAKDOWN --}}
+
 @if($paymentMethodStats->count() > 0)
 <div class="row g-3 mb-4">
   <div class="col-12">

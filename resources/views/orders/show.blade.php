@@ -496,6 +496,304 @@
     </div>
   </div>
   @endif
+
+  {{-- ============================================================
+       📦 ITEM RETURN TRACKING SECTION
+  ============================================================ --}}
+  @php
+    $order->load('items', 'returnItems.orderItem', 'returnItems.recordedBy');
+
+    // Build per-item return summary
+    $returnSummary = [];
+    foreach ($order->items as $item) {
+        $returnedQty = $order->returnItems
+            ->where('order_item_id', $item->id)
+            ->sum('returned_qty');
+        $returnedQty = min($returnedQty, $item->quantity);
+        $returnSummary[$item->id] = [
+            'item'         => $item,
+            'dispatched'   => $item->quantity,
+            'returned'     => $returnedQty,
+            'pending'      => max(0, $item->quantity - $returnedQty),
+        ];
+    }
+
+    $isOverdue = $order->isReturnOverdue();
+    $overdueDays = $order->returnOverdueDays();
+  @endphp
+
+  <div class="card border-0 shadow-sm mt-4" id="return-tracking-section">
+    <div class="card-header bg-white border-0 p-4 d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center gap-3">
+        <h5 class="mb-0 fw-semibold">
+          <i class="bi bi-box-arrow-in-left me-2 text-warning"></i>Item Return Tracking
+        </h5>
+
+        {{-- Return Status Badge --}}
+        @if($order->return_status === 'fully_returned')
+          <span class="badge px-3 py-2" style="background:#d1fae5;color:#065f46;font-size:0.78rem;">
+            <i class="bi bi-check-circle-fill me-1"></i>Fully Returned
+          </span>
+        @elseif($order->return_status === 'partial')
+          <span class="badge px-3 py-2" style="background:#fef3c7;color:#92400e;font-size:0.78rem;">
+            <i class="bi bi-arrow-left-right me-1"></i>Partial Return
+          </span>
+        @else
+          <span class="badge px-3 py-2" style="background:#fee2e2;color:#991b1b;font-size:0.78rem;">
+            <i class="bi bi-clock-history me-1"></i>Return Pending
+          </span>
+        @endif
+      </div>
+
+      @if($order->return_status !== 'fully_returned')
+        <button class="btn btn-warning btn-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#recordReturnModal">
+          <i class="bi bi-plus-circle me-2"></i>Record Return
+        </button>
+      @endif
+    </div>
+
+    <div class="card-body p-0">
+
+      {{-- Overdue Alert --}}
+      @if($isOverdue)
+        <div class="mx-4 mt-4">
+          <div class="alert mb-0 d-flex align-items-center gap-3 py-3 px-4"
+               style="background:#fff1f2;border:1.5px solid #fca5a5;border-radius:10px;">
+            <i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i>
+            <div>
+              <strong class="text-danger">Return Overdue!</strong>
+              <span class="text-danger ms-2">
+                Event ended {{ $overdueDays }} day{{ $overdueDays > 1 ? 's' : '' }} ago — items have not been returned yet.
+              </span>
+            </div>
+          </div>
+        </div>
+      @endif
+
+      {{-- Per-Item Return Table --}}
+      <div class="table-responsive px-4 pt-4">
+        <table class="table align-middle mb-0" style="border-radius:10px;overflow:hidden;">
+          <thead style="background:#f8fafc;">
+            <tr>
+              <th class="py-3 px-3 text-muted fw-semibold" style="font-size:0.82rem;">Item</th>
+              <th class="py-3 px-3 text-muted fw-semibold text-center" style="font-size:0.82rem;">Dispatched</th>
+              <th class="py-3 px-3 text-muted fw-semibold text-center" style="font-size:0.82rem;">Returned</th>
+              <th class="py-3 px-3 text-muted fw-semibold text-center" style="font-size:0.82rem;">Pending</th>
+              <th class="py-3 px-3 text-muted fw-semibold text-center" style="font-size:0.82rem;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach($returnSummary as $summary)
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td class="py-3 px-3">
+                <div class="fw-medium">{{ $summary['item']->item_name }}</div>
+                @if($summary['item']->item_type)
+                  <small class="text-muted">{{ $summary['item']->item_type }}</small>
+                @endif
+              </td>
+              <td class="py-3 px-3 text-center">
+                <span class="badge bg-secondary bg-opacity-10 text-secondary px-3 py-2 fw-semibold">
+                  {{ $summary['dispatched'] }}
+                </span>
+              </td>
+              <td class="py-3 px-3 text-center">
+                <span class="badge px-3 py-2 fw-semibold"
+                      style="{{ $summary['returned'] > 0 ? 'background:#d1fae5;color:#065f46;' : 'background:#f1f5f9;color:#64748b;' }}">
+                  {{ $summary['returned'] }}
+                </span>
+              </td>
+              <td class="py-3 px-3 text-center">
+                <span class="badge px-3 py-2 fw-semibold"
+                      style="{{ $summary['pending'] > 0 ? 'background:#fee2e2;color:#991b1b;' : 'background:#d1fae5;color:#065f46;' }}">
+                  {{ $summary['pending'] }}
+                </span>
+              </td>
+              <td class="py-3 px-3 text-center">
+                @if($summary['pending'] === 0)
+                  <span class="badge px-3 py-2" style="background:#d1fae5;color:#065f46;font-size:0.75rem;">
+                    <i class="bi bi-check-circle-fill me-1"></i>Returned
+                  </span>
+                @elseif($summary['returned'] > 0)
+                  <span class="badge px-3 py-2" style="background:#fef3c7;color:#92400e;font-size:0.75rem;">
+                    <i class="bi bi-arrow-left-right me-1"></i>Partial
+                  </span>
+                @else
+                  <span class="badge px-3 py-2" style="background:#fee2e2;color:#991b1b;font-size:0.75rem;">
+                    <i class="bi bi-clock-history me-1"></i>Pending
+                  </span>
+                @endif
+              </td>
+            </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
+
+      {{-- Return History Log --}}
+      @if($order->returnItems->count() > 0)
+        <div class="px-4 py-4">
+          <h6 class="fw-semibold text-muted mb-3" style="font-size:0.85rem;letter-spacing:0.5px;">
+            <i class="bi bi-clock-history me-2"></i>Return History
+          </h6>
+          <div class="d-flex flex-column gap-2">
+            @foreach($order->returnItems->sortByDesc('created_at') as $ret)
+              <div class="d-flex align-items-start justify-content-between p-3 rounded-3"
+                   style="background:#f8fafc;border:1px solid #e2e8f0;">
+                <div class="d-flex align-items-start gap-3">
+                  <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                       style="width:36px;height:36px;
+                              {{ $ret->condition === 'good' ? 'background:#d1fae5;color:#059669;' : ($ret->condition === 'damaged' ? 'background:#fef3c7;color:#d97706;' : 'background:#fee2e2;color:#dc2626;') }}">
+                    <i class="bi bi-{{ $ret->condition === 'good' ? 'check-circle' : ($ret->condition === 'damaged' ? 'exclamation-triangle' : 'x-circle') }} fs-6"></i>
+                  </div>
+                  <div>
+                    <div class="fw-semibold" style="font-size:0.9rem;">
+                      {{ $ret->orderItem->item_name ?? 'Item' }}
+                      <span class="ms-2 badge px-2 py-1 fw-medium"
+                            style="{{ $ret->condition === 'good' ? 'background:#d1fae5;color:#065f46;' : ($ret->condition === 'damaged' ? 'background:#fef3c7;color:#92400e;' : 'background:#fee2e2;color:#991b1b;') }}font-size:0.72rem;">
+                        {{ ucfirst($ret->condition) }}
+                      </span>
+                    </div>
+                    <div class="text-muted mt-1" style="font-size:0.82rem;">
+                      <i class="bi bi-arrow-return-left me-1"></i>
+                      <strong>{{ $ret->returned_qty }}</strong> unit{{ $ret->returned_qty > 1 ? 's' : '' }} returned
+                      on <strong>{{ $ret->return_date->format('d M Y') }}</strong>
+                      @if($ret->recordedBy)
+                        &bull; Recorded by <strong>{{ $ret->recordedBy->name }}</strong>
+                      @endif
+                    </div>
+                    @if($ret->notes)
+                      <div class="mt-1 text-muted" style="font-size:0.8rem;">
+                        <i class="bi bi-chat-left-text me-1"></i>{{ $ret->notes }}
+                      </div>
+                    @endif
+                  </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="text-muted" style="font-size:0.75rem;">{{ $ret->created_at->diffForHumans() }}</span>
+                  @if($order->return_status !== 'fully_returned')
+                    <form action="{{ route('orders.return-item.destroy', [$order, $ret]) }}" method="POST"
+                          onsubmit="return confirm('Are you sure you want to delete this return entry?')">
+                      @csrf
+                      @method('DELETE')
+                      <button type="submit" class="btn btn-sm btn-outline-danger border-0 p-1" title="Delete">
+                        <i class="bi bi-trash" style="font-size:0.8rem;"></i>
+                      </button>
+                    </form>
+                  @endif
+                </div>
+              </div>
+            @endforeach
+          </div>
+        </div>
+      @else
+        <div class="text-center py-4 text-muted" style="font-size:0.88rem;">
+          <i class="bi bi-inbox fs-4 d-block mb-2 opacity-50"></i>
+          No return entries recorded yet.
+        </div>
+      @endif
+
+    </div>{{-- end card-body --}}
+  </div>
+
+  {{-- Record Return Modal --}}
+  <div class="modal fade" id="recordReturnModal" tabindex="-1" aria-labelledby="recordReturnModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <form action="{{ route('orders.record-return', $order) }}" method="POST">
+        @csrf
+        <div class="modal-content border-0 shadow">
+          <div class="modal-header border-0 p-4" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);">
+            <h5 class="modal-title fw-semibold" id="recordReturnModalLabel">
+              <i class="bi bi-box-arrow-in-left me-2 text-warning"></i>Record Return
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+
+            @if($errors->any())
+              <div class="alert alert-danger py-2">
+                @foreach($errors->all() as $error)
+                  <div><i class="bi bi-exclamation-circle me-1"></i>{{ $error }}</div>
+                @endforeach
+              </div>
+            @endif
+
+            {{-- Item Select --}}
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Select Item <span class="text-danger">*</span></label>
+              <select name="order_item_id" id="returnItemSelect" class="form-select" required>
+                <option value="">-- Choose an Item --</option>
+                @foreach($returnSummary as $summary)
+                  @if($summary['pending'] > 0)
+                    <option value="{{ $summary['item']->id }}"
+                            data-pending="{{ $summary['pending'] }}"
+                            data-name="{{ $summary['item']->item_name }}">
+                      {{ $summary['item']->item_name }}
+                      ({{ $summary['pending'] }} pending)
+                    </option>
+                  @endif
+                @endforeach
+              </select>
+            </div>
+
+            {{-- Returned Qty --}}
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Returned Quantity <span class="text-danger">*</span></label>
+              <input type="number" name="returned_qty" id="returnQtyInput"
+                     class="form-control" min="1" value="1" required>
+              <div class="form-text" id="returnQtyHint">Select an item to see the maximum returnable quantity.</div>
+            </div>
+
+            {{-- Return Date --}}
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Return Date <span class="text-danger">*</span></label>
+              <input type="date" name="return_date" class="form-control"
+                     value="{{ date('Y-m-d') }}" required>
+            </div>
+
+            {{-- Condition --}}
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Item Condition <span class="text-danger">*</span></label>
+              <div class="d-flex gap-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="condition" id="cond_good" value="good" checked>
+                  <label class="form-check-label fw-medium" for="cond_good">
+                    <span style="color:#059669;">✅ Good</span>
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="condition" id="cond_damaged" value="damaged">
+                  <label class="form-check-label fw-medium" for="cond_damaged">
+                    <span style="color:#d97706;">⚠️ Damaged</span>
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="condition" id="cond_missing" value="missing">
+                  <label class="form-check-label fw-medium" for="cond_missing">
+                    <span style="color:#dc2626;">❌ Missing</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {{-- Notes --}}
+            <div class="mb-0">
+              <label class="form-label fw-semibold">Notes (Optional)</label>
+              <textarea name="notes" class="form-control" rows="2"
+                        placeholder="Add any damage details or special notes here..."></textarea>
+            </div>
+
+          </div>
+          <div class="modal-footer border-0 p-4 pt-0">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-warning fw-semibold">
+              <i class="bi bi-check-circle me-2"></i>Save Return
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
   @if($order->status == 'completed' || $order->settlement_status == 'pending')
   <div class="card border-0 shadow-sm mt-4">
       <div class="card-header bg-white border-0 p-4">
@@ -907,5 +1205,34 @@ document.addEventListener('DOMContentLoaded', function() {
   window.open('{{ session('whatsapp_link') }}', '_blank');
 @endif
 </script> -->
+@endpush
+@push('scripts')
+<script>
+// Return Modal: Update max quantity based on selected item
+document.addEventListener('DOMContentLoaded', function () {
+    const itemSelect  = document.getElementById('returnItemSelect');
+    const qtyInput    = document.getElementById('returnQtyInput');
+    const qtyHint     = document.getElementById('returnQtyHint');
+
+    if (!itemSelect) return;
+
+    itemSelect.addEventListener('change', function () {
+        const selected = this.options[this.selectedIndex];
+        if (!selected || !selected.value) {
+            qtyInput.max  = '';
+            qtyInput.value = 1;
+            qtyHint.textContent = 'Select an item to see the maximum returnable quantity.';
+            return;
+        }
+
+        const pending  = parseInt(selected.dataset.pending) || 1;
+        const itemName = selected.dataset.name || 'Item';
+
+        qtyInput.max   = pending;
+        qtyInput.value = pending; // default to all pending
+        qtyHint.textContent = `Max: ${pending} unit(s) can be returned (${itemName})`;
+    });
+});
+</script>
 @endpush
 @endsection

@@ -190,6 +190,13 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
+        // Overdue Returns — event ended but items not fully returned
+        $overdueReturns = Order::where('return_status', '!=', 'fully_returned')
+            ->whereDate('event_to', '<', now()->startOfDay())
+            ->orderBy('event_to')
+            ->limit(10)
+            ->get();
+
         // Payment Method Breakdown (for orders)
         $paymentMethodStats = PaymentTransaction::select('payment_method', DB::raw('count(*) as count'), DB::raw('sum(amount) as total'))
             ->groupBy('payment_method')
@@ -225,7 +232,8 @@ class DashboardController extends Controller
             'monthlyRevenue',
             'itemTypeRevenue',
             'selectedMonth',
-            'selectedYear'
+            'selectedYear',
+            'overdueReturns'
         ));
     }
 }

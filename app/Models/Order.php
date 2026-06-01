@@ -14,7 +14,8 @@ class Order extends Model
         'extra_charge_type','staff_count','extra_charge_rate','extra_charge_total',
         'discount_amount','total_amount',
         'advance_paid','balance_amount','agreement_required',
-        'status','created_by','notes','bill_to','pdf_path','security_deposit','damage_charge','late_fee','refund_amount','deposit_adjusted','amount_due','settlement_status','payment_status','settlement_date','final_payable'
+        'status','created_by','notes','bill_to','pdf_path','security_deposit','damage_charge','late_fee','refund_amount','deposit_adjusted','amount_due','settlement_status','payment_status','settlement_date','final_payable',
+        'return_status'
     ];
 
     protected $casts = [
@@ -30,6 +31,11 @@ class Order extends Model
 
     public function items() {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function returnItems()
+    {
+        return $this->hasMany(OrderReturnItem::class);
     }
 
     public function payment() {
@@ -93,5 +99,31 @@ class Order extends Model
         return $this->payment_status !== 'paid' 
             && $this->final_payable > 0 
             && now()->greaterThan($this->event_to);
+    }
+
+    /**
+     * Check if all items have been returned
+     */
+    public function isFullyReturned(): bool
+    {
+        return $this->return_status === 'fully_returned';
+    }
+
+    /**
+     * Items return is overdue — event ended but items not fully returned
+     */
+    public function isReturnOverdue(): bool
+    {
+        return $this->return_status !== 'fully_returned'
+            && now()->startOfDay()->greaterThan($this->event_to);
+    }
+
+    /**
+     * Days overdue for return
+     */
+    public function returnOverdueDays(): int
+    {
+        if (!$this->isReturnOverdue()) return 0;
+        return (int) now()->startOfDay()->diffInDays($this->event_to);
     }
 }
