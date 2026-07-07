@@ -299,6 +299,12 @@
                 <span class="info-label">Agreement Date:</span>
                 <span class="info-value">{{ $agreement->signed_at->format('d M Y') }}</span>
             </div>
+            @if($agreement->order->advance_paid > 0)
+            <div class="info-row">
+                <span class="info-label">Advance Paid:</span>
+                <span class="info-value fw-bold text-success">₹{{ number_format($agreement->order->advance_paid, 2) }}</span>
+            </div>
+            @endif
         </div>
 
         <!-- Rental Items -->

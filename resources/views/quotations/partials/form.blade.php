@@ -1,5 +1,7 @@
 @php
     $items = old('items') ?: ($quotation ? $quotation->items->toArray() : []);
+    $savedHT = $quotation->handle_type ?? null;
+    $htVal = old('handle_type', $savedHT !== null ? ($savedHT == 1 ? 'self' : 'staff') : '');
 @endphp
 
 <!-- Client Information Card -->
@@ -54,8 +56,8 @@
 
           <select name="handle_type" class="form-select" required>
               <option value="">Select</option>
-              <option value="staff">Our Staff Onsite</option>
-              <option value="self">Client Pickup (Self)</option>
+              <option value="staff" {{ $htVal === 'staff' ? 'selected' : '' }}>Our Staff Onsite</option>
+              <option value="self" {{ $htVal === 'self' ? 'selected' : '' }}>Client Pickup (Self)</option>
           </select>
       </div>
 
@@ -180,7 +182,10 @@
         </div>
         <!-- Additional Charges -->
         <div class="mb-3">
-            <span class="text-muted d-block mb-2">Additional Charges:</span>
+            <span class="text-muted d-block mb-2">
+                Additional Charges:
+                <a href="#" id="clear_extra_charges" class="text-danger ms-2" style="font-size: 0.85em; text-decoration: none;"><i class="bi bi-x-circle"></i> Clear</a>
+            </span>
 
             <!-- Delivery Charges -->
             <div class="form-check d-flex align-items-center gap-2 mb-2">
@@ -209,49 +214,51 @@
 
             <!-- Travelling Charges -->
             <!-- Attendance / Support Staff -->
-            <div class="form-check d-flex align-items-center gap-2 mb-2">
-                <input class="form-check-input extra-charge-option mt-0"
-                      type="radio"
-                      name="extra_charge_type"
-                      id="staff_charge_option"
-                      value="staff" {{ old('extra_charge_type', $quotation->extra_charge_type ?? '') === 'staff' ? 'checked' : '' }}>
-                <label class="form-check-label fw-semibold" for="staff_charge_option">
-                    Attendance / Support Staff <span class="text-muted">(Per Day)</span>
-                </label>
-            </div>
-
-            <div id="staff_charge_input"
-                class="ms-4 mb-2"
-                style="{{ old('extra_charge_type', $quotation->extra_charge_type ?? '') === 'staff' ? '' : 'display:none;' }}">
-                <div class="d-flex gap-2 align-items-center flex-wrap">
-                    <div class="input-group" style="max-width:160px;">
-                        <span class="input-group-text"><i class="bi bi-people"></i></span>
-                        <input type="number"
-                              min="1"
-                              step="1"
-                              class="form-control"
-                              name="staff_count"
-                              id="staff_count"
-                              value="{{ old('staff_count', $quotation->staff_count ?? 1) }}"
-                              placeholder="No. of Staff">
-                    </div>
-                    <div class="input-group" style="max-width:160px;">
-                        <span class="input-group-text">₹</span>
-                        <input type="number"
-                              step="0.01"
-                              class="form-control"
-                              name="extra_charge_rate"
-                              id="staff_charge_amount"
-                              value="{{ old('extra_charge_rate', $quotation->extra_charge_rate ?? '') }}"
-                              placeholder="Rate/Staff/Day">
-                    </div>
+            <div id="attendance_support_staff_wrapper" style="display: {{ $htVal === 'staff' ? 'block' : 'none' }};">
+                <div class="form-check d-flex align-items-center gap-2 mb-2">
+                    <input class="form-check-input extra-charge-option mt-0"
+                          type="radio"
+                          name="extra_charge_type"
+                          id="staff_charge_option"
+                          value="staff" {{ old('extra_charge_type', $quotation->extra_charge_type ?? '') === 'staff' ? 'checked' : '' }}>
+                    <label class="form-check-label fw-semibold" for="staff_charge_option">
+                        Attendance / Support Staff <span class="text-muted">(Per Day)</span>
+                    </label>
                 </div>
-                <small class="text-muted mt-1 d-block">
-                    <span id="staff_count_display">1</span> Staff ×
-                    ₹<span id="staff_rate_display">0</span> ×
-                    <span id="staff_days">1</span> Day(s) =
-                    <strong>₹<span id="staff_total">0.00</span></strong>
-                </small>
+
+                <div id="staff_charge_input"
+                    class="ms-4 mb-2"
+                    style="{{ old('extra_charge_type', $quotation->extra_charge_type ?? '') === 'staff' ? '' : 'display:none;' }}">
+                    <div class="d-flex gap-2 align-items-center flex-wrap">
+                        <div class="input-group" style="max-width:160px;">
+                            <span class="input-group-text"><i class="bi bi-people"></i></span>
+                            <input type="number"
+                                  min="1"
+                                  step="1"
+                                  class="form-control"
+                                  name="staff_count"
+                                  id="staff_count"
+                                  value="{{ old('staff_count', $quotation->staff_count ?? 1) }}"
+                                  placeholder="No. of Staff">
+                        </div>
+                        <div class="input-group" style="max-width:160px;">
+                            <span class="input-group-text">₹</span>
+                            <input type="number"
+                                  step="0.01"
+                                  class="form-control"
+                                  name="extra_charge_rate"
+                                  id="staff_charge_amount"
+                                  value="{{ old('extra_charge_rate', $quotation->extra_charge_rate ?? '') }}"
+                                  placeholder="Rate/Staff/Day">
+                        </div>
+                    </div>
+                    <small class="text-muted mt-1 d-block">
+                        <span id="staff_count_display">1</span> Staff ×
+                        ₹<span id="staff_rate_display">0</span> ×
+                        <span id="staff_days">1</span> Day(s) =
+                        <strong>₹<span id="staff_total">0.00</span></strong>
+                    </small>
+                </div>
             </div>
         </div>
 
@@ -424,6 +431,31 @@ document.addEventListener('DOMContentLoaded', function(){
     const deliveryInput    = document.getElementById('delivery_charge_input');
     const staffInput = document.getElementById('staff_charge_input');
 
+    const handleTypeSelect = document.querySelector('select[name="handle_type"]');
+    const attendanceWrapper = document.getElementById('attendance_support_staff_wrapper');
+
+    if (handleTypeSelect && attendanceWrapper) {
+        function toggleAttendanceStaff() {
+            if (handleTypeSelect.value === 'staff') {
+                attendanceWrapper.style.display = 'block';
+            } else {
+                attendanceWrapper.style.display = 'none';
+                const staffRadio = document.getElementById('staff_charge_option');
+                if (staffRadio && staffRadio.checked) {
+                    staffRadio.checked = false;
+                    staffInput.style.display = 'none';
+                    document.getElementById('staff_charge_amount').value = '';
+                    document.getElementById('staff_count').value = '1';
+                    recalcAll();
+                }
+            }
+        }
+        
+        handleTypeSelect.addEventListener('change', toggleAttendanceStaff);
+        // Trigger on load as well
+        toggleAttendanceStaff();
+    }
+
     document.querySelectorAll('.extra-charge-option').forEach(opt => {
         opt.addEventListener('change', function () {
             deliveryInput.style.display = 'none';
@@ -439,6 +471,20 @@ document.addEventListener('DOMContentLoaded', function(){
             recalcAll();
         });
     });
+
+    const clearExtraChargesBtn = document.getElementById('clear_extra_charges');
+    if (clearExtraChargesBtn) {
+        clearExtraChargesBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelectorAll('.extra-charge-option').forEach(opt => opt.checked = false);
+            if (deliveryInput) deliveryInput.style.display = 'none';
+            if (staffInput) staffInput.style.display = 'none';
+            document.getElementById('delivery_charge_amount').value = '';
+            document.getElementById('staff_charge_amount').value = '';
+            document.getElementById('staff_count').value = '1';
+            recalcAll();
+        });
+    }
 
     /* ======================
        EVENT LISTENERS
