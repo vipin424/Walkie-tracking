@@ -145,7 +145,7 @@ class DashboardController extends Controller
 
         // Financial Overview - Orders
         $orderFinancials = [
-            'total_revenue' => Order::sum('total_amount'),
+            'total_revenue' => Order::sum('total_amount') + PaymentTransaction::whereNull('order_id')->sum('amount'),
             'total_pending' => Order::where('payment_status', '!=', 'paid')->sum('final_payable'),
             'total_collected' => PaymentTransaction::sum('amount'),
             'advance_amount' => Order::where('payment_status', 'partial')->sum('final_payable'),
