@@ -828,11 +828,18 @@
 
   @if($order->status == 'completed' || $order->settlement_status == 'pending')
   <div class="card border-0 shadow-sm mt-4">
-      <div class="card-header bg-white border-0 p-4">
+      <div class="card-header bg-white border-0 p-4 d-flex justify-content-between align-items-center">
           <h5 class="mb-0 fw-semibold">
               <i class="bi bi-cash-coin text-success me-2"></i>
               Final Settlement
           </h5>
+          @if($order->settlement_status === 'settled')
+            <a href="{{ route('orders.settlementPdf', $order) }}" target="_blank"
+               class="btn btn-sm fw-semibold"
+               style="background:linear-gradient(135deg,#e84393,#c026a0);color:#fff;border:none;">
+              <i class="bi bi-file-earmark-pdf me-2"></i>Download Invoice PDF
+            </a>
+          @endif
       </div>
 
       <div class="card-body p-4">
@@ -873,21 +880,93 @@
               <div class="row mb-3">
                   <div class="col-md-6">
                       <label class="form-label fw-semibold">Damage Charges</label>
-                      <input type="number" step="0.01" name="damage_charge"
-                             class="form-control" value="0">
+                      <div class="input-group">
+                          <span class="input-group-text">₹</span>
+                          <input type="number" step="0.01" name="damage_charge"
+                                 class="form-control settlement-charge-input" value="{{ $order->damage_charge ?? 0 }}"
+                                 min="0">
+                      </div>
                   </div>
                   <div class="col-md-6">
                       <label class="form-label fw-semibold">Late Fee</label>
-                      <input type="number" step="0.01" name="late_fee"
-                             class="form-control" value="0">
+                      <div class="input-group">
+                          <span class="input-group-text">₹</span>
+                          <input type="number" step="0.01" name="late_fee"
+                                 class="form-control settlement-charge-input" value="{{ $order->late_fee ?? 0 }}"
+                                 min="0">
+                      </div>
                   </div>
               </div>
 
-              <div class="alert alert-info mt-4">
-                  <strong>Note:</strong> Damage/Late fee will be settled from security deposit first.
+              <hr class="my-4">
+
+              <h5 class="fw-bold mb-3">Additional Charges</h5>
+
+              <div class="row mb-3">
+                  <div class="col-md-6">
+                      <label class="form-label fw-semibold">
+                          <i class="bi bi-car-front-fill text-primary me-1"></i>Travelling Charges
+                      </label>
+                      <div class="input-group">
+                          <span class="input-group-text">₹</span>
+                          <input type="number" step="0.01" name="settlement_travelling_charges"
+                                 id="settlementTravellingCharges"
+                                 class="form-control settlement-charge-input"
+                                 value="{{ $order->settlement_travelling_charges ?? 0 }}"
+                                 min="0" placeholder="0.00">
+                      </div>
+                      <div class="form-text text-muted">Transport/logistics charges for the event</div>
+                  </div>
+                  <div class="col-md-6">
+                      <label class="form-label fw-semibold">
+                          <i class="bi bi-cup-hot-fill text-warning me-1"></i>Food Charges
+                      </label>
+                      <div class="input-group">
+                          <span class="input-group-text">₹</span>
+                          <input type="number" step="0.01" name="settlement_food_charges"
+                                 id="settlementFoodCharges"
+                                 class="form-control settlement-charge-input"
+                                 value="{{ $order->settlement_food_charges ?? 0 }}"
+                                 min="0" placeholder="0.00">
+                      </div>
+                      <div class="form-text text-muted">Food/catering charges during the event</div>
+                  </div>
               </div>
 
-              <button class="btn btn-success mt-3">
+              {{-- Live Settlement Preview --}}
+              <div class="rounded-3 p-4 mt-3 mb-3" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1.5px solid #86efac;">
+                  <h6 class="fw-bold mb-3" style="color:#15803d;">
+                      <i class="bi bi-calculator me-2"></i>Settlement Preview
+                  </h6>
+                  <div class="row g-3">
+                      <div class="col-6 col-md-4">
+                          <div class="text-muted" style="font-size:0.8rem;">Remaining Rent</div>
+                          <div class="fw-semibold">₹{{ number_format($order->balance_amount, 2) }}</div>
+                      </div>
+                      <div class="col-6 col-md-4">
+                          <div class="text-muted" style="font-size:0.8rem;">Additional Charges</div>
+                          <div class="fw-semibold text-warning" id="previewAdditional">₹0.00</div>
+                      </div>
+                      <div class="col-6 col-md-4">
+                          <div class="text-muted" style="font-size:0.8rem;">Security Deposit</div>
+                          <div class="fw-semibold text-success">- ₹{{ number_format($order->security_deposit, 2) }}</div>
+                      </div>
+                      <div class="col-12">
+                          <hr class="my-1">
+                          <div class="d-flex justify-content-between align-items-center">
+                              <span class="fw-bold" style="font-size:1rem;">Estimated Final Payable</span>
+                              <span class="fw-bold fs-5" id="previewFinalPayable" style="color:#15803d;">₹0.00</span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+              <div class="alert" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;">
+                  <i class="bi bi-info-circle-fill me-2" style="color:#3b82f6;"></i>
+                  <strong>Note:</strong> Damage/Late fee will be settled from security deposit first. Travelling & Food charges are added to the final payable amount.
+              </div>
+
+              <button class="btn btn-success mt-3 px-4 fw-semibold">
                   <i class="bi bi-check-circle me-2"></i>
                   Proceed Settlement
               </button>
@@ -897,6 +976,7 @@
       </div>
   </div>
   @endif
+
 @if($order->agreement_required || optional($order->agreement)->aadhaar_status !== 'uploaded')
 <div class="card border-0 shadow-sm mt-4">
     <div class="card-header bg-white border-0 p-4">
@@ -1293,6 +1373,62 @@ if (window.location.hash === '#return-tracking-section') {
         }
     });
 }
+</script>
+@endpush
+@push('scripts')
+<script>
+// Live Settlement Preview Calculator
+document.addEventListener('DOMContentLoaded', function () {
+    const chargeInputs = document.querySelectorAll('.settlement-charge-input');
+    const previewAdditional = document.getElementById('previewAdditional');
+    const previewFinalPayable = document.getElementById('previewFinalPayable');
+
+    if (!previewFinalPayable) return;
+
+    const balance     = {{ floatval($order->balance_amount) }};
+    const deposit     = {{ floatval($order->security_deposit) }};
+
+    function updatePreview() {
+        const damageEl   = document.querySelector('input[name="damage_charge"]');
+        const lateEl     = document.querySelector('input[name="late_fee"]');
+        const travelEl   = document.querySelector('input[name="settlement_travelling_charges"]');
+        const foodEl     = document.querySelector('input[name="settlement_food_charges"]');
+
+        const damage     = parseFloat(damageEl?.value || 0);
+        const late       = parseFloat(lateEl?.value   || 0);
+        const travelling = parseFloat(travelEl?.value || 0);
+        const food       = parseFloat(foodEl?.value   || 0);
+
+        const extraCharges      = travelling + food;
+        const depositRemaining  = deposit - (damage + late);
+        let finalPayable;
+
+        if (depositRemaining >= 0) {
+            finalPayable = balance + extraCharges - depositRemaining;
+            finalPayable = Math.max(0, finalPayable);
+        } else {
+            finalPayable = balance + extraCharges + Math.abs(depositRemaining);
+        }
+
+        // Update preview
+        if (previewAdditional) {
+            previewAdditional.textContent = '₹' + extraCharges.toFixed(2);
+            previewAdditional.style.color = extraCharges > 0 ? '#d97706' : '#64748b';
+        }
+
+        if (previewFinalPayable) {
+            previewFinalPayable.textContent = '₹' + finalPayable.toFixed(2);
+            previewFinalPayable.style.color = finalPayable > 0 ? '#dc2626' : '#15803d';
+        }
+    }
+
+    chargeInputs.forEach(function (input) {
+        input.addEventListener('input', updatePreview);
+    });
+
+    // Run once on page load
+    updatePreview();
+});
 </script>
 @endpush
 @endsection

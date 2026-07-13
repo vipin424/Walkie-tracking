@@ -337,29 +337,36 @@ class OrderController extends Controller
     public function complete(Request $request, Order $order)
     {
         $request->validate([
-            'damage_charge' => 'nullable|numeric|min:0',
-            'late_fee'      => 'nullable|numeric|min:0',
+            'damage_charge'                  => 'nullable|numeric|min:0',
+            'late_fee'                       => 'nullable|numeric|min:0',
+            'settlement_travelling_charges'  => 'nullable|numeric|min:0',
+            'settlement_food_charges'        => 'nullable|numeric|min:0',
         ]);
 
-        $damage = floatval($request->damage_charge ?? 0);
-        $late   = floatval($request->late_fee ?? 0);
+        $damage     = floatval($request->damage_charge ?? 0);
+        $late       = floatval($request->late_fee ?? 0);
+        $travelling = floatval($request->settlement_travelling_charges ?? 0);
+        $food       = floatval($request->settlement_food_charges ?? 0);
 
         $deposit = floatval($order->security_deposit);
         $balance = floatval($order->balance_amount);
         $advance = floatval($order->advance_paid);
         $total   = floatval($order->total_amount);
-        
+
+        // Total extra charges added at settlement
+        $extraCharges = $travelling + $food;
+
         $depositRemaining = $deposit - ($damage + $late);
         $depositUsedForBalance = 0;
 
         if ($depositRemaining >= 0) {
             // deposit covers damages
-            $finalPayable = $balance - $depositRemaining;
+            $finalPayable = $balance + $extraCharges - $depositRemaining;
 
             if ($finalPayable <= 0) {
                 $refund = abs($finalPayable);
                 $finalPayable = 0;
-                $depositUsedForBalance = $balance;
+                $depositUsedForBalance = $balance + $extraCharges;
             } else {
                 $refund = 0;
                 $depositUsedForBalance = $depositRemaining;
@@ -367,20 +374,22 @@ class OrderController extends Controller
 
         } else {
             // deposit not enough
-            $finalPayable = $balance + abs($depositRemaining);
+            $finalPayable = $balance + $extraCharges + abs($depositRemaining);
             $refund = 0;
             $depositUsedForBalance = 0;
         }
  
         $order->update([    
-            'damage_charge'   => $damage,
-            'late_fee'        => $late,
-            'deposit_adjusted'=> max($depositRemaining, 0),
-            'refund_amount'   => $refund,
-            'final_payable'   => $finalPayable,
-            'settlement_status'=>'settled',
-            'settlement_date' => now(),
-            'payment_status'  => $finalPayable > 0 ? 'partial' : 'paid',
+            'damage_charge'                 => $damage,
+            'late_fee'                      => $late,
+            'settlement_travelling_charges' => $travelling,
+            'settlement_food_charges'       => $food,
+            'deposit_adjusted'              => max($depositRemaining, 0),
+            'refund_amount'                 => $refund,
+            'final_payable'                 => $finalPayable,
+            'settlement_status'             => 'settled',
+            'settlement_date'               => now(),
+            'payment_status'                => $finalPayable > 0 ? 'partial' : 'paid',
         ]);
 
         // Record payment transaction if deposit was used for balance OR if balance was already paid
@@ -409,6 +418,7 @@ class OrderController extends Controller
 
         return redirect()->route('orders.show', $order)->with('success','Settlement completed.');
     }
+
 
     // public function complete(Request $request, Order $order)
     // {
@@ -736,6 +746,21 @@ class OrderController extends Controller
         $order->save();
 
         return redirect()->back()->with('success','PDF generated and stored.');
+    }
+
+    // Generate & stream settlement/invoice PDF inline
+    public function generateSettlementPdf(Order $order)
+    {
+        $order->load('items');
+        $html = view('orders.pdf', compact('order'))->render();
+        $pdf = PDF::loadHTML($html)->setPaper('a4', 'portrait');
+
+        $fileName = $order->order_code . '-invoice.pdf';
+
+        return response($pdf->output(), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+        ]);
     }
 
     // Download via signed route - signed middleware protects it

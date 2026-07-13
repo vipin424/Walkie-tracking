@@ -14,7 +14,7 @@ class Order extends Model
         'extra_charge_type','staff_count','extra_charge_rate','extra_charge_total','travelling_charge',
         'discount_amount','total_amount',
         'advance_paid','balance_amount','agreement_required',
-        'status','created_by','notes','bill_to','pdf_path','security_deposit','damage_charge','late_fee','refund_amount','deposit_adjusted','amount_due','settlement_status','payment_status','settlement_date','final_payable',
+        'status','created_by','notes','bill_to','pdf_path','security_deposit','damage_charge','late_fee','settlement_travelling_charges','settlement_food_charges','refund_amount','deposit_adjusted','amount_due','settlement_status','payment_status','settlement_date','final_payable',
         'return_status'
     ];
 
