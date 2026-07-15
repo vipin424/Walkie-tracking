@@ -274,6 +274,21 @@ class OrderController extends Controller
                     'total_price' => $baseTotal + $lineTax,
                 ]);
             }
+
+            /** 🔹 RECORD ADVANCE PAYMENT */
+            if ($request->advance_paid > 0) {
+                \App\Models\PaymentTransaction::create([
+                    'order_id' => $order->id,
+                    'payable_type' => \App\Models\Order::class,
+                    'payable_id' => $order->id,
+                    'amount' => $request->advance_paid,
+                    'payment_method' => 'gpay',
+                    'transaction_id' => null,
+                    'notes' => 'Advance payment received during order creation',
+                    'paid_at' => now(),
+                    'recorded_by' => auth()->user()->name ?? 'Admin',
+                ]);
+            }
         });
 
         // Generate WhatsApp link and store in session
@@ -681,6 +696,33 @@ class OrderController extends Controller
                 ]);
             }
 
+            /** 🔹 UPDATE ADVANCE PAYMENT TRANSACTION IF NEEDED */
+            $advanceTransaction = \App\Models\PaymentTransaction::where('order_id', $order->id)
+                ->where('notes', 'Advance payment received during order creation')
+                ->first();
+
+            if ($request->advance_paid > 0) {
+                if ($advanceTransaction) {
+                    $advanceTransaction->update(['amount' => $request->advance_paid]);
+                } else {
+                    \App\Models\PaymentTransaction::create([
+                        'order_id' => $order->id,
+                        'payable_type' => \App\Models\Order::class,
+                        'payable_id' => $order->id,
+                        'amount' => $request->advance_paid,
+                        'payment_method' => 'gpay',
+                        'transaction_id' => null,
+                        'notes' => 'Advance payment received during order creation',
+                        'paid_at' => now(),
+                        'recorded_by' => auth()->user()->name ?? 'Admin',
+                    ]);
+                }
+            } else {
+                if ($advanceTransaction) {
+                    $advanceTransaction->delete();
+                }
+            }
+
             return redirect()
                 ->route('orders.show', $order)
                 ->with('success', "Order updated successfully for {$totalDays} day(s).");
@@ -1049,6 +1091,21 @@ class OrderController extends Controller
             $quotation->update([
                 'status' => 'accepted'
             ]);
+
+            /** ✅ RECORD ADVANCE PAYMENT */
+            if ($request->advance_paid > 0) {
+                \App\Models\PaymentTransaction::create([
+                    'order_id' => $order->id,
+                    'payable_type' => \App\Models\Order::class,
+                    'payable_id' => $order->id,
+                    'amount' => $request->advance_paid,
+                    'payment_method' => 'gpay',
+                    'transaction_id' => null,
+                    'notes' => 'Advance payment received during order creation',
+                    'paid_at' => now(),
+                    'recorded_by' => auth()->user()->name ?? 'Admin',
+                ]);
+            }
         });
 
         return redirect()
