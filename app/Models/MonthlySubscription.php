@@ -26,6 +26,11 @@ class MonthlySubscription extends Model
         return $this->hasMany(MonthlyInvoice::class, 'subscription_id');
     }
 
+    public function agreement()
+    {
+        return $this->hasOne(SubscriptionAgreement::class, 'subscription_id');
+    }
+
     public static function generateCode()
     {
         return 'SUB-' . now()->format('Ymd') . '-' . rand(100, 999);

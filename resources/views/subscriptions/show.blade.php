@@ -8,10 +8,14 @@
             <h4 class="mb-1 fw-bold">{{ $subscription->subscription_code }}</h4>
             <p class="text-muted mb-0">Subscription Details & Invoice History</p>
         </div>
-        <div>
+        <div class="d-flex gap-2 flex-wrap">
             <a href="{{ route('subscriptions.generate-invoice', $subscription) }}" class="btn btn-success btn-md shadow-sm">
                 <i class="bi bi-file-earmark-plus me-2"></i>Generate Invoice
             </a>
+            <button type="button" class="btn btn-primary btn-md shadow-sm" onclick="openAgreementModal()">
+                <i class="bi bi-file-earmark-lock me-2"></i>
+                {{ $subscription->agreement ? 'Regenerate Agreement' : 'Generate Agreement' }}
+            </button>
             <a href="{{ route('subscriptions.edit', $subscription) }}" class="btn btn-warning btn-md shadow-sm">
                 <i class="bi bi-pencil me-2"></i>Edit
             </a>
@@ -135,6 +139,87 @@
     </div>
     @endif
 
+    <!-- Agreement Section -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-0 p-4 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-semibold">
+                <i class="bi bi-file-earmark-lock me-2 text-warning"></i>Monthly Rental Agreement
+            </h5>
+            @if($subscription->agreement)
+                <span class="badge px-3 py-2 {{ $subscription->agreement->status === 'signed' ? 'bg-success' : 'bg-warning text-dark' }} fs-6">
+                    {{ $subscription->agreement->status === 'signed' ? '✅ Signed' : '⏳ Pending Signature' }}
+                </span>
+            @else
+                <span class="badge bg-secondary px-3 py-2 fs-6">Not Generated</span>
+            @endif
+        </div>
+        <div class="card-body p-4">
+            @if($subscription->agreement)
+                @php $agr = $subscription->agreement; @endphp
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3">
+                        <div class="text-muted small">Agreement Code</div>
+                        <div class="fw-semibold">{{ $agr->agreement_code }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-muted small">Agreement Period</div>
+                        <div class="fw-semibold">
+                            {{ $agr->agreement_start_date->format('d M Y') }}
+                            <i class="bi bi-arrow-right mx-1"></i>
+                            {{ $agr->agreement_end_date->format('d M Y') }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-muted small">Generated / Sent</div>
+                        <div class="fw-semibold">{{ $agr->created_at->format('d M Y') }}</div>
+                    </div>
+                    @if($agr->status === 'signed')
+                    <div class="col-md-3">
+                        <div class="text-muted small">Signed On</div>
+                        <div class="fw-semibold text-success">{{ $agr->signed_at->format('d M Y, h:i A') }}</div>
+                    </div>
+                    @endif
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    {{-- Send via Email --}}
+                    <button type="button" class="btn btn-outline-primary btn-sm"
+                            onclick="openSendAgreementEmailModal()">
+                        <i class="bi bi-envelope me-1"></i> Send via Email
+                    </button>
+
+                    {{-- Send via WhatsApp --}}
+                    <a href="{{ route('subscriptions.agreement.send-whatsapp', $subscription) }}"
+                       class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-whatsapp me-1"></i> Send via WhatsApp
+                    </a>
+
+                    {{-- View / Download signed PDF --}}
+                    @if($agr->signed_pdf)
+                    <a href="{{ asset('storage/' . $agr->signed_pdf) }}" target="_blank"
+                       class="btn btn-outline-dark btn-sm">
+                        <i class="bi bi-file-pdf me-1"></i> View Signed PDF
+                    </a>
+                    @endif
+
+                    {{-- Copy Link --}}
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                            onclick="copyLink('{{ $agr->signed_url }}')">
+                        <i class="bi bi-link-45deg me-1"></i> Copy Sign Link
+                    </button>
+                </div>
+            @else
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-file-earmark-lock fs-1 d-block mb-3 opacity-25"></i>
+                    <p class="mb-3">No agreement generated yet for this subscription.</p>
+                    <button type="button" class="btn btn-primary" onclick="openAgreementModal()">
+                        <i class="bi bi-plus-circle me-2"></i>Generate Agreement Now
+                    </button>
+                </div>
+            @endif
+        </div>
+    </div>
+
     <!-- Generated Invoices -->
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-white border-0 p-4">
@@ -214,6 +299,119 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- Generate Agreement Modal -->
+<div class="modal fade" id="generateAgreementModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%); color: white;">
+        <h5 class="modal-title">
+          <i class="bi bi-file-earmark-lock me-2"></i>
+          {{ $subscription->agreement ? 'Regenerate Agreement' : 'Generate Agreement' }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ route('subscriptions.agreement.generate', $subscription) }}">
+        @csrf
+        <div class="modal-body p-4">
+          <div class="alert alert-info border-0 mb-4" style="background: #e3f2fd; border-left: 4px solid #1565c0 !important;">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>{{ $subscription->subscription_code }}</strong> &mdash; {{ $subscription->client_name }}<br>
+            <small class="text-muted">Monthly Amount: ₹{{ number_format($subscription->monthly_amount, 2) }}</small>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              <i class="bi bi-calendar-event me-2"></i>Agreement Start Date <span class="text-danger">*</span>
+            </label>
+            <input type="date" class="form-control" name="agreement_start_date"
+                   value="{{ $subscription->agreement ? $subscription->agreement->agreement_start_date->format('Y-m-d') : $subscription->billing_start_date->format('Y-m-d') }}"
+                   required>
+            <small class="text-muted">Default: Subscription billing start date</small>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              <i class="bi bi-calendar-check me-2"></i>Agreement End Date <span class="text-danger">*</span>
+            </label>
+            <input type="date" class="form-control" name="agreement_end_date"
+                   value="{{ $subscription->agreement ? $subscription->agreement->agreement_end_date->format('Y-m-d') : $subscription->billing_start_date->addYear()->format('Y-m-d') }}"
+                   required>
+            <small class="text-muted">Default: 1 year from start date (change as needed)</small>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              <i class="bi bi-shield-lock me-2"></i>Security Deposit (Optional)
+            </label>
+            <div class="input-group">
+              <span class="input-group-text">₹</span>
+              <input type="number" step="0.01" class="form-control" name="security_deposit"
+                     placeholder="0.00" value="{{ $subscription->agreement ? $subscription->agreement->security_deposit : '' }}">
+            </div>
+            <small class="text-muted">Refundable security deposit amount</small>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle me-1"></i>Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-file-earmark-lock me-1"></i>
+            {{ $subscription->agreement ? 'Regenerate' : 'Generate' }} Agreement
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Send Agreement Email Modal -->
+<div class="modal fade" id="sendAgreementEmailModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header" style="background: linear-gradient(135deg, #0a5b4dff 0%, #004d40 100%); color: white;">
+        <h5 class="modal-title">
+          <i class="bi bi-envelope me-2"></i>Send Agreement Link via Email
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ route('subscriptions.agreement.send-email', $subscription) }}">
+        @csrf
+        <div class="modal-body p-4">
+          <div class="alert alert-success border-0 mb-4" style="background: #e8f5e9; border-left: 4px solid #004d40 !important;">
+            <strong>{{ $subscription->subscription_code }}</strong> — Signing link will be sent to client.
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              <i class="bi bi-envelope me-2"></i>To Email <span class="text-danger">*</span>
+            </label>
+            <input type="email" class="form-control" name="to_email"
+                   value="{{ $subscription->client_email }}"
+                   placeholder="client@example.com" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              <i class="bi bi-envelope-plus me-2"></i>CC Emails (Optional)
+            </label>
+            <input type="text" class="form-control" name="cc_emails"
+                   placeholder="email1@example.com, email2@example.com">
+            <small class="text-muted">Separate multiple emails with commas</small>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle me-1"></i>Cancel
+          </button>
+          <button type="submit" class="btn btn-success">
+            <i class="bi bi-send-fill me-1"></i>Send Agreement Link
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <!-- Send Invoice Modal -->
@@ -472,6 +670,71 @@ document.querySelectorAll('input[name="method"]').forEach(radio => {
     }
   });
 });
+
+function openAgreementModal() {
+  new bootstrap.Modal(document.getElementById('generateAgreementModal')).show();
+}
+
+function openSendAgreementEmailModal() {
+  new bootstrap.Modal(document.getElementById('sendAgreementEmailModal')).show();
+}
+
+function copyLink(link) {
+  // navigator.clipboard only works on HTTPS — use execCommand fallback for HTTP
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(link).then(function() {
+      showCopyToast();
+    }).catch(function() {
+      fallbackCopy(link);
+    });
+  } else {
+    fallbackCopy(link);
+  }
+}
+
+function fallbackCopy(link) {
+  const el = document.createElement('textarea');
+  el.value = link;
+  el.style.position = 'fixed';
+  el.style.left = '-9999px';
+  el.style.top = '-9999px';
+  document.body.appendChild(el);
+  el.focus();
+  el.select();
+  try {
+    const success = document.execCommand('copy');
+    if (success) {
+      showCopyToast();
+    } else {
+      prompt('Copy this signing link manually:', link);
+    }
+  } catch(e) {
+    prompt('Copy this signing link manually:', link);
+  }
+  document.body.removeChild(el);
+}
+
+function showCopyToast() {
+  // Remove existing toast if any
+  const existing = document.getElementById('copyToast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'copyToast';
+  toast.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Signing link copied to clipboard!';
+  toast.style.cssText = `
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    background: #004d40; color: #fff;
+    padding: 12px 20px; border-radius: 8px;
+    font-size: 14px; font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    transition: opacity 0.4s;
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+  setTimeout(() => { toast.remove(); }, 3000);
+}
+
 
 document.getElementById('sendInvoiceForm').addEventListener('submit', function(e) {
   e.preventDefault();
