@@ -457,8 +457,13 @@ document.addEventListener('DOMContentLoaded', function () {
         icon: 'success',
         title: 'Agreement Signed Successfully!',
         html: 'Thank you <strong>{{ $agreement->subscription->client_name }}</strong>.<br>Your agreement has been recorded and a signed copy has been sent to your email.',
-        confirmButtonText: 'OK',
-        confirmButtonColor: '#004d40'
+        confirmButtonText: 'OK, Continue',
+        confirmButtonColor: '#004d40',
+        allowOutsideClick: false
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = 'https://www.crewrent.in';
+        }
     });
 });
 </script>
