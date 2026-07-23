@@ -8,8 +8,12 @@ use Illuminate\Support\Str;
 class Quotation extends Model
 {
     protected $fillable = [
-        'code','client_name','client_email','client_phone','event_from','event_to','handle_type','total_days',
-        'notes','bill_to','subtotal','tax_amount','discount_amount','extra_charge_type','extra_charge_rate','staff_count','extra_charge_total','travelling_charge','total_amount','status','created_by','pdf_path'
+        'code', 'client_id', 'client_name', 'client_email', 'client_phone',
+        'event_from', 'event_to', 'handle_type', 'pickup_type', 'total_days',
+        'notes', 'bill_to', 'valid_until',
+        'subtotal', 'tax_amount', 'discount_amount',
+        'extra_charge_type', 'extra_charge_rate', 'staff_count', 'extra_charge_total',
+        'travelling_charge', 'total_amount', 'status', 'created_by', 'pdf_path'
     ];
 
     protected static function booted()
@@ -21,6 +25,11 @@ class Quotation extends Model
                 $quotation->code = 'QTN-' . $date . '-' . rand(100,999);
             }
         });
+    }
+
+    public function client()
+    {
+        return $this->belongsTo(Client::class);
     }
 
     public function items()

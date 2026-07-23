@@ -5,10 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\{
     DashboardController,
     ClientController,
-    DispatchController,
-    ReturnController,
     PaymentController,
-    InvoiceController,
     OrderController,
     OrderReturnController,
     QuotationController,
@@ -18,13 +15,39 @@ use App\Http\Controllers\{
     SubscriptionAgreementController,
 };
 
-Route::get('/', function () {
-    return view('welcome');
-});
+use App\Http\Controllers\Storefront\HomeController;
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+// ─────────────────────────────────────────────────────────────────────────────
+// Public Storefront Routes
+// ─────────────────────────────────────────────────────────────────────────────
+
+Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/category/{slug}', [HomeController::class, 'category'])->name('storefront.category');
+Route::get('/category/{category_slug}/{item_slug}', [HomeController::class, 'product'])->name('storefront.product');
+
+// Storefront AJAX APIs
+Route::post('/api/storefront/check-availability', [App\Http\Controllers\StorefrontAPIController::class, 'checkAvailability'])->name('api.storefront.check-availability');
+
+// Signed download links (outside auth — accessed from email)
+Route::get('quotations/{hash}/download', [QuotationController::class, 'download'])
+    ->name('quotations.download')->middleware('signed');
+
+Route::get('/orders/{hash}/download', [OrderController::class, 'download'])
+    ->name('orders.download')->middleware('signed');
+
+Route::get('/monthly-invoice/{hash}/download', [MonthlySubscriptionController::class, 'downloadInvoice'])
+    ->name('monthly-invoice.download')->middleware('signed');
+
+// Client-facing agreement signing (no auth required)
+Route::get('/agreement/sign/{code}',  [AgreementController::class, 'show'])->name('agreement.sign');
+Route::post('/agreement/{code}',      [AgreementController::class, 'submit'])->name('agreement.submit');
+
+Route::get('/subscription-agreement/sign/{code}',  [SubscriptionAgreementController::class, 'show'])->name('subscription-agreement.sign');
+Route::post('/subscription-agreement/{code}',       [SubscriptionAgreementController::class, 'submit'])->name('subscription-agreement.submit');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auth Profile Routes
+// ─────────────────────────────────────────────────────────────────────────────
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -34,117 +57,70 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__.'/auth.php';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin Routes (auth protected)
+// ─────────────────────────────────────────────────────────────────────────────
+
 Route::middleware(['auth'])->group(function () {
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
+    // Dashboard
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // ── Clients ──────────────────────────────────────────────────────────────
     Route::resource('clients', ClientController::class);
+
+    // ── Categories / Catalog ──────────────────────────────────────────────────
+    Route::resource('categories', App\Http\Controllers\CategoryController::class);
+    Route::get('/categories-data', [App\Http\Controllers\CategoryController::class, 'getData'])->name('categories.data');
+
+    // ── Items / Catalog ──────────────────────────────────────────────────────
     Route::resource('items', ItemController::class);
-    Route::get('/items-data', [ItemController::class, 'getData'])->name('items.data');
+    Route::get('/items-data',   [ItemController::class, 'getData'])->name('items.data');
     Route::get('/items-search', [ItemController::class, 'search'])->name('items.search');
+
+    // ── Quotations ───────────────────────────────────────────────────────────
     Route::resource('quotations', QuotationController::class);
-    // Extra custom routes for PDF, Email, WhatsApp
-    Route::post('quotations/{quotation}/generate-pdf', [QuotationController::class, 'generatePdf'])->name('quotations.generatePdf');
-    Route::post('quotations/{quotation}/send-email', [QuotationController::class, 'sendEmail'])->name('quotations.sendEmail');
+    Route::post('quotations/{quotation}/generate-pdf',  [QuotationController::class, 'generatePdf'])->name('quotations.generatePdf');
+    Route::post('quotations/{quotation}/send-email',    [QuotationController::class, 'sendEmail'])->name('quotations.sendEmail');
     Route::post('quotations/{quotation}/send-whatsapp', [QuotationController::class, 'sendWhatsapp'])->name('quotations.sendWhatsapp');
-    //Route::get('quotations/{quotation}/download',[QuotationController::class, 'download'])->name('quotations.download');
+    Route::post('quotations/{quotation}/convert',       [OrderController::class, 'storeFromQuotation'])->name('quotations.convertToOrder');
 
+    // ── Orders ───────────────────────────────────────────────────────────────
     Route::resource('orders', OrderController::class);
-    Route::get('orders-search-clients', [OrderController::class, 'searchClients'])->name('orders.searchClients');
-        // Direct order create
-    Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');
-    Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
-    Route::post('/orders/{order}/complete',[OrderController::class,'complete'])->name('orders.complete');
-    Route::post('orders/{order}/generate-pdf',        [OrderController::class, 'generatePdf'])->name('orders.generatePdf');
-    Route::get('orders/{order}/settlement-invoice',   [OrderController::class, 'generateSettlementPdf'])->name('orders.settlementPdf');
-    Route::get('orders/{order}/combined-dues-pdf',     [OrderController::class, 'generateCombinedDuesPdf'])->name('orders.combinedDuesPdf');
-    Route::post('orders/{order}/send-email', [OrderController::class, 'sendEmail'])->name('orders.sendEmail');
-    Route::post('orders/{order}/send-whatsapp', [OrderController::class, 'sendWhatsapp'])->name('orders.sendWhatsapp');
-    Route::post('/orders/{order}/settle',[OrderController::class,'settle'])->name('orders.settle');
-    Route::post('/orders/{order}/agreement',[OrderController::class, 'generateAgreement'])->name('orders.generateAgreement');
-    Route::post('/orders/{order}/upload-aadhaar',[OrderController::class, 'uploadAadhaar'])->name('orders.uploadAadhaar');
-    Route::post('/orders/{order}/agreement/send-email', [AgreementController::class, 'sendEmail'])->name('orders.sendAgreementEmail');
+    Route::get('orders-search-clients',                   [OrderController::class, 'searchClients'])->name('orders.searchClients');
+    Route::post('/orders/{order}/complete',               [OrderController::class, 'complete'])->name('orders.complete');
+    Route::post('orders/{order}/generate-pdf',            [OrderController::class, 'generatePdf'])->name('orders.generatePdf');
+    Route::get('orders/{order}/settlement-invoice',       [OrderController::class, 'generateSettlementPdf'])->name('orders.settlementPdf');
+    Route::get('orders/{order}/combined-dues-pdf',        [OrderController::class, 'generateCombinedDuesPdf'])->name('orders.combinedDuesPdf');
+    Route::post('orders/{order}/send-email',              [OrderController::class, 'sendEmail'])->name('orders.sendEmail');
+    Route::post('orders/{order}/send-whatsapp',           [OrderController::class, 'sendWhatsapp'])->name('orders.sendWhatsapp');
+    Route::post('/orders/{order}/settle',                 [OrderController::class, 'settle'])->name('orders.settle');
+    Route::post('/orders/{order}/agreement',              [OrderController::class, 'generateAgreement'])->name('orders.generateAgreement');
+    Route::post('/orders/{order}/upload-aadhaar',         [OrderController::class, 'uploadAadhaar'])->name('orders.uploadAadhaar');
+    Route::post('/orders/{order}/agreement/send-email',   [AgreementController::class, 'sendEmail'])->name('orders.sendAgreementEmail');
     Route::get('/orders/{order}/agreement/send-whatsapp', [AgreementController::class, 'sendWhatsapp'])->name('orders.sendAgreementWhatsapp');
-    // Quotation → Order
-    Route::post(
-        'quotations/{quotation}/convert',
-        [OrderController::class, 'storeFromQuotation']
-    )->name('quotations.convertToOrder');
 
-        // Send payment reminder
-    Route::post('/orders/{order}/send-reminder', [PaymentController::class, 'sendReminder'])
-        ->name('orders.send-reminder');
-    
-    // Record payment
-    Route::post('/orders/{order}/record-payment', [PaymentController::class, 'recordPayment'])
-        ->name('orders.record-payment');
-    
-    // Get payment history
-    Route::get('/orders/{order}/payment-history', [PaymentController::class, 'getPaymentHistory'])
-        ->name('orders.payment-history');
+    // ── Payments ──────────────────────────────────────────────────────────────
+    Route::post('/orders/{order}/send-reminder',    [PaymentController::class, 'sendReminder'])->name('orders.send-reminder');
+    Route::post('/orders/{order}/record-payment',   [PaymentController::class, 'recordPayment'])->name('orders.record-payment');
+    Route::get('/orders/{order}/payment-history',   [PaymentController::class, 'getPaymentHistory'])->name('orders.payment-history');
 
-    // Item Return Tracking
-    Route::post('/orders/{order}/record-return', [OrderReturnController::class, 'store'])
-        ->name('orders.record-return');
-    Route::delete('/orders/{order}/return-item/{returnItem}', [OrderReturnController::class, 'destroy'])
-        ->name('orders.return-item.destroy');
+    // ── Returns ───────────────────────────────────────────────────────────────
+    Route::post('/orders/{order}/record-return',                        [OrderReturnController::class, 'store'])->name('orders.record-return');
+    Route::delete('/orders/{order}/return-item/{returnItem}',           [OrderReturnController::class, 'destroy'])->name('orders.return-item.destroy');
 
-    // Temporary diagnostic — remove after fixing production issue
-    Route::get('/debug/return-tables', function () {
-        try {
-            $tables = [
-                'orders'             => \Illuminate\Support\Facades\Schema::hasTable('orders'),
-                'order_items'        => \Illuminate\Support\Facades\Schema::hasTable('order_items'),
-                'order_return_items' => \Illuminate\Support\Facades\Schema::hasTable('order_return_items'),
-            ];
-            $cols = \Illuminate\Support\Facades\Schema::hasColumn('orders', 'return_status');
-            return response()->json([
-                'tables'                       => $tables,
-                'orders.return_status_column'  => $cols,
-                'php_version'                  => PHP_VERSION,
-                'laravel_version'              => app()->version(),
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
-    })->name('debug.return-tables');
-
-    // Monthly Subscriptions
+    // ── Monthly Subscriptions ────────────────────────────────────────────────
     Route::resource('subscriptions', MonthlySubscriptionController::class);
-    Route::get('subscriptions/{subscription}/generate-invoice', [MonthlySubscriptionController::class, 'generateInvoice'])->name('subscriptions.generate-invoice');
-    Route::post('monthly-invoice/{invoice}/send', [MonthlySubscriptionController::class, 'sendInvoice'])->name('monthly-invoice.send');
-    Route::post('monthly-invoice/{invoice}/send-reminder', [MonthlySubscriptionController::class, 'sendReminder'])->name('monthly-invoice.send-reminder');
-    Route::post('monthly-invoice/{invoice}/mark-paid', [MonthlySubscriptionController::class, 'markPaid'])->name('monthly-invoice.mark-paid');
-    Route::delete('monthly-invoice/{invoice}/delete', [MonthlySubscriptionController::class, 'deleteInvoice'])->name('monthly-invoice.delete');
-    Route::get('subscriptions/client/{id}', [MonthlySubscriptionController::class, 'getClientData'])->name('subscriptions.client-data');
+    Route::get('subscriptions/{subscription}/generate-invoice',         [MonthlySubscriptionController::class, 'generateInvoice'])->name('subscriptions.generate-invoice');
+    Route::post('monthly-invoice/{invoice}/send',                       [MonthlySubscriptionController::class, 'sendInvoice'])->name('monthly-invoice.send');
+    Route::post('monthly-invoice/{invoice}/send-reminder',              [MonthlySubscriptionController::class, 'sendReminder'])->name('monthly-invoice.send-reminder');
+    Route::post('monthly-invoice/{invoice}/mark-paid',                  [MonthlySubscriptionController::class, 'markPaid'])->name('monthly-invoice.mark-paid');
+    Route::delete('monthly-invoice/{invoice}/delete',                   [MonthlySubscriptionController::class, 'deleteInvoice'])->name('monthly-invoice.delete');
+    Route::get('subscriptions/client/{id}',                             [MonthlySubscriptionController::class, 'getClientData'])->name('subscriptions.client-data');
 
-    // Subscription Agreements
-    Route::post('subscriptions/{subscription}/agreement/generate',     [SubscriptionAgreementController::class, 'generate'])->name('subscriptions.agreement.generate');
-    Route::post('subscriptions/{subscription}/agreement/send-email',   [SubscriptionAgreementController::class, 'sendEmail'])->name('subscriptions.agreement.send-email');
-    Route::get('subscriptions/{subscription}/agreement/send-whatsapp', [SubscriptionAgreementController::class, 'sendWhatsapp'])->name('subscriptions.agreement.send-whatsapp');
+    // ── Subscription Agreements ──────────────────────────────────────────────
+    Route::post('subscriptions/{subscription}/agreement/generate',      [SubscriptionAgreementController::class, 'generate'])->name('subscriptions.agreement.generate');
+    Route::post('subscriptions/{subscription}/agreement/send-email',    [SubscriptionAgreementController::class, 'sendEmail'])->name('subscriptions.agreement.send-email');
+    Route::get('subscriptions/{subscription}/agreement/send-whatsapp',  [SubscriptionAgreementController::class, 'sendWhatsapp'])->name('subscriptions.agreement.send-whatsapp');
 
-
-    // View
-    Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
-    // Route::post('/orders/{order}/approve', [OrderController::class, 'approve'])->name('orders.approve');
-    // Route::post('/orders/{order}/reject', [OrderController::class, 'reject'])->name('orders.reject');
-    // Route::get('/orders/{order}/convert-dispatch', [OrderController::class, 'convertToDispatch'])
-    //     ->name('orders.convertToDispatch');
-    Route::resource('dispatches', DispatchController::class)->only(['index','create','store','show','destroy']);
-    Route::post('returns', [ReturnController::class, 'store'])->name('returns.store');
-    Route::resource('invoices', InvoiceController::class);
-    Route::post('invoice-generate', [InvoiceController::class, 'generate'])->name('invoices.generate');
-
-
-    Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
-    Route::post('payments/{dispatch}', [PaymentController::class, 'storeOrUpdate'])->name('payments.store');
 });
-    // signed download with obfuscated ID for security (similar to order flow)
-    Route::get('quotations/{hash}/download',[QuotationController::class, 'download'])->name('quotations.download')->middleware('signed');
-    Route::get('/orders/{hash}/download',[OrderController::class, 'download'])->name('orders.download')->middleware('signed');
-    Route::get('/agreement/sign/{code}',[AgreementController::class, 'show'])->name('agreement.sign');
-    Route::post('/agreement/{code}', [AgreementController::class, 'submit'])->name('agreement.submit');
-    // Subscription Agreement – client-facing, no auth
-    Route::get('/subscription-agreement/sign/{code}',  [SubscriptionAgreementController::class, 'show'])->name('subscription-agreement.sign');
-    Route::post('/subscription-agreement/{code}',       [SubscriptionAgreementController::class, 'submit'])->name('subscription-agreement.submit');
-    // Monthly invoice download - must be outside auth routes as it's accessed from email links
-    Route::get('/monthly-invoice/{hash}/download',[MonthlySubscriptionController::class, 'downloadInvoice'])->name('monthly-invoice.download')->middleware('signed');

@@ -5,7 +5,7 @@
 <aside id="sidebar" class="sidebar shadow-sm">
   <div class="brand d-flex align-items-center justify-content-between">
     <a href="{{ route('dashboard') }}" class="brand-text d-flex align-items-center gap-2">
-      <img src="{{ asset('image/logo.png') }}" alt="logo" height="100" weight="100">
+      <img src="{{ asset('image/logo.png') }}" alt="logo" height="100" width="100">
     </a>
     <button id="sidebarToggle" class="btn btn-sm btn-outline-light d-md-none">
       <i class="bi bi-x-lg"></i>
@@ -20,25 +20,16 @@
       <i class="bi bi-people"></i> <span>Clients</span>
     </a>
     <a href="{{ route('items.index') }}" class="menu-item {{ nav_active('items.*') }}">
-      <i class="bi bi-box-seam"></i> <span>Items</span>
+      <i class="bi bi-box-seam"></i> <span>Catalog Items</span>
     </a>
-    <a href="{{ route('quotations.index') }}" class="menu-item {{ nav_active('quotations.*') }}">
-      <i class="bi bi-receipt"></i> <span>Quotations</span>
+    <a href="/categories" class="menu-item {{ nav_active('categories.*') }}">
+      <i class="bi bi-tags"></i> <span>Categories</span>
     </a>
     <a href="{{ route('orders.index') }}" class="menu-item {{ nav_active('orders.*') }}">
       <i class="bi bi-diagram-2"></i> <span>Orders</span>
     </a>
     <a href="{{ route('subscriptions.index') }}" class="menu-item {{ nav_active('subscriptions.*') }}">
       <i class="bi bi-calendar-check"></i> <span>Monthly Subscriptions</span>
-    </a>
-    <a href="{{ route('dispatches.index') }}" class="menu-item {{ nav_active('dispatches.*') }}">
-      <i class="bi bi-truck"></i> <span>Dispatches</span>
-    </a>
-    <!-- <a href="{{ route('invoices.index') }}" class="menu-item {{ nav_active('dispatches.*') }}">
-      <i class="bi bi-truck"></i> <span>Invoices</span>
-    </a> -->
-    <a href="{{ route('payments.index') }}" class="menu-item {{ nav_active('payments.*') }}">
-      <i class="bi bi-wallet2"></i> <span>Payments</span>
     </a>
   </nav>
 </aside>

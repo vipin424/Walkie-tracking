@@ -21,15 +21,15 @@
     <div class="card-body">
       <div class="table-responsive">
         <table id="items-table" class="table table-hover align-middle">
-          <thead class="bg-light">
+          <thead>
             <tr>
+              <th>Image</th>
               <th>Name</th>
               <th>Type</th>
-              <th>Description</th>
+              <th>Total Stock</th>
               <th>Unit Price</th>
-              <th>Tax %</th>
               <th>Status</th>
-              <th class="text-end">Actions</th>
+              <th>Actions</th>
             </tr>
           </thead>
         </table>
@@ -50,12 +50,12 @@ $(document).ready(function() {
     serverSide: true,
     ajax: '{{ route('items.data') }}',
     columns: [
+      { data: 'image', name: 'image', orderable: false, searchable: false },
       { data: 'name', name: 'name' },
       { data: 'type', name: 'type' },
-      { data: 'description', name: 'description', orderable: false },
+      { data: 'total_stock', name: 'total_stock' },
       { data: 'unit_price', name: 'unit_price' },
-      { data: 'tax_percent', name: 'tax_percent' },
-      { data: 'is_active', name: 'is_active' },
+      { data: 'is_active', name: 'is_active', orderable: false, searchable: false },
       { data: 'actions', name: 'actions', orderable: false, searchable: false, className: 'text-end' }
     ],
     order: [[0, 'desc']],
