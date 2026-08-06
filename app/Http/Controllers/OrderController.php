@@ -418,17 +418,6 @@ class OrderController extends Controller
                 'paid_at' => now(),
                 'recorded_by' => 'Admin',
             ]);
-        } elseif ($advance >= $total) {
-            // Full payment already received in advance
-            PaymentTransaction::create([
-                'order_id' => $order->id,
-                'amount' => $advance,
-                'payment_method' => 'bank_transfer',
-                'transaction_id' => null,
-                'notes' => 'Full advance payment recorded during settlement',
-                'paid_at' => now(),
-                'recorded_by' => 'Admin',
-            ]);
         }
 
         return redirect()->route('orders.show', $order)->with('success','Settlement completed.');
