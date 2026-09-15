@@ -14,6 +14,7 @@ use App\Http\Controllers\{
     QuotationController,
     AgreementController,
     ItemController,
+    InventoryController,
     MonthlySubscriptionController,
     SubscriptionAgreementController,
 };
@@ -41,6 +42,13 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('items', ItemController::class);
     Route::get('/items-data', [ItemController::class, 'getData'])->name('items.data');
     Route::get('/items-search', [ItemController::class, 'search'])->name('items.search');
+
+    // Inventory (Walkie Serial Number Tracking)
+    Route::resource('inventory', InventoryController::class);
+    Route::get('/inventory-data', [InventoryController::class, 'getData'])->name('inventory.data');
+    Route::get('/inventory-scan', [InventoryController::class, 'scan'])->name('inventory.scan');
+    Route::post('/inventory-scan/store', [InventoryController::class, 'storeScan'])->name('inventory.storeScan');
+
     Route::resource('quotations', QuotationController::class);
     // Extra custom routes for PDF, Email, WhatsApp
     Route::post('quotations/{quotation}/generate-pdf', [QuotationController::class, 'generatePdf'])->name('quotations.generatePdf');
