@@ -94,24 +94,57 @@
         </tr>
     </thead>
     <tbody>
-        @foreach($invoice->subscription->items_json as $i => $item)
+        @php
+            // Use items_snapshot (with computed pro-rated amounts) if available, else fall back to items_json
+            $invoiceItems = $invoice->items_snapshot ?? $invoice->subscription->items_json ?? [];
+            $hasProRated  = collect($invoiceItems)->where('is_pro_rated', true)->count() > 0;
+        @endphp
+        @foreach($invoiceItems as $i => $item)
         <tr>
             <td>{{ $i + 1 }}</td>
-            <td><strong>{{ $item['name'] }}</strong><br><small>{{ $item['description'] ?? '' }}</small></td>
+            <td>
+                <strong>{{ $item['name'] }}</strong>
+                @if(!empty($item['description']))<br><small>{{ $item['description'] }}</small>@endif
+                @if(!empty($item['is_pro_rated']))
+                    <br>
+                    <small style="color: #e65100; font-weight: 600;">
+                        ⏱ Pro-Rated: {{ $item['pro_rated_label'] ?? '' }}
+                    </small>
+                @endif
+            </td>
             <td>{{ $item['type'] ?? '-' }}</td>
             <td class="right">{{ $item['quantity'] }}</td>
-            <td class="right">₹{{ number_format($item['rate'], 2) }}</td>
-            <td class="right">₹{{ number_format($item['quantity'] * $item['rate'], 2) }}</td>
+            <td class="right">
+                ₹{{ number_format($item['rate'], 2) }}
+                @if(!empty($item['is_pro_rated']))
+                    <br><small style="color:#888;">× {{ $item['pro_rated_days'] }}/30 days</small>
+                @endif
+            </td>
+            <td class="right">
+                @if(!empty($item['is_pro_rated']))
+                    <span style="color: #e65100;">₹{{ number_format($item['computed_amount'], 2) }}</span>
+                @else
+                    ₹{{ number_format($item['computed_amount'] ?? ($item['quantity'] * $item['rate']), 2) }}
+                @endif
+            </td>
         </tr>
         @endforeach
     </tbody>
     <tfoot>
+        @if($hasProRated)
+        <tr>
+            <td colspan="6" style="font-size: 10px; color: #e65100; padding: 4px 8px; border-top: none;">
+                * Pro-rated items are charged for partial month only. Full rate applies from next billing cycle.
+            </td>
+        </tr>
+        @endif
         <tr class="final-amount-row total-row">
             <td colspan="5" class="right"><strong>TOTAL AMOUNT</strong></td>
             <td class="right"><strong>₹{{ number_format($invoice->amount, 2) }}</strong></td>
         </tr>
     </tfoot>
 </table>
+
 
 {{-- ================= PAYMENT DETAILS ================= --}}
 @if($invoice->status !== 'paid')

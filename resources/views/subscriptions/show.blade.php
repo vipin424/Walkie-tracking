@@ -105,15 +105,40 @@
                     <tbody>
                         @foreach($subscription->items_json as $item)
                         <tr>
-                            <td class="px-4 py-3 fw-semibold">{{ $item['name'] }}</td>
+                            <td class="px-4 py-3 fw-semibold">
+                                {{ $item['name'] }}
+                                @if(!empty($item['is_mid_cycle']))
+                                    <br>
+                                    <span class="badge bg-warning text-dark" style="font-size:10px;">
+                                        ⏱ Mid-Cycle
+                                    </span>
+                                    @php
+                                        $addedOn    = \Carbon\Carbon::parse($item['added_on']);
+                                        $billingEnd = \Carbon\Carbon::parse($item['pro_rated_until']);
+                                        $days       = max(1, (int)$addedOn->diffInDays($billingEnd));
+                                        $proAmt     = round(($item['rate'] ?? 0) * ($item['quantity'] ?? 1) * ($days / 30), 2);
+                                    @endphp
+                                    <small class="text-muted d-block" style="font-size:10px;">
+                                        Added: {{ $addedOn->format('d M') }} → Bills till: {{ $billingEnd->format('d M') }} ({{ $days }} days)
+                                    </small>
+                                @endif
+                            </td>
                             <td class="px-4 py-3 text-muted">{{ $item['type'] ?? '-' }}</td>
                             <td class="px-4 py-3 text-muted">{{ $item['description'] ?? '-' }}</td>
                             <td class="px-4 py-3 text-center">{{ $item['quantity'] }}</td>
                             <td class="px-4 py-3 text-end">₹{{ number_format($item['rate'], 2) }}</td>
-                            <td class="px-4 py-3 text-end fw-semibold">₹{{ number_format($item['quantity'] * $item['rate'], 2) }}</td>
+                            <td class="px-4 py-3 text-end fw-semibold">
+                                @if(!empty($item['is_mid_cycle']))
+                                    <span class="text-warning">₹{{ number_format($proAmt, 2) }}</span>
+                                    <br><small class="text-muted" style="font-size:10px;">Pro-rated {{ $days }}/30 days<br>(Next: ₹{{ number_format(($item['quantity'] ?? 1) * ($item['rate'] ?? 0), 2) }}/mo)</small>
+                                @else
+                                    ₹{{ number_format($item['quantity'] * $item['rate'], 2) }}
+                                @endif
+                            </td>
                         </tr>
                         @endforeach
                     </tbody>
+
                     <tfoot class="bg-light">
                         <tr>
                             <td colspan="5" class="px-4 py-3 text-end fw-bold">Total Monthly Amount:</td>
@@ -220,8 +245,92 @@
         </div>
     </div>
 
+    <!-- Addendum Agreements (Mid-Cycle Item Additions) -->
+    @if($subscription->addendums->count() > 0)
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-0 p-4 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-semibold">
+                <i class="bi bi-file-earmark-plus me-2 text-warning"></i>Addendum Agreements
+                <span class="badge bg-warning text-dark ms-2">{{ $subscription->addendums->count() }}</span>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="px-4 py-3 text-muted fw-semibold">Addendum Code</th>
+                            <th class="px-4 py-3 text-muted fw-semibold">Effective Date</th>
+                            <th class="px-4 py-3 text-muted fw-semibold">End Date</th>
+                            <th class="px-4 py-3 text-muted fw-semibold">New Items</th>
+                            <th class="px-4 py-3 text-muted fw-semibold">Pro-Rated Charge</th>
+                            <th class="px-4 py-3 text-muted fw-semibold">New Monthly Total</th>
+                            <th class="px-4 py-3 text-muted fw-semibold">Status</th>
+                            <th class="px-4 py-3 text-muted fw-semibold text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($subscription->addendums as $addendum)
+                        <tr>
+                            <td class="px-4 py-3 fw-semibold">{{ $addendum->addendum_code }}</td>
+                            <td class="px-4 py-3">{{ $addendum->effective_date->format('d M Y') }}</td>
+                            <td class="px-4 py-3">{{ $addendum->agreement_end_date ? $addendum->agreement_end_date->format('d M Y') : 'Ongoing' }}</td>
+                            <td class="px-4 py-3">
+                                @foreach($addendum->new_items_json as $ni)
+                                    <span class="badge bg-light text-dark border me-1">{{ $ni['name'] }} × {{ $ni['quantity'] }}</span>
+                                @endforeach
+                            </td>
+                            <td class="px-4 py-3 fw-semibold" style="color:#e65100;">
+                                ₹{{ number_format($addendum->pro_rated_amount, 2) }}
+                                <br><small class="text-muted fw-normal" style="font-size:10px;">{{ $addendum->pro_rated_days }}/30 days until {{ $addendum->pro_rated_until->format('d M Y') }}</small>
+                            </td>
+                            <td class="px-4 py-3 fw-semibold" style="color:#004d40;">₹{{ number_format($addendum->new_monthly_amount, 2) }}/mo</td>
+                            <td class="px-4 py-3">
+                                <span class="badge px-3 py-2 {{ $addendum->status === 'signed' ? 'bg-success' : 'bg-warning text-dark' }}">
+                                    {{ $addendum->status === 'signed' ? '✅ Signed' : '⏳ Pending Signature' }}
+                                </span>
+                                @if($addendum->signed_at)
+                                    <br><small class="text-muted" style="font-size:10px;">{{ $addendum->signed_at->format('d M Y, h:i A') }}</small>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <div class="d-flex gap-1 justify-content-center flex-wrap">
+                                    {{-- Send via Email --}}
+                                    <button type="button" class="btn btn-outline-primary btn-sm"
+                                            onclick="openAddendumEmailModal({{ $addendum->id }}, '{{ $addendum->addendum_code }}', '{{ $subscription->client_email }}')">
+                                        <i class="bi bi-envelope"></i>
+                                    </button>
+                                    {{-- Send via WhatsApp --}}
+                                    <a href="{{ route('subscription-addendum.send-whatsapp', $addendum) }}"
+                                       class="btn btn-outline-success btn-sm">
+                                        <i class="bi bi-whatsapp"></i>
+                                    </a>
+                                    {{-- Copy sign link --}}
+                                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                                            onclick="copyLink('{{ $addendum->signed_url }}')" title="Copy Sign Link">
+                                        <i class="bi bi-link-45deg"></i>
+                                    </button>
+                                    {{-- View signed PDF --}}
+                                    @if($addendum->signed_pdf)
+                                    <a href="{{ asset('storage/' . $addendum->signed_pdf) }}" target="_blank"
+                                       class="btn btn-outline-dark btn-sm" title="View Signed PDF">
+                                        <i class="bi bi-file-pdf"></i>
+                                    </a>
+                                    @endif
+                                </div>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- Generated Invoices -->
     <div class="card border-0 shadow-sm">
+
         <div class="card-header bg-white border-0 p-4">
             <h5 class="mb-0 fw-semibold">
                 <i class="bi bi-file-earmark-text me-2 text-warning"></i>Generated Invoices
@@ -574,6 +683,50 @@
     </div>
   </div>
 </div>
+</div>
+
+<!-- Addendum Email Modal -->
+<div class="modal fade" id="sendAddendumEmailModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+          <i class="bi bi-envelope-paper me-2"></i>Send Addendum Email
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" id="addendumEmailForm">
+        @csrf
+        <div class="modal-body p-4">
+          <div class="alert alert-info border-0 mb-4">
+            <strong id="addendumModalCode"></strong><br>
+            <small>This will email a secure signing link to the client.</small>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              <i class="bi bi-envelope me-2"></i>To Email <span class="text-danger">*</span>
+            </label>
+            <input type="email" class="form-control" id="addendumToEmail" name="to_email" required>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              <i class="bi bi-envelope-plus me-2"></i>CC Emails (Optional)
+            </label>
+            <input type="text" class="form-control" id="addendumCcEmails" name="cc_emails" placeholder="email1@example.com, email2@example.com">
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-send-fill me-2"></i>Send Addendum
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
 <script>
 let currentInvoiceId = null;
@@ -600,6 +753,15 @@ function openReminderModal(invoiceId, invoiceCode, clientEmail, amount) {
   document.getElementById('reminderEmailFields').style.display = 'block';
   
   new bootstrap.Modal(document.getElementById('paymentReminderModal')).show();
+}
+
+function openAddendumEmailModal(addendumId, addendumCode, clientEmail) {
+  document.getElementById('addendumModalCode').textContent = 'Addendum: ' + addendumCode;
+  document.getElementById('addendumToEmail').value = clientEmail || '';
+  document.getElementById('addendumCcEmails').value = '';
+  document.getElementById('addendumEmailForm').action = `/subscription-addendum/${addendumId}/send-email`;
+  
+  new bootstrap.Modal(document.getElementById('sendAddendumEmailModal')).show();
 }
 
 function markAsPaid(invoiceId, invoiceCode, amount) {

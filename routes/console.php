@@ -15,3 +15,7 @@ Schedule::command('invoices:send-monthly')->dailyAt('09:00');
 
 // Send payment reminders for unpaid invoices (7 days after invoice sent) at 10 AM
 Schedule::command('invoices:send-reminders')->dailyAt('10:00');
+
+// Send 10-day expiry reminders for main agreements and addendums at 10:30 AM
+Schedule::command('agreements:expiry-reminders')->dailyAt('10:30');
+

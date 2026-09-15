@@ -122,6 +122,12 @@ Route::middleware(['auth'])->group(function () {
     Route::post('subscriptions/{subscription}/agreement/send-email',   [SubscriptionAgreementController::class, 'sendEmail'])->name('subscriptions.agreement.send-email');
     Route::get('subscriptions/{subscription}/agreement/send-whatsapp', [SubscriptionAgreementController::class, 'sendWhatsapp'])->name('subscriptions.agreement.send-whatsapp');
 
+    // Subscription Addendum Agreements (mid-cycle item additions)
+    Route::post('subscription-addendum/{addendum}/send-email',    [\App\Http\Controllers\SubscriptionAddendumController::class, 'sendEmail'])->name('subscription-addendum.send-email');
+    Route::get('subscription-addendum/{addendum}/send-whatsapp',  [\App\Http\Controllers\SubscriptionAddendumController::class, 'sendWhatsapp'])->name('subscription-addendum.send-whatsapp');
+
+
+
 
     // View
     Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
@@ -146,5 +152,8 @@ Route::middleware(['auth'])->group(function () {
     // Subscription Agreement – client-facing, no auth
     Route::get('/subscription-agreement/sign/{code}',  [SubscriptionAgreementController::class, 'show'])->name('subscription-agreement.sign');
     Route::post('/subscription-agreement/{code}',       [SubscriptionAgreementController::class, 'submit'])->name('subscription-agreement.submit');
+    // Subscription Addendum – client-facing, no auth
+    Route::get('/subscription-addendum/sign/{code}',    [\App\Http\Controllers\SubscriptionAddendumController::class, 'show'])->name('subscription-addendum.sign');
+    Route::post('/subscription-addendum/{code}',        [\App\Http\Controllers\SubscriptionAddendumController::class, 'submit'])->name('subscription-addendum.submit');
     // Monthly invoice download - must be outside auth routes as it's accessed from email links
     Route::get('/monthly-invoice/{hash}/download',[MonthlySubscriptionController::class, 'downloadInvoice'])->name('monthly-invoice.download')->middleware('signed');

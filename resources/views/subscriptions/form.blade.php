@@ -130,7 +130,46 @@
                 </div>
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive">
+                @if(isset($subscription))
+                @php
+                    $billingDay    = $subscription->billing_day_of_month;
+                    $today         = \Carbon\Carbon::today();
+                    $isMidCycle    = $today->day < $billingDay;
+                    $nextBilling   = $isMidCycle
+                        ? \Carbon\Carbon::create($today->year, $today->month, $billingDay)
+                        : \Carbon\Carbon::create($today->year, $today->month, $billingDay)->addMonth();
+                    $daysRemaining = $today->diffInDays($nextBilling);
+                @endphp
+
+                @if($isMidCycle)
+                <div class="alert alert-warning border-0 mx-4 mt-4 mb-0 d-flex align-items-start gap-3"
+                     style="background: #fff8e1; border-left: 4px solid #f59e0b !important;">
+                    <i class="bi bi-exclamation-triangle-fill text-warning fs-5 mt-1"></i>
+                    <div>
+                        <strong>Mid-Cycle Addition Detected</strong><br>
+                        <small class="text-muted">
+                            Today's date (<strong>{{ $today->format('d M Y') }}</strong>) is before the billing day
+                            (<strong>{{ $billingDay }}</strong>) of this month.
+                            <br>
+                            Any <strong>new items added</strong> now will be charged on a pro-rated basis for
+                            <strong>{{ $daysRemaining }} days</strong> in the next billing
+                            (<strong>{{ $nextBilling->format('d M Y') }}</strong>).
+                            From the following month, they will be billed at the full monthly rate.
+                            <br>
+                            <span class="text-warning fw-semibold">Formula: Rate × Qty × ({{ $daysRemaining }}/30 days)</span>
+                        </small>
+                        <div class="mt-3">
+                            <label for="addendum_end_date" class="form-label fw-bold" style="font-size:12px; color:#555;">Addendum End Date (Optional)</label>
+                            <input type="date" class="form-control form-control-sm w-50" name="addendum_end_date" id="addendum_end_date">
+                            <small class="text-muted" style="font-size:11px;">If new items are added for a specific time period (e.g., 3 months), set the end date here.</small>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                @endif
+
+                <div class="table-responsive p-0">
                     <table class="table table-hover align-middle mb-0" id="items-table">
                         <thead class="bg-light">
                             <tr>
@@ -139,7 +178,7 @@
                                 <th class="px-3 py-3 text-muted fw-semibold" style="min-width: 180px;">Description</th>
                                 <th class="px-3 py-3 text-muted fw-semibold text-center" style="width: 100px;">Quantity <span class="text-danger">*</span></th>
                                 <th class="px-3 py-3 text-muted fw-semibold" style="width: 150px;">Rate/Month <span class="text-danger">*</span></th>
-                                <th class="px-3 py-3 text-muted fw-semibold text-end" style="width: 150px;">Amount</th>
+                                <th class="px-3 py-3 text-muted fw-semibold text-end" style="width: 180px;">Amount</th>
                                 <th class="px-3 py-3 text-muted fw-semibold text-center" style="width: 60px;"></th>
                             </tr>
                         </thead>
@@ -148,7 +187,7 @@
                                 $items = old('items', isset($subscription) ? $subscription->items_json : [['name' => '', 'type' => '', 'description' => '', 'quantity' => 1, 'rate' => 0]]); 
                             @endphp
                             @foreach($items as $i => $item)
-                            <tr class="item-row">
+                            <tr class="item-row" data-existing="1">
                                 <td class="px-3 py-2">
                                     <input type="text" name="items[{{ $i }}][name]" class="form-control form-control-sm item-name" 
                                            placeholder="Item Name" value="{{ $item['name'] ?? '' }}" required>
@@ -172,7 +211,24 @@
                                                placeholder="Rate" step="0.01" value="{{ $item['rate'] ?? 0 }}" min="0" required>
                                     </div>
                                 </td>
-                                <td class="px-3 py-2 text-end fw-semibold item-amount">₹0.00</td>
+                                <td class="px-3 py-2 text-end fw-semibold item-amount">
+                                    @if(!empty($item['is_mid_cycle']))
+                                        @php
+                                            $addedOn    = \Carbon\Carbon::parse($item['added_on']);
+                                            $billingEnd = \Carbon\Carbon::parse($item['pro_rated_until']);
+                                            $days       = max(1, (int)$addedOn->diffInDays($billingEnd));
+                                            $proAmt     = round(($item['rate'] ?? 0) * ($item['quantity'] ?? 1) * ($days / 30), 2);
+                                        @endphp
+                                        <span class="text-warning fw-bold">₹{{ number_format($proAmt, 2) }}</span>
+                                        <br><small class="text-muted" style="font-size:10px;">Pro-rated {{ $days }}/30 days</small>
+                                        {{-- Preserve mid-cycle metadata for existing mid-cycle items --}}
+                                        <input type="hidden" name="items[{{ $i }}][is_mid_cycle]" value="1">
+                                        <input type="hidden" name="items[{{ $i }}][added_on]" value="{{ $item['added_on'] ?? '' }}">
+                                        <input type="hidden" name="items[{{ $i }}][pro_rated_until]" value="{{ $item['pro_rated_until'] ?? '' }}">
+                                    @else
+                                        ₹{{ number_format(($item['quantity'] ?? 1) * ($item['rate'] ?? 0), 2) }}
+                                    @endif
+                                </td>
                                 <td class="px-3 py-2 text-center">
                                     <button type="button" class="btn btn-sm btn-outline-danger remove-item">
                                         <i class="bi bi-trash"></i>
@@ -192,6 +248,7 @@
                 </div>
             </div>
         </div>
+
 
         <!-- Notes Card -->
         <div class="card border-0 shadow-sm mb-4">
@@ -224,18 +281,44 @@
 <script>
 let itemIndex = {{ count($items) }};
 
+// PHP vars passed to JS for mid-cycle preview (edit mode only)
+@if(isset($subscription))
+const isMidCycle   = {{ isset($isMidCycle) && $isMidCycle ? 'true' : 'false' }};
+const daysRemaining = {{ isset($daysRemaining) ? (int)$daysRemaining : 0 }};
+const nextBillingDate = "{{ isset($nextBilling) ? $nextBilling->format('d M Y') : '' }}";
+@else
+const isMidCycle = false;
+const daysRemaining = 0;
+const nextBillingDate = "";
+@endif
+
 function calculateRow(row) {
-    const qty = parseFloat(row.find('.item-qty').val()) || 0;
+    // Skip rows that have a fixed mid-cycle pro-rated amount (already shown server-side)
+    if (row.data('existing') && row.find('input[name*="[is_mid_cycle]"]').val() == '1') {
+        return; // don't overwrite the server-computed pro-rated display
+    }
+    const qty  = parseFloat(row.find('.item-qty').val()) || 0;
     const rate = parseFloat(row.find('.item-rate').val()) || 0;
-    const amount = qty * rate;
-    row.find('.item-amount').text('₹' + amount.toFixed(2));
+
+    if (isMidCycle && row.data('new') == '1') {
+        // New item in mid-cycle: show pro-rated preview
+        const proAmount = qty * rate * (daysRemaining / 30);
+        row.find('.item-amount').html(
+            '<span class="text-warning fw-bold">₹' + proAmount.toFixed(2) + '</span>' +
+            '<br><small class="text-muted" style="font-size:10px;">Pro-rated ' + daysRemaining + '/30 days</small>'
+        );
+    } else {
+        const amount = qty * rate;
+        row.find('.item-amount').html('₹' + amount.toFixed(2));
+    }
 }
 
 function calculateTotal() {
     let total = 0;
     $('.item-row').each(function() {
-        const qty = parseFloat($(this).find('.item-qty').val()) || 0;
+        const qty  = parseFloat($(this).find('.item-qty').val()) || 0;
         const rate = parseFloat($(this).find('.item-rate').val()) || 0;
+        // Total always uses full rate (monthly_amount stores full monthly value)
         total += qty * rate;
         calculateRow($(this));
     });
@@ -261,7 +344,7 @@ function initAutocomplete(input) {
         },
         minLength: 2,
         select: function(event, ui) {
-            const row = $(this).closest('tr');
+            const row  = $(this).closest('tr');
             const item = ui.item.item;
             
             // Auto-fill fields
@@ -286,9 +369,14 @@ $(document).ready(function() {
 
     // Add item
     $('#add-item').click(function() {
+        const midCycleNote = isMidCycle
+            ? `<small class="text-warning" style="font-size:10px; display:block;">⏱ Pro-rated ${daysRemaining}/30 days (until ${nextBillingDate})</small>`
+            : '';
+
         const newRow = `
-            <tr class="item-row">
+            <tr class="item-row" data-new="1">
                 <td class="px-3 py-2">
+                    <input type="hidden" name="items[${itemIndex}][is_new_row]" value="1">
                     <input type="text" name="items[${itemIndex}][name]" class="form-control form-control-sm item-name" 
                            placeholder="Item Name" required>
                 </td>
@@ -311,7 +399,9 @@ $(document).ready(function() {
                                placeholder="Rate" step="0.01" value="0" min="0" required>
                     </div>
                 </td>
-                <td class="px-3 py-2 text-end fw-semibold item-amount">₹0.00</td>
+                <td class="px-3 py-2 fw-semibold item-amount">
+                    ₹0.00${midCycleNote}
+                </td>
                 <td class="px-3 py-2 text-center">
                     <button type="button" class="btn btn-sm btn-outline-danger remove-item">
                         <i class="bi bi-trash"></i>
@@ -344,6 +434,7 @@ $(document).ready(function() {
     });
 });
 </script>
+
 
 <style>
   .table-hover tbody tr:hover {

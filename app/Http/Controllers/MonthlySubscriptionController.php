@@ -6,7 +6,10 @@ use App\Models\MonthlySubscription;
 use App\Models\MonthlyInvoice;
 use App\Models\Client;
 use App\Models\PaymentTransaction;
+use App\Services\SubscriptionBillingService;
+use App\Http\Controllers\SubscriptionAddendumController;
 use Illuminate\Http\Request;
+
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Carbon\Carbon;
@@ -15,6 +18,13 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class MonthlySubscriptionController extends Controller
 {
+    protected SubscriptionBillingService $billingService;
+
+    public function __construct(SubscriptionBillingService $billingService)
+    {
+        $this->billingService = $billingService;
+    }
+
     public function index(Request $request)
     {
         if ($request->ajax()) {
@@ -53,39 +63,44 @@ class MonthlySubscriptionController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'client_id' => 'required|exists:clients,id',
-            'billing_details' => 'nullable|string',
-            'billing_start_date' => 'required|date',
+            'client_id'            => 'required|exists:clients,id',
+            'billing_details'      => 'nullable|string',
+            'billing_start_date'   => 'required|date',
             'billing_day_of_month' => 'required|integer|min:1|max:28',
-            'monthly_amount' => 'required|numeric|min:0',
-            'items' => 'required|array|min:1',
+            'monthly_amount'       => 'required|numeric|min:0',
+            'items'                => 'required|array|min:1',
         ]);
 
         $client = Client::findOrFail($request->client_id);
 
+        // On create, items are never mid-cycle — clean up any stray flags
+        $processedItems = $this->billingService->processItemsOnCreate($request->items);
+
         MonthlySubscription::create([
-            'subscription_code' => MonthlySubscription::generateCode(),
-            'client_id' => $client->id,
-            'client_name' => $client->name,
-            'client_email' => $client->email ?? null,
-            'client_phone' => $client->contact_number,
-            'cc_emails' => $request->cc_emails,
-            'billing_details' => $request->billing_details,
-            'billing_start_date' => $request->billing_start_date,
+            'subscription_code'    => MonthlySubscription::generateCode(),
+            'client_id'            => $client->id,
+            'client_name'          => $client->name,
+            'client_email'         => $client->email ?? null,
+            'client_phone'         => $client->contact_number,
+            'cc_emails'            => $request->cc_emails,
+            'billing_details'      => $request->billing_details,
+            'billing_start_date'   => $request->billing_start_date,
             'billing_day_of_month' => $request->billing_day_of_month,
-            'monthly_amount' => $request->monthly_amount,
-            'items_json' => $request->items,
-            'notes' => $request->notes,
-            'status' => 'active',
+            'monthly_amount'       => $request->monthly_amount,
+            'items_json'           => $processedItems,
+            'notes'                => $request->notes,
+            'status'               => 'active',
         ]);
 
         return redirect()->route('subscriptions.index')->with('success', 'Monthly subscription created successfully.');
     }
 
+
     public function show(MonthlySubscription $subscription)
     {
-        $subscription->load('invoices');
+        $subscription->load(['invoices', 'addendums']);
         return view('subscriptions.show', compact('subscription'));
+
     }
 
     public function edit(MonthlySubscription $subscription)
@@ -97,46 +112,80 @@ class MonthlySubscriptionController extends Controller
     public function update(Request $request, MonthlySubscription $subscription)
     {
         $request->validate([
-            'client_id' => 'required|exists:clients,id',
-            'billing_details' => 'nullable|string',
+            'client_id'            => 'required|exists:clients,id',
+            'billing_details'      => 'nullable|string',
             'billing_day_of_month' => 'required|integer|min:1|max:28',
-            'monthly_amount' => 'required|numeric|min:0',
-            'items' => 'required|array|min:1',
-            'status' => 'required|in:active,paused,cancelled',
+            'monthly_amount'       => 'required|numeric|min:0',
+            'items'                => 'required|array|min:1',
+            'status'               => 'required|in:active,paused,cancelled',
         ]);
 
         $client = Client::findOrFail($request->client_id);
 
+        // Detect newly added items and mark mid-cycle ones for pro-rated billing
+        $existingItems  = $subscription->items_json ?? [];
+        $billingDay     = (int) $request->billing_day_of_month;
+        $processedItems = $this->billingService->processItemsOnUpdate(
+            $existingItems,
+            $request->items,
+            $billingDay
+        );
+
+        // Collect only the newly added mid-cycle items for the addendum
+        $existingNames = collect($existingItems)->pluck('name')->map(fn($n) => strtolower(trim($n)))->toArray();
+        $newMidCycleItems = collect($processedItems)
+            ->filter(function($item) use ($existingNames) {
+                if (empty($item['is_mid_cycle'])) return false;
+                // It's a new item if it has is_new_row OR if its name is completely new
+                return !empty($item['is_new_row']) || !in_array(strtolower(trim($item['name'] ?? '')), $existingNames);
+            })
+            ->values()
+            ->toArray();
+
+        // Recalculate monthly_amount from full rates (ignoring pro-rate, which is only for the current invoice)
+        $fullMonthlyAmount = collect($processedItems)->sum(fn($item) => ($item['rate'] ?? 0) * ($item['quantity'] ?? 1));
+
         $subscription->update([
-            'client_id' => $client->id,
-            'client_name' => $client->name,
-            'client_email' => $client->email ?? null,
-            'client_phone' => $client->contact_number,
-            'cc_emails' => $request->cc_emails,
-            'billing_details' => $request->billing_details,
-            'billing_day_of_month' => $request->billing_day_of_month,
-            'monthly_amount' => $request->monthly_amount,
-            'items_json' => $request->items,
-            'notes' => $request->notes,
-            'status' => $request->status,
+            'client_id'            => $client->id,
+            'client_name'          => $client->name,
+            'client_email'         => $client->email ?? null,
+            'client_phone'         => $client->contact_number,
+            'cc_emails'            => $request->cc_emails,
+            'billing_details'      => $request->billing_details,
+            'billing_day_of_month' => $billingDay,
+            'monthly_amount'       => $fullMonthlyAmount,
+            'items_json'           => $processedItems,
+            'notes'                => $request->notes,
+            'status'               => $request->status,
         ]);
+
+        // Auto-generate addendum agreement if new mid-cycle items were added
+        if (!empty($newMidCycleItems)) {
+            $subscription->refresh(); // get updated monthly_amount
+            SubscriptionAddendumController::autoGenerate($subscription, $newMidCycleItems, $request->addendum_end_date);
+            return redirect()->route('subscriptions.show', $subscription)
+                ->with('success', 'Subscription updated. New items detected — an Addendum Agreement has been created. Please send it to the client for signing.');
+        }
 
         return redirect()->route('subscriptions.show', $subscription)->with('success', 'Subscription updated successfully.');
     }
 
+
+
+
     public function generateInvoice(MonthlySubscription $subscription)
     {
         $billingDay = $subscription->billing_day_of_month;
-        $today = Carbon::today();
-        
+        $today      = Carbon::today();
+
         $currentBillingDay = Carbon::create($today->year, $today->month, $billingDay);
-        
+
         if ($currentBillingDay->gt($today)) {
             return redirect()->back()->with('error', 'Invoice can only be generated after the billing day of the month.');
         }
-        
+
         $periodFrom = $currentBillingDay->copy()->subMonth();
-        $periodTo = $periodFrom->copy()->addMonth();
+        $periodTo   = $currentBillingDay->copy();
 
         // Check if invoice already exists for this billing period
         $existingInvoice = MonthlyInvoice::where('subscription_id', $subscription->id)
@@ -151,20 +200,31 @@ class MonthlySubscriptionController extends Controller
                 ->with('success', 'Invoice for this period already exists. PDF has been regenerated.');
         }
 
-        // Create new invoice
+        // Calculate amounts — handles both regular and mid-cycle (pro-rated) items
+        $billingResult = $this->billingService->calculateInvoiceAmounts($subscription->items_json ?? []);
+        $invoiceAmount = $billingResult['total'];
+        $itemsSnapshot = $billingResult['items_detail']; // snapshot with computed amounts for PDF
+
+        // Create new invoice, storing the items snapshot for accurate PDF rendering
         $invoice = MonthlyInvoice::create([
-            'subscription_id' => $subscription->id,
-            'invoice_code' => MonthlyInvoice::generateCode(),
-            'billing_period_from' => $periodFrom,
-            'billing_period_to' => $periodTo,
-            'amount' => $subscription->monthly_amount,
-            'status' => 'pending',
+            'subscription_id'    => $subscription->id,
+            'invoice_code'       => MonthlyInvoice::generateCode(),
+            'billing_period_from'=> $periodFrom,
+            'billing_period_to'  => $periodTo,
+            'amount'             => $invoiceAmount,
+            'items_snapshot'     => $itemsSnapshot, // stored for PDF rendering
+            'status'             => 'pending',
         ]);
+
+        // After invoice is created, clear mid-cycle flags → next month full rate
+        $clearedItems = $this->billingService->clearMidCycleFlags($subscription->items_json ?? []);
+        $subscription->update(['items_json' => $clearedItems]);
 
         $this->generatePdf($invoice);
 
         return redirect()->route('subscriptions.show', $subscription)->with('success', 'Invoice generated successfully.');
     }
+
 
     private function generatePdf(MonthlyInvoice $invoice)
     {

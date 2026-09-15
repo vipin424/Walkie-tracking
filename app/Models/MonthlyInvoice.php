@@ -8,15 +8,17 @@ class MonthlyInvoice extends Model
 {
     protected $fillable = [
         'subscription_id', 'invoice_code', 'billing_period_from', 'billing_period_to',
-        'amount', 'pdf_path', 'status', 'sent_at', 'paid_at'
+        'amount', 'items_snapshot', 'pdf_path', 'status', 'sent_at', 'paid_at'
     ];
 
     protected $casts = [
         'billing_period_from' => 'date',
-        'billing_period_to' => 'date',
-        'sent_at' => 'datetime',
-        'paid_at' => 'datetime',
+        'billing_period_to'   => 'date',
+        'sent_at'             => 'datetime',
+        'paid_at'             => 'datetime',
+        'items_snapshot'      => 'array',
     ];
+
 
     public function subscription()
     {

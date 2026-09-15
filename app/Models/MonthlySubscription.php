@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\SubscriptionAddendum;
+
 
 class MonthlySubscription extends Model
 {
@@ -30,6 +32,12 @@ class MonthlySubscription extends Model
     {
         return $this->hasOne(SubscriptionAgreement::class, 'subscription_id');
     }
+
+    public function addendums()
+    {
+        return $this->hasMany(SubscriptionAddendum::class, 'subscription_id')->orderByDesc('id');
+    }
+
 
     public static function generateCode()
     {

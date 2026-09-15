@@ -190,7 +190,7 @@ class SubscriptionAgreementController extends Controller
         $subscription = $agreement->subscription;
         if ($subscription && $subscription->client_email) {
             try {
-                $adminEmail = config('mail.admin_email');
+                $adminEmail = config('mail.admin_email') ?? env('ADMIN_EMAIL', 'info@crewrent.in');
                 $mailInstance = Mail::to($subscription->client_email);
                 if ($adminEmail) {
                     $mailInstance->cc([$adminEmail]);
