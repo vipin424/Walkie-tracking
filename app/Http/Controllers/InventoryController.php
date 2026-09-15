@@ -61,7 +61,7 @@ class InventoryController extends Controller
             'serial_number' => 'required|string|max:255|unique:walkie_inventories,serial_number',
             'item_id'       => 'nullable|exists:items,id',
         ], [
-            'serial_number.unique' => 'यह Serial Number पहले से registered है!',
+            'serial_number.unique' => 'This serial number is already registered in inventory.',
         ]);
 
         $inv = WalkieInventory::create([

@@ -139,8 +139,8 @@ $(document).ready(function () {
         order: [[0, 'asc']],
         pageLength: 25,
         language: {
-            emptyTable: 'कोई inventory item नहीं है',
-            zeroRecords: 'कोई matching item नहीं मिली',
+            emptyTable: 'No inventory items found',
+            zeroRecords: 'No matching items found',
         }
     });
 
@@ -148,11 +148,11 @@ $(document).ready(function () {
     $('#inv-table').on('click', '.delete-inv-btn', function () {
         Swal.fire({
             title: 'Delete?',
-            text: 'इस serial number को delete करना चाहते हैं?',
+            text: 'Are you sure you want to delete this serial number?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
-            confirmButtonText: 'हाँ, Delete करो',
+            confirmButtonText: 'Yes, Delete',
             cancelButtonText: 'Cancel'
         }).then(result => {
             if (result.isConfirmed) {
@@ -163,7 +163,7 @@ $(document).ready(function () {
                     headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
                     success: () => {
                         table.ajax.reload();
-                        Swal.fire('Deleted!', 'Serial number delete हो गई।', 'success');
+                        Swal.fire('Deleted!', 'Serial number has been deleted.', 'success');
                     }
                 });
             }

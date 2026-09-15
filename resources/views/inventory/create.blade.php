@@ -32,7 +32,7 @@
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Walkie Model</label>
                         <select name="item_id" class="form-select @error('item_id') is-invalid @enderror">
-                            <option value="">— कोई model नहीं —</option>
+                            <option value="">— No model —</option>
                             @foreach($items as $item)
                                 <option value="{{ $item->id }}" {{ old('item_id') == $item->id ? 'selected' : '' }}>
                                     {{ $item->name }}{{ $item->type ? ' ('.$item->type.')' : '' }}
@@ -67,7 +67,7 @@
 
                     <div class="col-12">
                         <label class="form-label fw-semibold">Notes</label>
-                        <textarea name="notes" class="form-control" rows="3" placeholder="कोई extra जानकारी...">{{ old('notes') }}</textarea>
+                        <textarea name="notes" class="form-control" rows="3" placeholder="Any additional notes...">{{ old('notes') }}</textarea>
                     </div>
                 </div>
             </div>

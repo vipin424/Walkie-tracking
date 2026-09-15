@@ -35,7 +35,7 @@
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Walkie Model</label>
                         <select name="item_id" class="form-select @error('item_id') is-invalid @enderror">
-                            <option value="">— कोई model नहीं —</option>
+                            <option value="">— No model —</option>
                             @foreach($items as $item)
                                 <option value="{{ $item->id }}"
                                     {{ old('item_id', $inventory->item_id) == $item->id ? 'selected' : '' }}>
