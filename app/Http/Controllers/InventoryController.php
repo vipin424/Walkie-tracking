@@ -24,18 +24,28 @@ class InventoryController extends Controller
     // ─── DataTables AJAX ─────────────────────────────────────────────────────
     public function getData(Request $request)
     {
-        $query = WalkieInventory::with('item')
-            ->select('walkie_inventories.*')
-            ->orderBy('id', 'asc');
+        $query = WalkieInventory::leftJoin('items', 'walkie_inventories.item_id', '=', 'items.id')
+            ->select([
+                'walkie_inventories.id',
+                'walkie_inventories.serial_number',
+                'walkie_inventories.status',
+                'walkie_inventories.condition',
+                'walkie_inventories.purchase_date',
+                'walkie_inventories.item_id',
+                'items.name as item_name',
+            ])
+            ->orderBy('walkie_inventories.id', 'asc');
 
         return DataTables::of($query)
-            ->addColumn('item_name', fn($inv) => $inv->item?->name ?? '<span class="text-muted">—</span>')
+            ->editColumn('item_name', fn($inv) => $inv->item_name ?? '<span class="text-muted">—</span>')
             ->editColumn('status', fn($inv) => $inv->status_badge)
             ->editColumn('condition', fn($inv) => $inv->condition_badge)
-            ->editColumn('purchase_date', fn($inv) => $inv->purchase_date?->format('d M Y') ?? '—')
+            ->editColumn('purchase_date', fn($inv) => $inv->purchase_date
+                ? \Carbon\Carbon::parse($inv->purchase_date)->format('d M Y')
+                : '—')
             ->addColumn('actions', function ($inv) {
                 return '
-                    <a href="' . route('inventory.edit', $inv) . '" class="btn btn-sm btn-outline-primary me-1">
+                    <a href="' . route('inventory.edit', $inv->id) . '" class="btn btn-sm btn-outline-primary me-1">
                         <i class="bi bi-pencil"></i>
                     </a>
                     <button class="btn btn-sm btn-outline-danger delete-inv-btn" data-id="' . $inv->id . '">
