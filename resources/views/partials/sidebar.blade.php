@@ -22,6 +22,9 @@
     <a href="{{ route('items.index') }}" class="menu-item {{ nav_active('items.*') }}">
       <i class="bi bi-box-seam"></i> <span>Items</span>
     </a>
+    <a href="{{ route('inventory.index') }}" class="menu-item {{ nav_active('inventory.*') }}">
+      <i class="bi bi-upc-scan"></i> <span>Inventory</span>
+    </a>
     <a href="{{ route('quotations.index') }}" class="menu-item {{ nav_active('quotations.*') }}">
       <i class="bi bi-receipt"></i> <span>Quotations</span>
     </a>
