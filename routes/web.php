@@ -16,6 +16,7 @@ use App\Http\Controllers\{
     ItemController,
     MonthlySubscriptionController,
     SubscriptionAgreementController,
+    DamageReportController,
 };
 
 Route::get('/', function () {
@@ -143,6 +144,13 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
     Route::post('payments/{dispatch}', [PaymentController::class, 'storeOrUpdate'])->name('payments.store');
+
+    // ─── Damage Reports (Physical Damage Invoices) ──────────────────────────────
+    Route::resource('damage-reports', DamageReportController::class);
+    Route::post('damage-reports/{damage_report}/send',         [DamageReportController::class, 'send'])->name('damage-reports.send');
+    Route::post('damage-reports/{damage_report}/mark-paid',    [DamageReportController::class, 'markPaid'])->name('damage-reports.mark-paid');
+    Route::post('damage-reports/{damage_report}/regenerate-pdf',[DamageReportController::class, 'regeneratePdf'])->name('damage-reports.regenerate-pdf');
+
 });
     // signed download with obfuscated ID for security (similar to order flow)
     Route::get('quotations/{hash}/download',[QuotationController::class, 'download'])->name('quotations.download')->middleware('signed');
@@ -157,3 +165,6 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/subscription-addendum/{code}',        [\App\Http\Controllers\SubscriptionAddendumController::class, 'submit'])->name('subscription-addendum.submit');
     // Monthly invoice download - must be outside auth routes as it's accessed from email links
     Route::get('/monthly-invoice/{hash}/download',[MonthlySubscriptionController::class, 'downloadInvoice'])->name('monthly-invoice.download')->middleware('signed');
+    // Damage invoice download – accessed from email links
+    Route::get('/damage-invoice/{hash}/download', [DamageReportController::class, 'download'])->name('damage-reports.download')->middleware('signed');
+

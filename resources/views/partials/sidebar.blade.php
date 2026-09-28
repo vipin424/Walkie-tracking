@@ -31,6 +31,9 @@
     <a href="{{ route('subscriptions.index') }}" class="menu-item {{ nav_active('subscriptions.*') }}">
       <i class="bi bi-calendar-check"></i> <span>Monthly Subscriptions</span>
     </a>
+    <a href="{{ route('damage-reports.index') }}" class="menu-item {{ nav_active('damage-reports.*') }}" style="{{ request()->routeIs('damage-reports.*') ? '' : '' }}">
+      <i class="bi bi-exclamation-triangle-fill"></i> <span>Damage Reports</span>
+    </a>
     <a href="{{ route('dispatches.index') }}" class="menu-item {{ nav_active('dispatches.*') }}">
       <i class="bi bi-truck"></i> <span>Dispatches</span>
     </a>
