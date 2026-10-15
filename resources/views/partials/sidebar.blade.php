@@ -1,5 +1,7 @@
 @php
-  function nav_active($pattern){ return request()->routeIs($pattern) ? 'active' : ''; }
+  if (!function_exists('nav_active')) {
+    function nav_active($pattern){ return request()->routeIs($pattern) ? 'active' : ''; }
+  }
 @endphp
 
 <aside id="sidebar" class="sidebar shadow-sm">
@@ -27,6 +29,9 @@
     </a>
     <a href="{{ route('quotations.index') }}" class="menu-item {{ nav_active('quotations.*') }}">
       <i class="bi bi-receipt"></i> <span>Quotations</span>
+    </a>
+    <a href="{{ route('monthly-quotations.index') }}" class="menu-item {{ nav_active('monthly-quotations.*') }}">
+      <i class="bi bi-file-earmark-text"></i> <span>Monthly Quotations</span>
     </a>
     <a href="{{ route('orders.index') }}" class="menu-item {{ nav_active('orders.*') }}">
       <i class="bi bi-diagram-2"></i> <span>Orders</span>

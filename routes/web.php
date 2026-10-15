@@ -16,6 +16,7 @@ use App\Http\Controllers\{
     ItemController,
     InventoryController,
     MonthlySubscriptionController,
+    MonthlyQuotationController,
     SubscriptionAgreementController,
     DamageReportController,
 };
@@ -116,6 +117,11 @@ Route::middleware(['auth'])->group(function () {
             return response()->json(['error' => $e->getMessage()], 500);
         }
     })->name('debug.return-tables');
+
+    // Monthly Rate Quotations (Rate contracts for monthly walkie rental)
+    Route::resource('monthly-quotations', MonthlyQuotationController::class);
+    Route::post('monthly-quotations/{monthlyQuotation}/generate-pdf', [MonthlyQuotationController::class, 'generatePdf'])
+        ->name('monthly-quotations.generate-pdf');
 
     // Monthly Subscriptions
     Route::resource('subscriptions', MonthlySubscriptionController::class);
