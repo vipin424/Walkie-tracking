@@ -198,38 +198,6 @@
   </div>
   @endif
 
-  {{-- ══════════ PAYMENT DETAILS ══════════ --}}
-  @if($monthlyQuotation->total_amount > 0)
-  @php
-    $upiId   = config('payment.upi.id');
-    $upiName = config('payment.upi.name');
-  @endphp
-  <div class="payment-section">
-    <h3>Payment Details</h3>
-    <div class="payment-grid">
-      <div class="bank-details">
-        <strong>Bank Transfer Details:</strong>
-        <table class="bank-table">
-          <tr><td>Bank Name:</td>     <td>{{ config('payment.bank.name') }}</td></tr>
-          <tr><td>Account Name:</td>  <td>{{ config('payment.bank.account_name') }}</td></tr>
-          <tr><td>Account No.:</td>   <td>{{ config('payment.bank.account_number') }}</td></tr>
-          <tr><td>IFSC Code:</td>     <td>{{ config('payment.bank.ifsc_code') }}</td></tr>
-          <tr><td>Branch:</td>        <td>{{ config('payment.bank.branch') }}</td></tr>
-          @if(config('payment.bank.pan_number'))
-          <tr><td>PAN:</td>           <td>{{ config('payment.bank.pan_number') }}</td></tr>
-          @endif
-        </table>
-      </div>
-      <div class="qr-section">
-        <strong>Scan to Pay via UPI</strong><br>
-        <img src="data:image/png;base64,{{ $qrCode }}" alt="UPI QR"><br>
-        <strong style="font-size: 13px; color: #f44336;">₹{{ number_format($monthlyQuotation->total_amount, 2) }}</strong><br>
-        <span style="font-size: 9px;">UPI ID: {{ $upiId }}</span>
-      </div>
-    </div>
-  </div>
-  @endif
-
   <div class="footer">
     This is a computer generated quotation by Crewrent Enterprises. | {{ $monthlyQuotation->code }}
   </div>
