@@ -23,7 +23,7 @@
             <label class="form-label fw-semibold">Type</label>
             <select name="type" class="form-select @error('type') is-invalid @enderror">
               <option value="">-- Select Type --</option>
-              @foreach(['Walkie Talkie', 'Talkback', 'PA System'] as $type)
+              @foreach(['Walkie Talkie', 'Talkback','Speaker', 'PA System'] as $type)
                 <option value="{{ $type }}" {{ old('type') == $type ? 'selected' : '' }}>{{ $type }}</option>
               @endforeach
             </select>
