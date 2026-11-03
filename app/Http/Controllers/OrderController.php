@@ -1072,8 +1072,29 @@ class OrderController extends Controller
             ]);
 
             /** ✅ COPY ITEMS */
-            foreach ($quotation->items as $item) {
-                $order->items()->create($item->toArray());
+            if ($quotation->quotation_type === 'multi_date') {
+                $quotation->load('dates.items');
+                foreach ($quotation->dates as $date) {
+                    $dateStr = \Carbon\Carbon::parse($date->event_date)->format('d M Y');
+                    if ($date->label) {
+                        $dateStr .= " - " . $date->label;
+                    }
+                    foreach ($date->items as $item) {
+                        $order->items()->create([
+                            'item_name'   => $item->item_name,
+                            'item_type'   => $item->item_type,
+                            'description' => ($item->description ? $item->description . " | " : "") . "Date: " . $dateStr,
+                            'quantity'    => $item->quantity,
+                            'unit_price'  => $item->unit_price,
+                            'tax_percent' => $item->tax_percent,
+                            'total_price' => $item->total_price,
+                        ]);
+                    }
+                }
+            } else {
+                foreach ($quotation->items as $item) {
+                    $order->items()->create($item->toArray());
+                }
             }
 
             /** ✅ UPDATE QUOTATION STATUS */

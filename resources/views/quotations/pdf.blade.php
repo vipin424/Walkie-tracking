@@ -110,6 +110,11 @@
       <h3>Quotation</h3>
       <div><strong>{{ $quotation->code }}</strong></div>
       <div>Date: {{ $quotation->created_at->format('d M Y') }}</div>
+      @if($quotation->quotation_type === 'multi_date')
+        <div>Event: <strong>{{ $quotation->total_days }} Selected Date(s)</strong></div>
+      @elseif($quotation->event_from && $quotation->event_to)
+        <div>Event: <strong>{{ \Carbon\Carbon::parse($quotation->event_from)->format('d M Y') }} to {{ \Carbon\Carbon::parse($quotation->event_to)->format('d M Y') }}</strong></div>
+      @endif
       <div>To: <strong>{{ $quotation->client_name }}</strong></div>
       <div>{{ $quotation->client_email }}</div>
       <div>{{ $quotation->client_phone }}</div>
@@ -129,31 +134,62 @@
       </tr>
     </thead>
     <tbody>
-      @foreach($quotation->items as $i => $item)
-      <tr>
-        <td>{{ $i+1 }}</td>
-        <td>
-          <strong>{{ $item->item_name }}</strong><br>
-          <div style="font-size:11px; color:#555;">{{ $item->description }}</div>
-        </td>
-        <td>{{ $item->item_type }}</td>
-        <td class="right">{{ $item->quantity }}</td>
-        <td class="right">₹{{ number_format($item->unit_price,2) }}</td>
-        <td class="right">{{ $item->tax_percent ?? 0 }}</td>
-        <td class="right">₹{{ number_format($item->total_price,2) }}</td>
-      </tr>
-      @endforeach
+      @if($quotation->quotation_type === 'multi_date')
+        @php $globalIdx = 1; @endphp
+        @foreach($quotation->dates as $dateRow)
+          {{-- Date header row --}}
+          <tr style="background:#fff3e0;">
+            <td colspan="7" style="font-weight:bold; color:#e65100; padding:6px 8px;">
+              📅 {{ $dateRow->event_date->format('d M Y') }}
+              @if($dateRow->label) — {{ $dateRow->label }} @endif
+            </td>
+          </tr>
+          @foreach($dateRow->items as $item)
+          <tr>
+            <td>{{ $globalIdx++ }}</td>
+            <td>
+              <strong>{{ $item->item_name }}</strong><br>
+              <div style="font-size:11px; color:#555;">{{ $item->description }}</div>
+            </td>
+            <td>{{ $item->item_type }}</td>
+            <td class="right">{{ $item->quantity }}</td>
+            <td class="right">₹{{ number_format($item->unit_price, 2) }}</td>
+            <td class="right">{{ $item->tax_percent ?? 0 }}</td>
+            <td class="right">₹{{ number_format($item->total_price, 2) }}</td>
+          </tr>
+          @endforeach
+        @endforeach
+      @else
+        @foreach($quotation->items as $i => $item)
+        <tr>
+          <td>{{ $i+1 }}</td>
+          <td>
+            <strong>{{ $item->item_name }}</strong><br>
+            <div style="font-size:11px; color:#555;">{{ $item->description }}</div>
+          </td>
+          <td>{{ $item->item_type }}</td>
+          <td class="right">{{ $item->quantity }}</td>
+          <td class="right">₹{{ number_format($item->unit_price,2) }}</td>
+          <td class="right">{{ $item->tax_percent ?? 0 }}</td>
+          <td class="right">₹{{ number_format($item->total_price,2) }}</td>
+        </tr>
+        @endforeach
+      @endif
     </tbody>
   <tfoot>
 
       {{-- Event Duration --}}
       <tr class="total-row">
           <td colspan="6" class="right">
-              Event Duration
+              @if($quotation->quotation_type === 'multi_date') Event Dates @else Event Duration @endif
           </td>
           <td class="right">
               {{ $quotation->total_days }}
-              Day{{ $quotation->total_days > 1 ? 's' : '' }}
+              @if($quotation->quotation_type === 'multi_date')
+                Date{{ $quotation->total_days > 1 ? 's' : '' }}
+              @else
+                Day{{ $quotation->total_days > 1 ? 's' : '' }}
+              @endif
           </td>
       </tr>
 
@@ -196,7 +232,7 @@
               Support Staff
               ({{ $quotation->staff_count }} Staff
               × ₹{{ number_format($quotation->extra_charge_rate, 2) }}/day
-              × {{ $quotation->total_days }} Day{{ $quotation->total_days > 1 ? 's' : '' }})
+              × {{ $quotation->total_days }} {{ $quotation->quotation_type === 'multi_date' ? 'Date(s)' : 'Day'.($quotation->total_days > 1 ? 's' : '') }})
           </td>
           <td class="right">
               ₹{{ number_format($quotation->extra_charge_total, 2) }}

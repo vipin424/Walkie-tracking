@@ -9,7 +9,8 @@ class Quotation extends Model
 {
     protected $fillable = [
         'code','client_name','client_email','client_phone','event_from','event_to','handle_type','total_days',
-        'notes','bill_to','subtotal','tax_amount','discount_amount','extra_charge_type','extra_charge_rate','staff_count','extra_charge_total','travelling_charge','total_amount','status','created_by','pdf_path'
+        'notes','bill_to','subtotal','tax_amount','discount_amount','extra_charge_type','extra_charge_rate','staff_count','extra_charge_total','travelling_charge','total_amount','status','created_by','pdf_path',
+        'quotation_type',
     ];
 
     protected static function booted()
@@ -26,6 +27,11 @@ class Quotation extends Model
     public function items()
     {
         return $this->hasMany(QuotationItem::class);
+    }
+
+    public function dates()
+    {
+        return $this->hasMany(QuotationDate::class)->orderBy('event_date')->orderBy('sort_order');
     }
 
     public function logs()

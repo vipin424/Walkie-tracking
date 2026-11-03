@@ -88,8 +88,31 @@
   </div>
 </div>
 
-<!-- Items Card -->
+<!-- Quotation Type Toggle -->
 <div class="card border-0 shadow-sm mb-4">
+  <div class="card-body p-4">
+    <div class="d-flex align-items-center gap-4 flex-wrap">
+      <span class="fw-semibold"><i class="bi bi-ui-checks-grid me-2 text-warning"></i>Quotation Type:</span>
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="radio" name="quotation_type" id="type_standard" value="standard"
+          {{ old('quotation_type', $quotation->quotation_type ?? 'standard') === 'standard' ? 'checked' : '' }}>
+        <label class="form-check-label fw-semibold" for="type_standard">
+          <i class="bi bi-calendar-range me-1 text-primary"></i> Standard (Continuous Date Range)
+        </label>
+      </div>
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="radio" name="quotation_type" id="type_multi_date" value="multi_date"
+          {{ old('quotation_type', $quotation->quotation_type ?? 'standard') === 'multi_date' ? 'checked' : '' }}>
+        <label class="form-check-label fw-semibold" for="type_multi_date">
+          <i class="bi bi-calendar2-plus me-1 text-warning"></i> Multi-Date (Custom Items/Qty Per Date)
+        </label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Standard Items Card -->
+<div id="standard-items-section" class="card border-0 shadow-sm mb-4">
   <div class="card-header bg-white border-0 p-4">
     <div class="d-flex justify-content-between align-items-center">
       <h5 class="mb-0 fw-semibold">
@@ -155,6 +178,11 @@
   </div>
 </div>
 
+<!-- Multi-Date Items Section -->
+<div id="multi-date-items-section" class="mb-4" style="display: none;">
+  @include('quotations.partials.multi-date-form')
+</div>
+
 <!-- Summary Card -->
 <div class="card border-0 shadow-sm">
   <div class="card-header bg-white border-0 p-4">
@@ -175,11 +203,11 @@
             <span class="fw-semibold">₹ <span id="tax_amount">0.00</span></span>
           </div>
           <div class="d-flex justify-content-between mb-3">
-            <span class="text-muted">Event Duration:</span>
+            <span class="text-muted" id="duration_label">Event Duration:</span>
             <span class="fw-semibold">
-                <span id="total_days">1</span> Day(s)
+                <span id="total_days">1</span> <span id="duration_unit">Day(s)</span>
             </span>
-        </div>
+          </div>
         <!-- Additional Charges -->
         <div class="mb-3">
             <span class="text-muted d-block mb-2">
@@ -255,7 +283,7 @@
                     <small class="text-muted mt-1 d-block">
                         <span id="staff_count_display">1</span> Staff ×
                         ₹<span id="staff_rate_display">0</span> ×
-                        <span id="staff_days">1</span> Day(s) =
+                        <span id="staff_days">1</span> <span id="staff_days_unit">Day(s)</span> =
                         <strong>₹<span id="staff_total">0.00</span></strong>
                     </small>
                 </div>
@@ -294,8 +322,9 @@
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 
 <script>
-// Autocomplete for item names
+// Autocomplete for standard items
 function initAutocomplete(input) {
+    if (typeof $ === 'undefined' || !$.fn.autocomplete) return;
     $(input).autocomplete({
         source: function(request, response) {
             $.ajax({
@@ -315,123 +344,210 @@ function initAutocomplete(input) {
             const row = $(this).closest('tr');
             const item = ui.item.item;
             
-            // Auto-fill fields
             row.find('input[name*="[item_type]"]').val(item.type || '');
             row.find('input[name*="[description]"]').val(item.description || '');
             row.find('input[name*="[unit_price]"]').val(item.unit_price || 0);
             row.find('input[name*="[tax_percent]"]').val(item.tax_percent || 0);
             
-            // Trigger recalculation
-            setTimeout(() => recalcAll(), 100);
+            setTimeout(() => window.recalcAll(), 100);
         }
     });
 }
 
-document.addEventListener('DOMContentLoaded', function(){
-    // Initialize autocomplete for existing rows
-    document.querySelectorAll('.item-name').forEach(input => initAutocomplete(input));
+/* =====================================================================
+   MASTER QUOTATION RECALCULATION ENGINE (STANDARD + MULTI-DATE)
+   ===================================================================== */
+window.recalcAll = function () {
+    const isMultiDate = document.querySelector('input[name="quotation_type"]:checked')?.value === 'multi_date';
+    let subtotal = 0;
+    let totalTax = 0;
+    let totalDays = 1;
 
-    /* ======================
-       TOTAL DAYS
-    ====================== */
-    function getTotalDays() {
-        const from = document.getElementById('event_from').value;
-        const to   = document.getElementById('event_to').value;
+    if (isMultiDate) {
+        // Multi-Date Mode
+        const dateBlocks = document.querySelectorAll('#multi-date-container .date-block');
+        totalDays = dateBlocks.length;
 
-        if (!from || !to) return 1;
+        dateBlocks.forEach((block, di) => {
+            let blockSub = 0;
 
-        const start = new Date(from);
-        const end   = new Date(to);
+            const seqEl = block.querySelector('.date-seq');
+            if (seqEl) seqEl.textContent = di + 1;
 
-        const diff = (end - start) / (1000 * 60 * 60 * 24);
-        return diff >= 0 ? diff + 1 : 1;
-    }
+            block.querySelectorAll('.date-item-row').forEach(row => {
+                const qty  = parseFloat(row.querySelector('.date-item-qty')?.value)  || 0;
+                const unit = parseFloat(row.querySelector('.date-item-unit')?.value) || 0;
+                const taxP = parseFloat(row.querySelector('.date-item-tax')?.value)  || 0;
 
-    /* ======================
-       EXTRA CHARGE CALC
-    ====================== */
-    function getExtraCharge() {
-        const selected = document.querySelector('input[name="extra_charge_type"]:checked');
-        if (!selected) return 0;
+                const base = qty * unit;
+                const taxAmt = base * (taxP / 100);
+                const lineTotal = base + taxAmt;
 
-        const days = getTotalDays();
+                const lineEl = row.querySelector('.date-item-total');
+                if (lineEl) lineEl.textContent = '₹' + lineTotal.toFixed(2);
 
-        // Delivery → one time
-        if (selected.value === 'delivery') {
-            return parseFloat(document.getElementById('delivery_charge_amount').value) || 0;
-        }
+                subtotal += base;
+                totalTax += taxAmt;
+                blockSub += lineTotal;
+            });
 
-        // Travelling → one time (always separate)
-        if (selected.value === 'travelling') {
-            return parseFloat(document.getElementById('travelling_charge_amount').value) || 0;
-        }
-
-        // Staff → staff_count × rate × days
-        if (selected.value === 'staff') {
-            const count  = parseInt(document.getElementById('staff_count').value) || 1;
-            const perDay = parseFloat(document.getElementById('staff_charge_amount').value) || 0;
-            const total  = count * perDay * days;
-
-            document.getElementById('staff_count_display').innerText = count;
-            document.getElementById('staff_rate_display').innerText  = perDay.toFixed(2);
-            document.getElementById('staff_days').innerText          = days;
-            document.getElementById('staff_total').innerText         = total.toFixed(2);
-
-            return total;
-        }
-
-        return 0;
-    }
-
-    /* ======================
-       ROW CALCULATION
-    ====================== */
-    function recalcRow(row){
-        const qty  = parseFloat(row.querySelector('.qty').value) || 0;
-        const unit = parseFloat(row.querySelector('.unit').value) || 0;
-        const tax  = parseFloat(row.querySelector('.tax').value) || 0;
-        const days = getTotalDays();
-
-        const baseTotal = qty * unit * days;
-        const taxAmount = baseTotal * (tax / 100);
-
-        row.querySelector('.line_total').innerText = '₹' + (baseTotal + taxAmount).toFixed(2);
-        row.dataset.baseAmount = baseTotal.toFixed(2);
-        row.dataset.taxAmount  = taxAmount.toFixed(2);
-    }
-
-    /* ======================
-       SUMMARY CALC
-    ====================== */
-    function recalcAll(){
-        let subtotal = 0;
-        let totalTax = 0;
-
-        document.querySelectorAll('.item-row').forEach(row => {
-            recalcRow(row);
-            subtotal += parseFloat(row.dataset.baseAmount || 0);
-            totalTax += parseFloat(row.dataset.taxAmount || 0);
+            const blockSubEl = block.querySelector('.date-subtotal-display');
+            if (blockSubEl) blockSubEl.textContent = '₹' + blockSub.toFixed(2);
         });
 
-        const discount    = parseFloat(document.getElementById('discount').value) || 0;
-        const extraCharge = getExtraCharge();
-        const travellingCharge = parseFloat(document.getElementById('travelling_charge_amount').value) || 0;
+        // Label updates for multi-date
+        const durLabel = document.getElementById('duration_label');
+        if (durLabel) durLabel.textContent = 'Total Event Dates:';
+        const durUnit = document.getElementById('duration_unit');
+        if (durUnit) durUnit.textContent = 'Date' + (totalDays === 1 ? '' : 's');
+        const staffUnit = document.getElementById('staff_days_unit');
+        if (staffUnit) staffUnit.textContent = 'Date' + (totalDays === 1 ? '' : 's');
 
-        const total = subtotal + totalTax + extraCharge + travellingCharge - discount;
+    } else {
+        // Standard Date Range Mode
+        const from = document.getElementById('event_from')?.value;
+        const to   = document.getElementById('event_to')?.value;
 
-        document.getElementById('subtotal').innerText = subtotal.toFixed(2);
-        document.getElementById('tax_amount').innerText = totalTax.toFixed(2);
-        document.getElementById('total_amount').innerText = total.toFixed(2);
-        document.getElementById('total_days').innerText = getTotalDays();
+        if (from && to) {
+            const start = new Date(from);
+            const end   = new Date(to);
+            const diff  = (end - start) / (1000 * 60 * 60 * 24);
+            totalDays   = diff >= 0 ? diff + 1 : 1;
+        } else {
+            totalDays = 1;
+        }
+
+        document.querySelectorAll('#items-table .item-row').forEach(row => {
+            const qty  = parseFloat(row.querySelector('.qty')?.value)  || 0;
+            const unit = parseFloat(row.querySelector('.unit')?.value) || 0;
+            const taxP = parseFloat(row.querySelector('.tax')?.value)   || 0;
+
+            const base = qty * unit * totalDays;
+            const taxAmt = base * (taxP / 100);
+            const lineTotal = base + taxAmt;
+
+            const lineEl = row.querySelector('.line_total');
+            if (lineEl) lineEl.textContent = '₹' + lineTotal.toFixed(2);
+
+            row.dataset.baseAmount = base.toFixed(2);
+            row.dataset.taxAmount  = taxAmt.toFixed(2);
+
+            subtotal += base;
+            totalTax += taxAmt;
+        });
+
+        const durLabel = document.getElementById('duration_label');
+        if (durLabel) durLabel.textContent = 'Event Duration:';
+        const durUnit = document.getElementById('duration_unit');
+        if (durUnit) durUnit.textContent = 'Day' + (totalDays === 1 ? '' : 's');
+        const staffUnit = document.getElementById('staff_days_unit');
+        if (staffUnit) staffUnit.textContent = 'Day' + (totalDays === 1 ? '' : 's');
     }
 
-    /* ======================
-       EXTRA CHARGE UI
-    ====================== */
-    const deliveryInput    = document.getElementById('delivery_charge_input');
-    const staffInput = document.getElementById('staff_charge_input');
+    // Additional Charges
+    const selectedExtra = document.querySelector('input[name="extra_charge_type"]:checked');
+    let extraCharge = 0;
 
-    const handleTypeSelect = document.querySelector('select[name="handle_type"]');
+    if (selectedExtra) {
+        if (selectedExtra.value === 'delivery') {
+            extraCharge = parseFloat(document.getElementById('delivery_charge_amount')?.value) || 0;
+        } else if (selectedExtra.value === 'staff') {
+            const count  = parseInt(document.getElementById('staff_count')?.value) || 1;
+            const perDay = parseFloat(document.getElementById('staff_charge_amount')?.value) || 0;
+            extraCharge  = count * perDay * (totalDays || 1);
+
+            const elCount = document.getElementById('staff_count_display');
+            const elRate  = document.getElementById('staff_rate_display');
+            const elDays  = document.getElementById('staff_days');
+            const elTot   = document.getElementById('staff_total');
+
+            if (elCount) elCount.innerText = count;
+            if (elRate)  elRate.innerText  = perDay.toFixed(2);
+            if (elDays)  elDays.innerText  = totalDays || 1;
+            if (elTot)   elTot.innerText   = extraCharge.toFixed(2);
+        }
+    }
+
+    const travellingCharge = parseFloat(document.getElementById('travelling_charge_amount')?.value) || 0;
+    const discount         = parseFloat(document.getElementById('discount')?.value) || 0;
+
+    const grandTotal = subtotal + totalTax + extraCharge + travellingCharge - discount;
+
+    const elSub = document.getElementById('subtotal');
+    if (elSub) elSub.innerText = subtotal.toFixed(2);
+
+    const elTax = document.getElementById('tax_amount');
+    if (elTax) elTax.innerText = totalTax.toFixed(2);
+
+    const elDays = document.getElementById('total_days');
+    if (elDays) elDays.innerText = totalDays;
+
+    const elTot = document.getElementById('total_amount');
+    if (elTot) elTot.innerText = grandTotal.toFixed(2);
+};
+
+/* =====================================================================
+   TYPE VISIBILITY TOGGLE
+   ===================================================================== */
+function applyTypeVisibility(type) {
+    const standardSection = document.getElementById('standard-items-section');
+    const multiSection    = document.getElementById('multi-date-items-section');
+    const eventFromWrap   = document.getElementById('event_from')?.closest('.col-md-4');
+    const eventToWrap     = document.getElementById('event_to')?.closest('.col-md-4');
+
+    if (type === 'multi_date') {
+        if (standardSection) standardSection.style.display = 'none';
+        if (multiSection)    multiSection.style.display    = 'block';
+        if (eventFromWrap)   eventFromWrap.style.display   = 'none';
+        if (eventToWrap)     eventToWrap.style.display     = 'none';
+
+        if (standardSection) {
+            standardSection.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+        }
+        if (document.getElementById('event_from')) document.getElementById('event_from').disabled = true;
+        if (document.getElementById('event_to'))   document.getElementById('event_to').disabled   = true;
+
+        if (multiSection) {
+            multiSection.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+        }
+    } else {
+        if (standardSection) standardSection.style.display = 'block';
+        if (multiSection)    multiSection.style.display    = 'none';
+        if (eventFromWrap)   eventFromWrap.style.display   = '';
+        if (eventToWrap)     eventToWrap.style.display     = '';
+
+        if (standardSection) {
+            standardSection.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+        }
+        if (document.getElementById('event_from')) document.getElementById('event_from').disabled = false;
+        if (document.getElementById('event_to'))   document.getElementById('event_to').disabled   = false;
+
+        if (multiSection) {
+            multiSection.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+        }
+    }
+
+    window.recalcAll();
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+    // Type radio listeners
+    document.querySelectorAll('input[name="quotation_type"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            applyTypeVisibility(this.value);
+        });
+    });
+
+    const currentType = document.querySelector('input[name="quotation_type"]:checked')?.value || 'standard';
+    applyTypeVisibility(currentType);
+
+    // Autocomplete for standard items
+    document.querySelectorAll('#items-table .item-name').forEach(input => initAutocomplete(input));
+
+    // Handling Type / Support staff toggling
+    const deliveryInput     = document.getElementById('delivery_charge_input');
+    const staffInput        = document.getElementById('staff_charge_input');
+    const handleTypeSelect  = document.querySelector('select[name="handle_type"]');
     const attendanceWrapper = document.getElementById('attendance_support_staff_wrapper');
 
     if (handleTypeSelect && attendanceWrapper) {
@@ -443,275 +559,152 @@ document.addEventListener('DOMContentLoaded', function(){
                 const staffRadio = document.getElementById('staff_charge_option');
                 if (staffRadio && staffRadio.checked) {
                     staffRadio.checked = false;
-                    staffInput.style.display = 'none';
-                    document.getElementById('staff_charge_amount').value = '';
-                    document.getElementById('staff_count').value = '1';
-                    recalcAll();
+                    if (staffInput) staffInput.style.display = 'none';
+                    const elAmt = document.getElementById('staff_charge_amount');
+                    if (elAmt) elAmt.value = '';
+                    const elCount = document.getElementById('staff_count');
+                    if (elCount) elCount.value = '1';
+                    window.recalcAll();
                 }
             }
         }
-        
         handleTypeSelect.addEventListener('change', toggleAttendanceStaff);
-        // Trigger on load as well
         toggleAttendanceStaff();
     }
 
+    // Extra charge radio buttons
     document.querySelectorAll('.extra-charge-option').forEach(opt => {
         opt.addEventListener('change', function () {
-            deliveryInput.style.display = 'none';
-            staffInput.style.display    = 'none';
+            if (deliveryInput) deliveryInput.style.display = 'none';
+            if (staffInput)    staffInput.style.display    = 'none';
 
-            document.getElementById('delivery_charge_amount').value = '';
-            document.getElementById('staff_charge_amount').value    = '';
-            document.getElementById('staff_count').value            = '1';
+            if (this.value === 'delivery' && deliveryInput) deliveryInput.style.display = 'block';
+            if (this.value === 'staff' && staffInput)       staffInput.style.display    = 'block';
 
-            if (this.value === 'delivery') deliveryInput.style.display = 'block';
-            if (this.value === 'staff')    staffInput.style.display    = 'block';
-
-            recalcAll();
+            window.recalcAll();
         });
     });
 
+    // Clear extra charges
     const clearExtraChargesBtn = document.getElementById('clear_extra_charges');
     if (clearExtraChargesBtn) {
         clearExtraChargesBtn.addEventListener('click', function(e) {
             e.preventDefault();
             document.querySelectorAll('.extra-charge-option').forEach(opt => opt.checked = false);
             if (deliveryInput) deliveryInput.style.display = 'none';
-            if (staffInput) staffInput.style.display = 'none';
-            document.getElementById('delivery_charge_amount').value = '';
-            document.getElementById('staff_charge_amount').value = '';
-            document.getElementById('staff_count').value = '1';
-            recalcAll();
+            if (staffInput)    staffInput.style.display    = 'none';
+            const delAmt = document.getElementById('delivery_charge_amount');
+            if (delAmt) delAmt.value = '';
+            const stAmt = document.getElementById('staff_charge_amount');
+            if (stAmt) stAmt.value = '';
+            const stCnt = document.getElementById('staff_count');
+            if (stCnt) stCnt.value = '1';
+            window.recalcAll();
         });
     }
 
-    /* ======================
-       EVENT LISTENERS
-    ====================== */
+    // Unified live input listener on document
     document.addEventListener('input', function(e){
         if (
             e.target.matches('.qty') ||
             e.target.matches('.unit') ||
             e.target.matches('.tax') ||
+            e.target.matches('.date-item-qty') ||
+            e.target.matches('.date-item-unit') ||
+            e.target.matches('.date-item-tax') ||
             e.target.matches('#discount') ||
             e.target.matches('#delivery_charge_amount') ||
             e.target.matches('#travelling_charge_amount') ||
             e.target.matches('#staff_charge_amount') ||
             e.target.matches('#staff_count')
         ) {
-            recalcAll();
+            window.recalcAll();
         }
     });
 
-    document.getElementById('event_from').addEventListener('change', recalcAll);
-    document.getElementById('event_to').addEventListener('change', recalcAll);
+    const eventFromEl = document.getElementById('event_from');
+    if (eventFromEl) eventFromEl.addEventListener('change', () => window.recalcAll());
 
-    /* ======================
-       ADD ROW
-    ====================== */
-    document.getElementById('add-row').addEventListener('click', function(){
-        const tbody = document.querySelector('#items-table tbody');
-        const index = tbody.children.length;
+    const eventToEl = document.getElementById('event_to');
+    if (eventToEl) eventToEl.addEventListener('change', () => window.recalcAll());
 
-        const tr = document.createElement('tr');
-        tr.classList.add('item-row');
-        tr.innerHTML = `
-            <td><input name="items[${index}][item_name]" class="form-control form-control-sm item-name"></td>
-            <td><input name="items[${index}][item_type]" class="form-control form-control-sm"></td>
-            <td><input name="items[${index}][description]" class="form-control form-control-sm"></td>
-            <td><input name="items[${index}][quantity]" class="form-control form-control-sm qty text-center" value="1"></td>
-            <td><input name="items[${index}][unit_price]" class="form-control form-control-sm unit" value="0"></td>
-            <td><input name="items[${index}][tax_percent]" class="form-control form-control-sm tax text-center" value="0"></td>
-            <td class="line_total text-end fw-semibold">₹0.00</td>
-            <td><button type="button" class="btn btn-sm btn-outline-danger remove-row">×</button></td>
-        `;
-        tbody.appendChild(tr);
-        
-        // Initialize autocomplete for new row
-        initAutocomplete(tr.querySelector('.item-name'));
-        
-        recalcAll();
-    });
+    // Standard Add Row
+    const addRowBtn = document.getElementById('add-row');
+    if (addRowBtn) {
+        addRowBtn.addEventListener('click', function(){
+            const tbody = document.querySelector('#items-table tbody');
+            const index = tbody.children.length;
 
-    /* ======================
-       REMOVE ROW
-    ====================== */
+            const tr = document.createElement('tr');
+            tr.classList.add('item-row');
+            tr.innerHTML = `
+                <td class="px-3 py-2"><input name="items[${index}][item_name]" class="form-control form-control-sm item-name"></td>
+                <td class="px-3 py-2"><input name="items[${index}][item_type]" class="form-control form-control-sm"></td>
+                <td class="px-3 py-2"><input name="items[${index}][description]" class="form-control form-control-sm"></td>
+                <td class="px-3 py-2"><input name="items[${index}][quantity]" type="number" step="1" class="form-control form-control-sm qty text-center" value="1"></td>
+                <td class="px-3 py-2"><input name="items[${index}][unit_price]" type="number" step="0.01" class="form-control form-control-sm unit" value="0"></td>
+                <td class="px-3 py-2"><input name="items[${index}][tax_percent]" type="number" step="0.01" class="form-control form-control-sm tax text-center" value="0"></td>
+                <td class="px-3 py-2 line_total text-end fw-semibold">₹0.00</td>
+                <td class="px-3 py-2 text-center"><button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-trash"></i></button></td>
+            `;
+            tbody.appendChild(tr);
+            
+            initAutocomplete(tr.querySelector('.item-name'));
+            window.recalcAll();
+        });
+    }
+
+    // Standard Remove Row
     document.addEventListener('click', function(e){
         if (e.target.closest('.remove-row')) {
-            const rows = document.querySelectorAll('.item-row');
+            const rows = document.querySelectorAll('#items-table .item-row');
             if (rows.length > 1) {
                 e.target.closest('tr').remove();
-                recalcAll();
-            }
-        }
-    });
-
-    // Initial run
-    recalcAll();
-});
-</script>
-
-<script src="https://cdn.ckeditor.com/ckeditor5/40.2.0/classic/ckeditor.js"></script>
-
-<script>
-    ClassicEditor
-        .create(document.querySelector('#notes_editor'), {
-            toolbar: [
-                'bold', 'italic', 'underline',
-                '|',
-                'bulletedList', 'numberedList',
-                '|',
-                'undo', 'redo'
-            ]
-        })
-        .catch(error => {
-            console.error(error);
-        });
-    ClassicEditor
-        .create(document.querySelector('#bill_editor'), {
-            toolbar: [
-                'bold', 'italic', 'underline',
-                '|',
-                'bulletedList', 'numberedList',
-                '|',
-                'undo', 'redo'
-            ]
-        })
-        .catch(error => {
-            console.error(error);
-        });
-</script>
-<!-- <script>
-document.addEventListener('DOMContentLoaded', function(){
-    function recalcRow(row){
-        const qty = parseFloat(row.querySelector('.qty').value) || 0;
-        const unit = parseFloat(row.querySelector('.unit').value) || 0;
-        const tax = parseFloat(row.querySelector('.tax').value) || 0;
-        const total = qty * unit;
-        const taxAmount = total * (tax/100);
-        row.querySelector('.line_total').innerText = '₹' + (total + taxAmount).toFixed(2);
-        // Store tax amount as data attribute for later calculation
-        row.setAttribute('data-tax-amount', taxAmount.toFixed(2));
-        row.setAttribute('data-base-amount', total.toFixed(2));
-    }
-
-    function recalcAll(){
-        let subtotal = 0;
-        let totalTax = 0;
-        
-        document.querySelectorAll('.item-row').forEach(r=>{
-            recalcRow(r);
-            const baseAmount = parseFloat(r.getAttribute('data-base-amount')) || 0;
-            const taxAmount = parseFloat(r.getAttribute('data-tax-amount')) || 0;
-            subtotal += baseAmount;
-            totalTax += taxAmount;
-        });
-        
-        const discount = parseFloat(document.querySelector('#discount').value) || 0;
-        const total = subtotal + totalTax - discount;
-        
-        document.querySelector('#subtotal').innerText = subtotal.toFixed(2);
-        document.querySelector('#tax_amount').innerText = totalTax.toFixed(2);
-        document.querySelector('#total_amount').innerText = total.toFixed(2);
-    }
-
-    // Initial calc
-    recalcAll();
-
-    // Live update events
-    document.addEventListener('input', function(e){
-        if (e.target.matches('.qty') || e.target.matches('.unit') || e.target.matches('.tax') || e.target.matches('#discount')) {
-            recalcAll();
-        }
-    });
-
-    // Add row
-    document.getElementById('add-row').addEventListener('click', function(){
-        const tbody = document.querySelector('#items-table tbody');
-        const index = tbody.querySelectorAll('tr').length;
-        const tr = document.createElement('tr');
-        tr.classList.add('item-row');
-        tr.innerHTML = `
-            <td class="px-3 py-2"><input name="items[${index}][item_name]" class="form-control form-control-sm item-name"></td>
-            <td class="px-3 py-2"><input name="items[${index}][item_type]" class="form-control form-control-sm"></td>
-            <td class="px-3 py-2"><input name="items[${index}][description]" class="form-control form-control-sm"></td>
-            <td class="px-3 py-2"><input name="items[${index}][quantity]" type="number" step="1" class="form-control form-control-sm qty text-center" value="1"></td>
-            <td class="px-3 py-2"><input name="items[${index}][unit_price]" type="number" step="0.01" class="form-control form-control-sm unit" value="0"></td>
-            <td class="px-3 py-2"><input name="items[${index}][tax_percent]" type="number" step="0.01" class="form-control form-control-sm tax text-center" value="0"></td>
-            <td class="px-3 py-2 line_total text-end fw-semibold">₹0.00</td>
-            <td class="px-3 py-2 text-center">
-                <button type="button" class="btn btn-sm btn-outline-danger remove-row">
-                    <i class="bi bi-trash"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-        recalcAll();
-    });
-
-    // Remove row
-    document.addEventListener('click', function(e){
-        if (e.target.closest('.remove-row')) {
-            const row = e.target.closest('tr');
-            if (document.querySelectorAll('.item-row').length > 1) {
-                row.remove();
-                // Re-index names
-                document.querySelectorAll('#items-table tbody tr').forEach((tr, i) => {
-                    tr.querySelectorAll('input').forEach(input => {
-                        const name = input.getAttribute('name');
-                        if (name) {
-                            const newName = name.replace(/items\[\d+\]/, `items[${i}]`);
-                            input.setAttribute('name', newName);
-                        }
-                    });
-                });
-                recalcAll();
+                window.recalcAll();
             } else {
                 alert('At least one item is required!');
             }
         }
     });
 
-    // Info buttons
-    document.getElementById('generate-pdf').addEventListener('click', function(){
-        alert('Please save the quotation first. After saving, you can generate PDF from the quotation details page.');
-    });
-
-    document.getElementById('send-email').addEventListener('click', function(){
-        alert('Please save the quotation first. After saving, you can send email from the quotation details page.');
-    });
-
-    document.getElementById('send-whatsapp').addEventListener('click', function(){
-        alert('Please save the quotation first. After saving, you can send WhatsApp message from the quotation details page.');
-    });
+    // Initial run
+    window.recalcAll();
 });
-</script> -->
+</script>
+
+<script src="https://cdn.ckeditor.com/ckeditor5/40.2.0/classic/ckeditor.js"></script>
+<script>
+    if (document.querySelector('#notes_editor')) {
+        ClassicEditor.create(document.querySelector('#notes_editor'), {
+            toolbar: ['bold', 'italic', 'underline', '|', 'bulletedList', 'numberedList', '|', 'undo', 'redo']
+        }).catch(err => console.error(err));
+    }
+    if (document.querySelector('#bill_editor')) {
+        ClassicEditor.create(document.querySelector('#bill_editor'), {
+            toolbar: ['bold', 'italic', 'underline', '|', 'bulletedList', 'numberedList', '|', 'undo', 'redo']
+        }).catch(err => console.error(err));
+    }
+</script>
 
 <style>
   .table-hover tbody tr:hover {
     background-color: rgba(13, 110, 253, 0.03);
   }
-
   .form-control:focus {
     border-color: #0d6efd;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
   }
-
   .form-control-sm {
     font-size: 0.875rem;
   }
-
-  #items-table input[type="number"] {
+  input[type="number"] {
     -moz-appearance: textfield;
   }
-
-  #items-table input[type="number"]::-webkit-outer-spin-button,
-  #items-table input[type="number"]::-webkit-inner-spin-button {
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
   }
-
   .card {
     transition: all 0.3s ease;
   }

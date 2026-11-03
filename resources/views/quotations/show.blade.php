@@ -144,7 +144,12 @@
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-white border-0 p-4">
       <h5 class="mb-0 fw-semibold">
-        <i class="bi bi-box-seam me-2 text-warning"></i>Quotation Items
+        <i class="bi bi-box-seam me-2 text-warning"></i>
+        @if($quotation->quotation_type === 'multi_date')
+          Event Dates &amp; Items
+        @else
+          Quotation Items
+        @endif
       </h5>
     </div>
     <div class="card-body p-0">
@@ -161,43 +166,88 @@
             </tr>
           </thead>
           <tbody>
-            @foreach($quotation->items as $i => $it)
-            <tr>
-              <td class="px-4 py-3">
-                <span class="badge bg-secondary bg-opacity-10 text-secondary">{{ $i+1 }}</span>
-              </td>
-              <td class="px-4 py-3">
-                <div class="fw-medium">{{ $it->item_name }}</div>
-                @if($it->description)
-                  <small class="text-muted">{{ $it->description }}</small>
-                @endif
-              </td>
-              <td class="px-4 py-3">
-                <span class="badge bg-info bg-opacity-10 text-info">{{ $it->item_type }}</span>
-              </td>
-              <td class="px-4 py-3 text-center">
-                <span class="fw-semibold">{{ $it->quantity }}</span>
-              </td>
-              <td class="px-4 py-3 text-end">
-                ₹{{ number_format($it->unit_price, 2) }}
-              </td>
-              <td class="px-4 py-3 text-end">
-                <span class="fw-semibold text-dark">₹{{ number_format($it->total_price, 2) }}</span>
-              </td>
-            </tr>
-            @endforeach
+            @if($quotation->quotation_type === 'multi_date')
+              @php $globalIdx = 1; @endphp
+              @foreach($quotation->dates as $dateRow)
+                {{-- Date header row --}}
+                <tr style="background: #fff8e1;">
+                  <td colspan="6" class="px-4 py-2">
+                    <span class="fw-bold text-warning">
+                      <i class="bi bi-calendar3 me-2"></i>
+                      {{ $dateRow->event_date->format('d M Y') }}
+                    </span>
+                    @if($dateRow->label)
+                      <span class="text-muted ms-2">— {{ $dateRow->label }}</span>
+                    @endif
+                    <span class="badge bg-warning bg-opacity-10 text-warning ms-2">
+                      {{ $dateRow->items->count() }} item(s)
+                    </span>
+                  </td>
+                </tr>
+                @foreach($dateRow->items as $it)
+                <tr>
+                  <td class="px-4 py-3">
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary">{{ $globalIdx++ }}</span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <div class="fw-medium">{{ $it->item_name }}</div>
+                    @if($it->description)
+                      <small class="text-muted">{{ $it->description }}</small>
+                    @endif
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="badge bg-info bg-opacity-10 text-info">{{ $it->item_type }}</span>
+                  </td>
+                  <td class="px-4 py-3 text-center">
+                    <span class="fw-semibold">{{ $it->quantity }}</span>
+                  </td>
+                  <td class="px-4 py-3 text-end">
+                    ₹{{ number_format($it->unit_price, 2) }}
+                  </td>
+                  <td class="px-4 py-3 text-end">
+                    <span class="fw-semibold text-dark">₹{{ number_format($it->total_price, 2) }}</span>
+                  </td>
+                </tr>
+                @endforeach
+              @endforeach
+            @else
+              @foreach($quotation->items as $i => $it)
+              <tr>
+                <td class="px-4 py-3">
+                  <span class="badge bg-secondary bg-opacity-10 text-secondary">{{ $i+1 }}</span>
+                </td>
+                <td class="px-4 py-3">
+                  <div class="fw-medium">{{ $it->item_name }}</div>
+                  @if($it->description)
+                    <small class="text-muted">{{ $it->description }}</small>
+                  @endif
+                </td>
+                <td class="px-4 py-3">
+                  <span class="badge bg-info bg-opacity-10 text-info">{{ $it->item_type }}</span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <span class="fw-semibold">{{ $it->quantity }}</span>
+                </td>
+                <td class="px-4 py-3 text-end">
+                  ₹{{ number_format($it->unit_price, 2) }}
+                </td>
+                <td class="px-4 py-3 text-end">
+                  <span class="fw-semibold text-dark">₹{{ number_format($it->total_price, 2) }}</span>
+                </td>
+              </tr>
+              @endforeach
+            @endif
           </tbody>
           
           <tfoot class="bg-light">
-
-              {{-- Event Duration --}}
+              {{-- Event Duration / Date Count --}}
               <tr>
                   <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
-                      Event Duration:
+                      @if($quotation->quotation_type === 'multi_date') Total Event Dates: @else Event Duration: @endif
                   </td>
                   <td class="px-4 py-3 text-end fw-semibold">
                       {{ $quotation->total_days }}
-                      Day{{ $quotation->total_days > 1 ? 's' : '' }}
+                      {{ $quotation->quotation_type === 'multi_date' ? 'Date(s)' : 'Day'.($quotation->total_days > 1 ? 's' : '') }}
                   </td>
               </tr>
 
@@ -225,17 +275,25 @@
               </tr>
               @endif
 
-                @if($quotation->extra_charge_type === 'staff')
-                <tr>
-                  <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
-                    Support Staff
-                    ({{ $quotation->staff_count }} Staff × ₹{{ number_format($quotation->extra_charge_rate, 2) }}/day × {{ $quotation->total_days }} Day{{ $quotation->total_days > 1 ? 's' : '' }})
-                  </td>
-                  <td class="px-4 py-3 text-end fw-semibold">
-                    ₹{{ number_format($quotation->extra_charge_total, 2) }}
-                  </td>
-                </tr>
-                @endif
+              @if($quotation->extra_charge_type === 'staff')
+              <tr>
+                <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">
+                  Support Staff
+                  ({{ $quotation->staff_count }} Staff × ₹{{ number_format($quotation->extra_charge_rate, 2) }}/day × {{ $quotation->total_days }} {{ $quotation->quotation_type === 'multi_date' ? 'Date(s)' : 'Day'.($quotation->total_days > 1 ? 's' : '') }})
+                </td>
+                <td class="px-4 py-3 text-end fw-semibold">
+                  ₹{{ number_format($quotation->extra_charge_total, 2) }}
+                </td>
+              </tr>
+              @endif
+
+              {{-- Travelling Charges --}}
+              @if(($quotation->travelling_charge ?? 0) > 0)
+              <tr>
+                  <td colspan="5" class="px-4 py-3 text-end fw-semibold text-muted">Travelling Charges:</td>
+                  <td class="px-4 py-3 text-end fw-semibold">₹{{ number_format($quotation->travelling_charge, 2) }}</td>
+              </tr>
+              @endif
 
               {{-- Discount --}}
               @if($quotation->discount_amount > 0)
@@ -262,8 +320,6 @@
               </tr>
 
           </tfoot>
-
-
         </table>
       </div>
     </div>
