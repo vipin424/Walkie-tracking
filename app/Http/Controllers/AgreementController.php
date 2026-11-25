@@ -80,6 +80,25 @@ class AgreementController extends Controller
      * Send Agreement link via Email
      */
 
+    public function view(Order $order)
+    {
+        $path = optional($order->agreement)->signed_pdf;
+        abort_unless($path && Storage::disk('public')->exists($path), 404, 'Signed agreement not found');
+
+        return response()->file(Storage::disk('public')->path($path), [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . basename($path) . '"',
+        ]);
+    }
+
+    public function download(Order $order)
+    {
+        $path = optional($order->agreement)->signed_pdf;
+        abort_unless($path && Storage::disk('public')->exists($path), 404, 'Signed agreement not found');
+
+        return Storage::disk('public')->download($path, basename($path));
+    }
+
     public function sendEmail(Request $request, Order $order)
     {
         $agreement = $order->agreement;

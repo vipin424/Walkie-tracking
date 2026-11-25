@@ -84,7 +84,15 @@
               <i class="bi bi-check-circle-fill me-2"></i>
               <strong>Agreement Signed</strong>
             </div>
-            
+            @if($order->agreement->signed_pdf)
+              <a href="{{ route('orders.viewAgreement', $order) }}" target="_blank" class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-eye me-2"></i>View Agreement
+              </a>
+              <a href="{{ route('orders.downloadAgreement', $order) }}" class="btn btn-outline-primary ms-1">
+                <i class="bi bi-download me-2"></i>Download Agreement
+              </a>
+            @endif
+
           @else
             <!-- Agreement Actions -->
             <div class="d-flex flex-wrap gap-2 align-items-center">
