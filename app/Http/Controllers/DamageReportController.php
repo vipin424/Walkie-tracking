@@ -335,6 +335,17 @@ class DamageReportController extends Controller
         return back()->with('success', 'Damage invoice marked as paid and payment recorded.');
     }
 
+    // ─── VIEW INVOICE (always freshly generated) ─────────────────────────────────
+    public function viewInvoice(DamageReport $damage_report)
+    {
+        $this->generatePdf($damage_report);
+        $damage_report->refresh()->load('client', 'subscription');
+        $html = view('damage-reports.invoice-pdf', ['report' => $damage_report])->render();
+
+        return PDF::loadHTML($html)->setPaper('a4', 'portrait')
+            ->stream($damage_report->report_code . '.pdf');
+    }
+
     // ─── REGENERATE PDF ──────────────────────────────────────────────────────────
     public function regeneratePdf(DamageReport $damage_report)
     {

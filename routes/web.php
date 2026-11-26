@@ -162,6 +162,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('payments/{dispatch}', [PaymentController::class, 'storeOrUpdate'])->name('payments.store');
 
     // ─── Damage Reports (Physical Damage Invoices) ──────────────────────────────
+    Route::get('damage-reports/{damage_report}/invoice', [DamageReportController::class, 'viewInvoice'])->name('damage-reports.invoice');
     Route::resource('damage-reports', DamageReportController::class);
     Route::post('damage-reports/{damage_report}/send',         [DamageReportController::class, 'send'])->name('damage-reports.send');
     Route::post('damage-reports/{damage_report}/mark-paid',    [DamageReportController::class, 'markPaid'])->name('damage-reports.mark-paid');

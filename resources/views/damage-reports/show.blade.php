@@ -12,7 +12,7 @@
     </div>
     <div class="d-flex gap-2 flex-wrap">
       @if($damageReport->pdf_path)
-      <a href="{{ asset($damageReport->pdf_path) }}" target="_blank" class="btn btn-outline-primary btn-md shadow-sm">
+      <a href="{{ route('damage-reports.invoice', $damageReport) }}" target="_blank" class="btn btn-outline-primary btn-md shadow-sm">
         <i class="bi bi-file-pdf me-2"></i>View Invoice PDF
       </a>
       @endif
