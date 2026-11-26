@@ -62,7 +62,7 @@
     <div class="invoice-meta">
         <h2>⚠ DAMAGE INVOICE</h2>
         <div class="code">{{ $report->report_code }}</div>
-        <div style="margin-top:8px; color:#555; font-size:11px;">Date: {{ $report->created_at->format('d M Y') }}</div>
+        <div style="margin-top:8px; color:#555; font-size:11px;">Date: {{ $report->damage_date->format('d M Y') }}</div>
         <div style="margin-top:12px; text-align:right;">
             <strong>Bill To:</strong><br>
             @if($report->billing_details)
